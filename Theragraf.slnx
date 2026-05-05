@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Theragraf.Core/Theragraf.Core.csproj" />
+  <Project Path="Theragraf.Functions/Theragraf.Functions.csproj" />
+</Solution>
