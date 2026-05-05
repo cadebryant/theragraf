@@ -6,7 +6,7 @@ Built with a privacy-first philosophy, Theragraf uses a **Bring-Your-Own-Key (BY
 
 ---
 
-## 🛠 Why Theragraf?
+## 🛠 Why TheraGraf?
 
 Modern clinical documentation is broken. Current solutions are high-cost, closed-source, and create data silos. Theragraf changes the paradigm:
 
