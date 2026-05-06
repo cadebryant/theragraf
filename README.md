@@ -1,14 +1,14 @@
 # TheraGraf
 
-**Theragraf** is an open-source, agentic clinical documentation engine designed to eliminate the "paperwork tax" for occupational therapists, physical therapists, and mental health practitioners.
+**TheraGraf** is an open-source, agentic clinical documentation engine designed to eliminate the "paperwork tax" for occupational therapists, physical therapists, and mental health practitioners.
 
-Built with a privacy-first philosophy, Theragraf uses a **Bring-Your-Own-Key (BYOK)** architecture to ensure your patient data never touches our servers—you maintain full control of your clinical records.
+Built with a privacy-first philosophy, TheraGraf uses a **Bring-Your-Own-Key (BYOK)** architecture to ensure your patient data never touches our servers—you maintain full control of your clinical records.
 
 ---
 
 ## 🛠 Why TheraGraf?
 
-Modern clinical documentation is broken. Current solutions are high-cost, closed-source, and create data silos. Theragraf changes the paradigm:
+Modern clinical documentation is broken. Current solutions are high-cost, closed-source, and create data silos. TheraGraf changes the paradigm:
 
 * **Privacy-First:** Your patient data stays between your device and your chosen AI provider (OpenAI, Anthropic, or Local Ollama).
 * **Cost-Efficient:** Pay only for the tokens you consume. No $100+/mo subscriptions.
@@ -19,7 +19,7 @@ Modern clinical documentation is broken. Current solutions are high-cost, closed
 
 ## 🏗 System Architecture
 
-Theragraf utilizes an agent-driven pipeline built on **Azure Functions (.NET 8 Isolated)**, managed by **Durable Functions** for reliable, stateful orchestration.
+TheraGraf utilizes an agent-driven pipeline built on **Azure Functions (.NET 8 Isolated)**, managed by **Durable Functions** for reliable, stateful orchestration.
 
 ### The Agentic Pipeline:
 1.  **Ingestion Agent:** Cleans raw transcripts and extracts core clinical observations.
