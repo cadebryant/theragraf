@@ -41,4 +41,5 @@ TheraGraf utilizes an agent-driven pipeline built on **Azure Functions (.NET 8 I
 2. Configure your `local.settings.json` with your AI provider API key.
 3. Launch the solution: 
    ```bash
-   func start
+   dotnet run --project ./Theragraf.Functions/Theragraf.Functions.csproj
+   ```
