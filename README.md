@@ -11,7 +11,7 @@ Built with a privacy-first philosophy, TheraGraf uses a **Bring-Your-Own-Key (BY
 Modern clinical documentation is broken. Current solutions are high-cost, closed-source, and create data silos. TheraGraf changes the paradigm:
 
 * **Privacy-First:** Your patient data stays between your device and your chosen AI provider (OpenAI, Anthropic, or Local Ollama).
-* **Cost-Efficient:** Pay only for the tokens you consume. No $100+/mo subscriptions.
+* **Cost-Efficient:** Pay only for the tokens you consume (typically just pennies per day for the typical clinical transcription/documentation workflow), from the LLM provider of your choice. No separate subscription required.    
 * **Agentic Workflow:** Not just a scribe, but an intelligent pipeline that cleans transcripts, structures SOAP notes, and validates compliance against clinical standards.
 * **Clinician-Centric:** Built for professionals who value precision, auditability, and data ownership.
 
