@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Theragraf.Core.Models;
+﻿namespace Theragraf.Core.Models;
 
 public record ObservationResult(
-    string ProcessedTranscript,
+    string RedactedTranscript,
+    IReadOnlyDictionary<string, string> RedactionMap, // e.g. "[PATIENT_1]" → "John Smith"
     string TherapistName,
     string ClientId,
     DateTimeOffset SessionDate

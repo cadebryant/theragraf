@@ -1,20 +1,23 @@
 ﻿using Microsoft.Azure.Functions.Worker;
-using OpenAI.Realtime;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Theragraf.Core.Models;
+using Theragraf.Core.Services;
+using Theragraf.Functions.Services;
 
-namespace Theragraf.Functions.Activities
+namespace Theragraf.Functions.Activities;
+
+public class IngestionActivity(IPiiRedactionService piiRedactionService)
 {
-    public class IngestionActivity
+    [Function(nameof(IngestionActivity))]
+    public async Task<ObservationResult> Run([ActivityTrigger] TranscriptInput input)
     {
-        [Function(nameof(IngestionActivity))]
-        public async Task<ObservationResult> Run([ActivityTrigger] TranscriptInput input)
-        {
-            throw new NotImplementedException();
-        }
+        var (redactedText, redactionMap) = await piiRedactionService.RedactAsync(input.RawTranscript);
+
+        return new ObservationResult(
+            RedactedTranscript: redactedText,
+            RedactionMap: redactionMap,
+            TherapistName: input.TherapistName,
+            ClientId: input.ClientId,
+            SessionDate: input.SessionDate
+        );
     }
 }
