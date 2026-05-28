@@ -20,11 +20,30 @@ var host = new HostBuilder()
             new Uri(config["AzureLanguage:Endpoint"]!),
             new AzureKeyCredential(config["AzureLanguage:ApiKey"]!)
         ));
+        services.AddSingleton<ITextAnalyticsClientAdapter, TextAnalyticsClientAdapter>();
         services.AddSingleton<IPiiRedactionService, PiiRedactionService>();
 
-        // Semantic Kernel (placeholder — LLM wired up next)
-        services.AddSingleton<Kernel>(_ => new Kernel());
-        services.AddKeyedSingleton<BaseAgent, SoapAgent>("SoapAgent");
+        // Semantic Kernel — Azure OpenAI
+        services.AddSingleton<Kernel>(sp =>
+        {
+            var kernelBuilder = Kernel.CreateBuilder();
+
+            kernelBuilder.AddAzureOpenAIChatCompletion(
+                deploymentName: config["AzureOpenAI:DeploymentName"]!,
+                endpoint: config["AzureOpenAI:Endpoint"]!,
+                apiKey: config["AzureOpenAI:ApiKey"]!
+            );
+
+            var kernel = kernelBuilder.Build();
+
+            // Load prompt plugins from the Plugins directory
+            var pluginsPath = Path.Combine(AppContext.BaseDirectory, "Plugins");
+            kernel.ImportPluginFromPromptDirectory(pluginsPath, "SoapAgent");
+
+            return kernel;
+        });
+
+        services.AddSingleton<ISoapAgent, SoapAgent>();
     })
     .Build();
 

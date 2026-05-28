@@ -1,3 +1,17 @@
 {
-
+  "schema": 1,
+  "description": "Generates a structured SOAP note from a redacted therapy session transcript.",
+  "execution_settings": {
+    "default": {
+      "max_tokens": 1000,
+      "temperature": 0.2
+    }
+  },
+  "input_variables": [
+    {
+      "name": "input",
+      "description": "The redacted therapy session transcript.",
+      "is_required": true
+    }
+  ]
 }

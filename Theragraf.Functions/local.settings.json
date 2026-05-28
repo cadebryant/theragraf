@@ -4,6 +4,9 @@
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     "AzureLanguage:Endpoint": "https://<your-resource-name>.cognitiveservices.azure.com/",
-    "AzureLanguage:ApiKey": "<your-api-key>"
+    "AzureLanguage:ApiKey": "<your-api-key>",
+    "AzureOpenAI:Endpoint": "https://<your-openai-resource>.openai.azure.com/",
+    "AzureOpenAI:ApiKey": "<your-api-key>",
+    "AzureOpenAI:DeploymentName": "gpt-4o"
   }
 }

@@ -4,7 +4,7 @@ using System.Text.Json;
 using Microsoft.SemanticKernel;
 using Theragraf.Core.Models;
 
-public class SoapAgent(Kernel kernel) : BaseAgent(kernel)
+public class SoapAgent(Kernel kernel) : BaseAgent(kernel), ISoapAgent
 {
     public async Task<SoapNote> GenerateSoapNoteAsync(ObservationResult input)
     {

@@ -1,16 +1,15 @@
-﻿using Azure;
-using Azure.AI.TextAnalytics;
+﻿using Azure.AI.TextAnalytics;
 using Theragraf.Core.Services;
 
 namespace Theragraf.Functions.Services;
 
-public class PiiRedactionService(TextAnalyticsClient client) : IPiiRedactionService
+public class PiiRedactionService(ITextAnalyticsClientAdapter client) : IPiiRedactionService
 {
-    private readonly TextAnalyticsClient _client = client;
+    private readonly ITextAnalyticsClientAdapter _client = client;
 
     public async Task<(string RedactedText, IReadOnlyDictionary<string, string> RedactionMap)> RedactAsync(string rawText)
     {
-        var response = await _client.RecognizePiiEntitiesAsync(rawText, "en", new RecognizePiiEntitiesOptions
+        var entities = await _client.RecognizePiiEntitiesAsync(rawText, "en", new RecognizePiiEntitiesOptions
         {
             CategoriesFilter =
             {
@@ -29,18 +28,14 @@ public class PiiRedactionService(TextAnalyticsClient client) : IPiiRedactionServ
         var counters = new Dictionary<string, int>();
 
         // Process longest entities first to avoid offset corruption
-        var entities = response.Value
-            .OrderByDescending(e => e.Offset)
-            .ToList();
-
-        foreach (var entity in entities)
+        foreach (var entity in entities.OrderByDescending(e => e.Offset))
         {
             var categoryKey = entity.Category.ToString().ToUpperInvariant();
 
             if (!counters.TryGetValue(categoryKey, out int value))
                 counters[categoryKey] = 1;
             else
-                counters[categoryKey] = ++value;
+                counters[categoryKey] = value + 1;
 
             var placeholder = $"[{categoryKey}_{counters[categoryKey]}]";
 
