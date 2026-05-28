@@ -1,19 +1,14 @@
 ﻿using Microsoft.Azure.Functions.Worker;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Theragraf.Core.Models;
+using Theragraf.Functions.Agents;
 
-namespace Theragraf.Functions.Activities
+namespace Theragraf.Functions.Activities;
+
+public class SoapActivity(SoapAgent soapAgent)
 {
-    public class SoapActivity
+    [Function(nameof(SoapActivity))]
+    public async Task<SoapNote> Run([ActivityTrigger] ObservationResult input)
     {
-        [Function(nameof(SoapActivity))]
-        public async Task<SoapNote> Run([ActivityTrigger] ObservationResult input)
-        {
-            throw new NotImplementedException();
-        }
+        return await soapAgent.GenerateSoapNoteAsync(input);
     }
 }

@@ -1,5 +1,6 @@
 namespace Theragraf.Functions.Agents;
 
+using System.Text.Json;
 using Microsoft.SemanticKernel;
 using Theragraf.Core.Models;
 
@@ -7,11 +8,11 @@ public class SoapAgent : BaseAgent
 {
     public SoapAgent(Kernel kernel) : base(kernel) { }
 
-    public override async Task<string> ProcessAsync(string input)
+    public async Task<SoapNote> GenerateSoapNoteAsync(ObservationResult input)
     {
         var function = Kernel.Plugins.GetFunction("SoapAgent", "SoapAgent");
-        var arguments = new KernelArguments { ["input"] = input };
+        var arguments = new KernelArguments { ["input"] = input.ProcessedTranscript };
         var result = await Kernel.InvokeAsync(function, arguments);
-        return result.ToString();
+        return JsonSerializer.Deserialize<SoapNote>(result.ToString())!;
     }
 }
