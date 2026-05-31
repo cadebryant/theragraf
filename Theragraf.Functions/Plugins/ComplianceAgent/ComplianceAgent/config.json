@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "description": "Reviews a SOAP note for clinical completeness and HIPAA-aligned documentation standards.",
+  "execution_settings": {
+    "default": {
+      "max_tokens": 1000,
+      "temperature": 0.1
+    }
+  },
+  "input_variables": [
+    {
+      "name": "input",
+      "description": "The SOAP note as a JSON string to be reviewed for compliance.",
+      "is_required": true
+    }
+  ]
+}

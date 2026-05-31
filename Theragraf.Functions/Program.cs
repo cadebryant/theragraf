@@ -39,11 +39,13 @@ var host = new HostBuilder()
             // Load prompt plugins from the Plugins directory
             var pluginsPath = Path.Combine(AppContext.BaseDirectory, "Plugins");
             kernel.ImportPluginFromPromptDirectory(pluginsPath, "SoapAgent");
+            kernel.ImportPluginFromPromptDirectory(pluginsPath, "ComplianceAgent");
 
             return kernel;
         });
 
         services.AddSingleton<ISoapAgent, SoapAgent>();
+        services.AddSingleton<IComplianceAgent, ComplianceAgent>();
     })
     .Build();
 

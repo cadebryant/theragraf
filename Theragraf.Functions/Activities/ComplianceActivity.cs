@@ -1,19 +1,15 @@
 ﻿using Microsoft.Azure.Functions.Worker;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Theragraf.Core.Models;
+using Theragraf.Functions.Agents;
 
-namespace Theragraf.Functions.Activities
+namespace Theragraf.Functions.Activities;
+
+public class ComplianceActivity(IComplianceAgent complianceAgent)
 {
-    public class ComplianceActivity
+    [Function(nameof(ComplianceActivity))]
+    public async Task<SoapNote> Run([ActivityTrigger] SoapNote input)
     {
-        [Function(nameof(ComplianceActivity))]
-        public async Task<ComplianceResult> Run([ActivityTrigger] SoapNote input)
-        {
-            throw new NotImplementedException();
-        }
+        var result = await complianceAgent.ValidateAsync(input);
+        return result.ValidatedNote;
     }
 }

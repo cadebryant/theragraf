@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Theragraf.Core.Models;
 
-namespace Theragraf.Core.Models
-{
-    public record ComplianceResult();
-}
+public record ComplianceResult(
+    SoapNote ValidatedNote,
+    bool IsCompliant,
+    IReadOnlyList<string> Issues
+);
