@@ -1,19 +1,31 @@
 ﻿using Microsoft.Azure.Functions.Worker;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Theragraf.Core.Models;
 
-namespace Theragraf.Functions.Activities
+namespace Theragraf.Functions.Activities;
+
+public class FinalizerActivity
 {
-    public class FinalizerActivity
+    [Function(nameof(FinalizerActivity))]
+    public Task<FinalizeResult> Run([ActivityTrigger] FinalizeInput input)
     {
-        [Function(nameof(FinalizerActivity))]
-        public async Task<FinalizeResult> Run([ActivityTrigger] ComplianceResult input)
-        {
-            throw new NotImplementedException();
-        }
+        var note = input.Note;
+        var map = input.RedactionMap;
+
+        var restored = new SoapNote(
+            Subjective: Restore(note.Subjective, map),
+            Objective:  Restore(note.Objective,  map),
+            Assessment: Restore(note.Assessment, map),
+            Plan:       Restore(note.Plan,        map)
+        );
+
+        return Task.FromResult(new FinalizeResult(restored));
+    }
+
+    private static string Restore(string text, IReadOnlyDictionary<string, string> map)
+    {
+        foreach (var (placeholder, original) in map)
+            text = text.Replace(placeholder, original);
+
+        return text;
     }
 }

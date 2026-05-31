@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Theragraf.Core.Models;
 
-namespace Theragraf.Core.Models
-{
-    public record FinalizeResult();
-}
+public record FinalizeResult(
+    SoapNote RestoredNote
+);

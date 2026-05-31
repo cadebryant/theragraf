@@ -17,80 +17,104 @@ public class DocumentationOrchestratorTests
         _sut = new DocumentationOrchestrator();
     }
 
+    private static TranscriptInput BuildTranscriptInput() =>
+        new("Raw session transcript.", "Dr. Adams", "client-001", DateTimeOffset.UtcNow);
+
+    private static ObservationResult BuildObservation(string transcript = "Redacted transcript.") =>
+        new(transcript, new Dictionary<string, string> { ["[PERSON_1]"] = "John Smith" }, "Dr. Adams", "client-001", DateTimeOffset.UtcNow);
+
     private static SoapNote BuildSoapNote(string suffix = "") =>
         new($"Subjective{suffix}", $"Objective{suffix}", $"Assessment{suffix}", $"Plan{suffix}");
+
+    private static FinalizeResult BuildFinalizeResult(string suffix = "") =>
+        new(BuildSoapNote(suffix));
 
     [Fact]
     public async Task RunOrchestrator_CallsAllActivitiesInOrder()
     {
-        var finalNote = BuildSoapNote("_final");
-
-        _context.GetInput<string>().Returns("raw transcript");
-        _context.CallActivityAsync<string>("IngestionActivity", Arg.Any<object>())
-                .Returns("ingested");
-        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>())
-                .Returns(BuildSoapNote("_soap"));
-        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>())
-                .Returns(BuildSoapNote("_compliant"));
-        _context.CallActivityAsync<SoapNote>("FinalizerActivity", Arg.Any<object>())
-                .Returns(finalNote);
+        var observation = BuildObservation();
+        _context.GetInput<TranscriptInput>().Returns(BuildTranscriptInput());
+        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
+        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote("_soap"));
+        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote("_compliant"));
+        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(BuildFinalizeResult("_final"));
 
         await _sut.RunOrchestrator(_context);
 
         Received.InOrder(() =>
         {
-            _ = _context.CallActivityAsync<string>("IngestionActivity", Arg.Any<object>());
+            _ = _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>());
             _ = _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>());
             _ = _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>());
-            _ = _context.CallActivityAsync<SoapNote>("FinalizerActivity", Arg.Any<object>());
+            _ = _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>());
         });
     }
 
     [Fact]
-    public async Task RunOrchestrator_ReturnsFinalNoteFromFinalizerActivity()
+    public async Task RunOrchestrator_ReturnsRestoredNoteFromFinalizerActivity()
     {
-        var finalNote = BuildSoapNote("_final");
-
-        _context.GetInput<string>().Returns("raw transcript");
-        _context.CallActivityAsync<string>("IngestionActivity", Arg.Any<object>()).Returns("ingested");
+        var expectedNote = BuildSoapNote("_final");
+        var observation = BuildObservation();
+        _context.GetInput<TranscriptInput>().Returns(BuildTranscriptInput());
+        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
         _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
         _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<SoapNote>("FinalizerActivity", Arg.Any<object>()).Returns(finalNote);
+        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(new FinalizeResult(expectedNote));
 
         var result = await _sut.RunOrchestrator(_context);
 
-        result.Should().Be(finalNote);
+        result.Should().Be(expectedNote);
     }
 
     [Fact]
-    public async Task RunOrchestrator_PassesIngestionOutputToSoapActivity()
+    public async Task RunOrchestrator_PassesObservationResultToSoapActivity()
     {
-        const string ingestionOutput = "processed transcript";
-
-        _context.GetInput<string>().Returns("raw");
-        _context.CallActivityAsync<string>("IngestionActivity", Arg.Any<object>()).Returns(ingestionOutput);
+        var observation = BuildObservation("Redacted text.");
+        _context.GetInput<TranscriptInput>().Returns(BuildTranscriptInput());
+        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
         _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
         _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<SoapNote>("FinalizerActivity", Arg.Any<object>()).Returns(BuildSoapNote());
+        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(BuildFinalizeResult());
 
         await _sut.RunOrchestrator(_context);
 
-        await _context.Received(1).CallActivityAsync<SoapNote>("SoapActivity", ingestionOutput);
+        await _context.Received(1).CallActivityAsync<SoapNote>("SoapActivity", observation);
     }
 
     [Fact]
     public async Task RunOrchestrator_PassesSoapNoteToComplianceActivity()
     {
         var soapNote = BuildSoapNote("_soap");
-
-        _context.GetInput<string>().Returns("raw");
-        _context.CallActivityAsync<string>("IngestionActivity", Arg.Any<object>()).Returns("ingested");
+        var observation = BuildObservation();
+        _context.GetInput<TranscriptInput>().Returns(BuildTranscriptInput());
+        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
         _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(soapNote);
         _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<SoapNote>("FinalizerActivity", Arg.Any<object>()).Returns(BuildSoapNote());
+        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(BuildFinalizeResult());
 
         await _sut.RunOrchestrator(_context);
 
         await _context.Received(1).CallActivityAsync<SoapNote>("ComplianceActivity", soapNote);
     }
+
+    [Fact]
+    public async Task RunOrchestrator_PassesFinalizeInputWithRedactionMapToFinalizerActivity()
+    {
+        var observation = BuildObservation();
+        var complianceNote = BuildSoapNote("_compliant");
+        _context.GetInput<TranscriptInput>().Returns(BuildTranscriptInput());
+        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
+        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
+        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(complianceNote);
+        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(BuildFinalizeResult());
+
+        await _sut.RunOrchestrator(_context);
+
+        await _context.Received(1).CallActivityAsync<FinalizeResult>(
+            "FinalizerActivity",
+            Arg.Is<FinalizeInput>(fi =>
+                fi.Note == complianceNote &&
+                fi.RedactionMap == observation.RedactionMap));
+    }
 }
+
