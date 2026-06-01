@@ -8,7 +8,7 @@ using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 
-public class DocumentationStart(ILoggerFactory loggerFactory, DurableTaskClient durableClient)
+public class DocumentationStart(ILoggerFactory loggerFactory)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<DocumentationStart>();
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -16,6 +16,7 @@ public class DocumentationStart(ILoggerFactory loggerFactory, DurableTaskClient 
     [Function("DocumentationStart")]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req,
+        [DurableClient] DurableTaskClient durableClient,
         CancellationToken cancellationToken)
     {
         TranscriptInput? input;
@@ -50,7 +51,7 @@ public class DocumentationStart(ILoggerFactory loggerFactory, DurableTaskClient 
         _logger.LogInformation("Started orchestration {InstanceId} for client {ClientId}",
             instanceId, input.ClientId);
 
-        var management = GetManagementPayload(instanceId, req);
+        var management = GetManagementPayload(instanceId, req, durableClient);
 
         var accepted = req.CreateResponse(HttpStatusCode.Accepted);
         if (!string.IsNullOrEmpty(management.StatusQueryGetUri))
@@ -68,6 +69,6 @@ public class DocumentationStart(ILoggerFactory loggerFactory, DurableTaskClient 
         return accepted;
     }
 
-    protected virtual HttpManagementPayload GetManagementPayload(string instanceId, HttpRequestData req)
+    protected virtual HttpManagementPayload GetManagementPayload(string instanceId, HttpRequestData req, DurableTaskClient durableClient)
         => durableClient.CreateHttpManagementPayload(instanceId, req);
 }

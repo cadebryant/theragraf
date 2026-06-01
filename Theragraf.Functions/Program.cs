@@ -38,8 +38,15 @@ var host = new HostBuilder()
 
             // Load prompt plugins from the Plugins directory
             var pluginsPath = Path.Combine(AppContext.BaseDirectory, "Plugins");
-            kernel.ImportPluginFromPromptDirectory(pluginsPath, "SoapAgent");
-            kernel.ImportPluginFromPromptDirectory(pluginsPath, "ComplianceAgent");
+
+            if (!Directory.Exists(pluginsPath))
+                throw new DirectoryNotFoundException($"Plugins directory not found at: {pluginsPath}");
+
+            Console.WriteLine($"[Theragraf] Loading plugins from: {pluginsPath}");
+            Console.WriteLine($"[Theragraf] Plugin dirs: {string.Join(", ", Directory.GetDirectories(pluginsPath))}");
+
+            kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "SoapAgent"), "SoapAgent");
+            kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "ComplianceAgent"), "ComplianceAgent");
 
             return kernel;
         });

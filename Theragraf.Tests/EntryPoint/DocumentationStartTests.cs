@@ -24,14 +24,14 @@ public class DocumentationStartTests
     public DocumentationStartTests()
     {
         _durableClient = Substitute.For<DurableTaskClient>("test");
-        _sut = new TestableDocumentationStart(NullLoggerFactory.Instance, _durableClient);
+        _sut = new TestableDocumentationStart(NullLoggerFactory.Instance);
     }
 
     // Subclass that bypasses the static extension method for unit testing
-    private sealed class TestableDocumentationStart(ILoggerFactory lf, DurableTaskClient client)
-        : DocumentationStart(lf, client)
+    private sealed class TestableDocumentationStart(ILoggerFactory lf)
+        : DocumentationStart(lf)
     {
-        protected override HttpManagementPayload GetManagementPayload(string instanceId, HttpRequestData req)
+        protected override HttpManagementPayload GetManagementPayload(string instanceId, HttpRequestData req, DurableTaskClient durableClient)
         {
             // HttpManagementPayload has no public constructor; build via reflection
             var type = typeof(HttpManagementPayload);
@@ -94,7 +94,7 @@ public class DocumentationStartTests
             Arg.Any<TaskName>(), Arg.Any<object>(), Arg.Any<CancellationToken>())
             .Returns("instance-123");
 
-        var response = await _sut.Run(BuildRequest(ValidInput()), CancellationToken.None);
+        var response = await _sut.Run(BuildRequest(ValidInput()), _durableClient, CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
     }
@@ -106,7 +106,7 @@ public class DocumentationStartTests
             Arg.Any<TaskName>(), Arg.Any<object>(), Arg.Any<CancellationToken>())
             .Returns("instance-123");
 
-        await _sut.Run(BuildRequest(ValidInput()), CancellationToken.None);
+        await _sut.Run(BuildRequest(ValidInput()), _durableClient, CancellationToken.None);
 
         await _durableClient.Received(1).ScheduleNewOrchestrationInstanceAsync(
             Arg.Is<TaskName>(n => n.Name == "DocumentationOrchestrator"),
@@ -119,7 +119,7 @@ public class DocumentationStartTests
     {
         var input = new { RawTranscript = "", TherapistName = "Dr. Adams", ClientId = "client-001", SessionDate = DateTimeOffset.UtcNow };
 
-        var response = await _sut.Run(BuildRequest(input), CancellationToken.None);
+        var response = await _sut.Run(BuildRequest(input), _durableClient, CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -129,7 +129,7 @@ public class DocumentationStartTests
     {
         var input = new { RawTranscript = "transcript", TherapistName = "", ClientId = "client-001", SessionDate = DateTimeOffset.UtcNow };
 
-        var response = await _sut.Run(BuildRequest(input), CancellationToken.None);
+        var response = await _sut.Run(BuildRequest(input), _durableClient, CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -139,7 +139,7 @@ public class DocumentationStartTests
     {
         var input = new { RawTranscript = "transcript", TherapistName = "Dr. Adams", ClientId = "", SessionDate = DateTimeOffset.UtcNow };
 
-        var response = await _sut.Run(BuildRequest(input), CancellationToken.None);
+        var response = await _sut.Run(BuildRequest(input), _durableClient, CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -147,7 +147,7 @@ public class DocumentationStartTests
     [Fact]
     public async Task Run_MalformedJson_Returns400()
     {
-        var response = await _sut.Run(BuildMalformedRequest(), CancellationToken.None);
+        var response = await _sut.Run(BuildMalformedRequest(), _durableClient, CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -157,7 +157,7 @@ public class DocumentationStartTests
     {
         var input = new { RawTranscript = "", TherapistName = "Dr. Adams", ClientId = "client-001", SessionDate = DateTimeOffset.UtcNow };
 
-        await _sut.Run(BuildRequest(input), CancellationToken.None);
+        await _sut.Run(BuildRequest(input), _durableClient, CancellationToken.None);
 
         await _durableClient.DidNotReceive().ScheduleNewOrchestrationInstanceAsync(
             Arg.Any<TaskName>(), Arg.Any<object>(), Arg.Any<CancellationToken>());
