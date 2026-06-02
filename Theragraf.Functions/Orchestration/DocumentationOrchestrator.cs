@@ -7,7 +7,7 @@ using Theragraf.Core.Models;
 public class DocumentationOrchestrator
 {
     [Function("DocumentationOrchestrator")]
-    public async Task<SoapNote> RunOrchestrator([OrchestrationTrigger] TaskOrchestrationContext context)
+    public async Task<FinalizeResult> RunOrchestrator([OrchestrationTrigger] TaskOrchestrationContext context)
     {
         var input = context.GetInput<TranscriptInput>();
 
@@ -16,7 +16,9 @@ public class DocumentationOrchestrator
         var compliance   = await context.CallActivityAsync<SoapNote>("ComplianceActivity", soap);
         var finalized    = await context.CallActivityAsync<FinalizeResult>("FinalizerActivity",
                                new FinalizeInput(compliance, observation.RedactionMap));
+        var cptCodes     = await context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity",
+                               finalized.RestoredNote);
 
-        return finalized.RestoredNote;
+        return finalized with { SuggestedCptCodes = cptCodes };
     }
 }

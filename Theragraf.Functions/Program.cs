@@ -61,12 +61,14 @@ var host = new HostBuilder()
 
             kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "SoapAgent"), "SoapAgent");
             kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "ComplianceAgent"), "ComplianceAgent");
+            kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "BillingAgent"), "BillingAgent");
 
             return kernel;
         });
 
         services.AddSingleton<ISoapAgent, SoapAgent>();
         services.AddSingleton<IComplianceAgent, ComplianceAgent>();
+        services.AddSingleton<IBillingAgent, BillingAgent>();
     })
     .Build();
 

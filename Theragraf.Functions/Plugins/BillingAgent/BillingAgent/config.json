@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "description": "Suggests appropriate OT CPT billing codes based on a finalized SOAP note.",
+  "execution_settings": {
+    "default": {
+      "max_tokens": 600,
+      "temperature": 0.1
+    }
+  },
+  "input_variables": [
+    {
+      "name": "input",
+      "description": "The finalized SOAP note as JSON",
+      "is_required": true
+    }
+  ]
+}
