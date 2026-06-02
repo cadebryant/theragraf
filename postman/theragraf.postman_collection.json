@@ -1,0 +1,117 @@
+{
+  "info": {
+    "name": "Theragraf - Documentation Pipeline",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:7071" },
+    { "key": "aoaiEndpoint", "value": "https://cadehbryant-theragraf-resource.services.ai.azure.com" },
+    { "key": "aoaiDeployment", "value": "gpt-4o-mini" },
+    { "key": "aoaiApiVersion", "value": "2024-12-01-preview" },
+    { "key": "aoaiApiKey", "value": "YOUR_AOAI_KEY" },
+    { "key": "durableCode", "value": "YOUR_DURABLE_CODE" },
+    { "key": "instanceId", "value": "" },
+    { "key": "generatedTranscript", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1 - Generate Synthetic OT Transcript",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "const transcript = json.choices[0].message.content;",
+              "pm.collectionVariables.set('generatedTranscript', transcript);",
+              "pm.test('Transcript generated', () => {",
+              "    pm.expect(transcript).to.be.a('string').and.have.length.greaterThan(100);",
+              "});",
+              "console.log('Generated transcript:', transcript);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "api-key", "value": "{{aoaiApiKey}}" }
+        ],
+        "url": "{{aoaiEndpoint}}/openai/deployments/{{aoaiDeployment}}/chat/completions?api-version={{aoaiApiVersion}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are generating realistic synthetic occupational therapy session transcripts for software testing purposes. Always use clearly fictional names. Include natural dialogue, OT-specific assessments, and functional goals. The transcript should feel like a real session.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate a realistic 10-minute occupational therapy session transcript. Randomly pick one of these scenarios: (1) stroke patient relearning ADLs, (2) pediatric patient with fine motor delays, (3) adult with TBI working on cognitive rehabilitation, (4) elderly patient recovering from hip replacement. Use fictional patient and therapist names. Include functional assessments, patient responses, and a plan discussed at the end.\"\n    }\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "2 - Start Documentation",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const transcript = pm.collectionVariables.get('generatedTranscript');",
+              "if (!transcript) {",
+              "    throw new Error('No transcript found. Run step 1 first.');",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('instanceId', json.instanceId);",
+              "pm.test('Orchestration started', () => {",
+              "    pm.expect(json.instanceId).to.be.a('string');",
+              "});",
+              "console.log('Instance ID:', json.instanceId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/DocumentationStart",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clientId\": \"client-001\",\n  \"therapistName\": \"Dr. Jane Doe\",\n  \"sessionDate\": \"{{$isoTimestamp}}\",\n  \"rawTranscript\": \"{{generatedTranscript}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "3 - Poll for Completion",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status received', () => {",
+              "    pm.expect(['Running', 'Completed', 'Failed']).to.include(json.runtimeStatus);",
+              "});",
+              "console.log('Status:', json.runtimeStatus);",
+              "if (json.runtimeStatus === 'Completed') {",
+              "    pm.test('SOAP note has Subjective', () => pm.expect(json.output.Subjective).to.be.a('string'));",
+              "    pm.test('SOAP note has Objective', () => pm.expect(json.output.Objective).to.be.a('string'));",
+              "    pm.test('SOAP note has Assessment', () => pm.expect(json.output.Assessment).to.be.a('string'));",
+              "    pm.test('SOAP note has Plan', () => pm.expect(json.output.Plan).to.be.a('string'));",
+              "    console.log('SOAP Note Output:', JSON.stringify(json.output, null, 2));",
+              "} else if (json.runtimeStatus === 'Failed') {",
+              "    pm.test('Orchestration failed', () => { throw new Error(json.output); });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/runtime/webhooks/durabletask/instances/{{instanceId}}?code={{durableCode}}"
+      }
+    }
+  ]
+}
