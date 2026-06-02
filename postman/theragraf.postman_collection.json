@@ -55,7 +55,14 @@
               "const transcript = pm.collectionVariables.get('generatedTranscript');",
               "if (!transcript) {",
               "    throw new Error('No transcript found. Run step 1 first.');",
-              "}"
+              "}",
+              "const body = JSON.stringify({",
+              "    clientId: 'client-001',",
+              "    therapistName: 'Dr. Jane Doe',",
+              "    sessionDate: new Date().toISOString(),",
+              "    rawTranscript: transcript",
+              "});",
+              "pm.collectionVariables.set('requestBody', body);"
             ]
           }
         },
@@ -79,7 +86,7 @@
         "url": "{{baseUrl}}/api/DocumentationStart",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"clientId\": \"client-001\",\n  \"therapistName\": \"Dr. Jane Doe\",\n  \"sessionDate\": \"{{$isoTimestamp}}\",\n  \"rawTranscript\": \"{{generatedTranscript}}\"\n}"
+          "raw": "{{requestBody}}"
         }
       }
     },
