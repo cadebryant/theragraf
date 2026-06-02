@@ -7,8 +7,10 @@ using Theragraf.Functions.Agents;
 public class BillingActivity(IBillingAgent billingAgent)
 {
     [Function(nameof(BillingActivity))]
-    public async Task<IReadOnlyList<CptCode>> Run([ActivityTrigger] SoapNote note)
+    public async Task<IReadOnlyList<CptCode>> Run([ActivityTrigger] BillingActivityInput input)
     {
-        return await billingAgent.SuggestCptCodesAsync(note);
+        return await billingAgent.SuggestCptCodesAsync(input.Note, input.Discipline);
     }
 }
+
+public record BillingActivityInput(SoapNote Note, TherapyDiscipline Discipline);

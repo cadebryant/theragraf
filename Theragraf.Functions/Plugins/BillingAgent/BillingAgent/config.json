@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "description": "Suggests appropriate OT CPT billing codes based on a finalized SOAP note.",
+  "description": "Suggests appropriate CPT billing codes based on a finalized SOAP note and therapy discipline.",
   "execution_settings": {
     "default": {
-      "max_tokens": 600,
+      "max_tokens": 800,
       "temperature": 0.1
     }
   },
@@ -11,6 +11,16 @@
     {
       "name": "input",
       "description": "The finalized SOAP note as JSON",
+      "is_required": true
+    },
+    {
+      "name": "cptCodeList",
+      "description": "Comma-separated list of CPT codes relevant to the therapy discipline",
+      "is_required": true
+    },
+    {
+      "name": "discipline",
+      "description": "The therapy discipline (e.g. OccupationalTherapy, PhysicalTherapy, Psychotherapy)",
       "is_required": true
     }
   ]

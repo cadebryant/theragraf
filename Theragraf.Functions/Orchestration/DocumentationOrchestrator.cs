@@ -3,6 +3,7 @@ namespace Theragraf.Functions.Orchestration;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 using Theragraf.Core.Models;
+using Theragraf.Functions.Activities;
 
 public class DocumentationOrchestrator
 {
@@ -17,7 +18,7 @@ public class DocumentationOrchestrator
         var finalized    = await context.CallActivityAsync<FinalizeResult>("FinalizerActivity",
                                new FinalizeInput(compliance, observation.RedactionMap));
         var cptCodes     = await context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity",
-                               finalized.RestoredNote);
+                               new BillingActivityInput(finalized.RestoredNote, input!.Discipline));
 
         return finalized with { SuggestedCptCodes = cptCodes };
     }

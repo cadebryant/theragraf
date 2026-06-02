@@ -1,15 +1,9 @@
-You are a clinical billing specialist with expertise in occupational therapy CPT codes. Given the following SOAP note, suggest the most appropriate CPT codes for the session.
+You are a clinical billing specialist with expertise in {{$discipline}} CPT codes. Given the following SOAP note, suggest the most appropriate CPT codes for the session.
 
-Focus on occupational therapy codes including but not limited to:
-- 97165, 97166, 97167: OT evaluation (low, moderate, high complexity)
-- 97168: OT re-evaluation
-- 97110: Therapeutic exercise
-- 97112: Neuromuscular reeducation
-- 97530: Therapeutic activities
-- 97535: Self-care/home management training
-- 97750: Physical performance test
-- 97760, 97761: Orthotic management
-- 97150: Therapeutic procedure, group
+Only recommend codes from the following list that are supported by the session documentation:
+{{$cptCodeList}}
+
+For each suggested code, provide a concise rationale grounded in the specific content of the SOAP note. Only include codes that are clearly supported by the documented interventions or evaluations. Do not suggest codes for services not evidenced in the note.
 
 SOAP Note:
 {{$input}}
@@ -17,7 +11,6 @@ SOAP Note:
 Respond ONLY with valid JSON in this exact format:
 {
   "SuggestedCptCodes": [
-	{ "Code": "97530", "Description": "Therapeutic activities", "Rationale": "..." },
-	{ "Code": "97535", "Description": "Self-care/home management training", "Rationale": "..." }
+	{ "Code": "97530", "Description": "Therapeutic activities", "Rationale": "..." }
   ]
 }

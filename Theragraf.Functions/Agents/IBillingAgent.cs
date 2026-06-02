@@ -4,5 +4,5 @@ using Theragraf.Core.Models;
 
 public interface IBillingAgent
 {
-    Task<IReadOnlyList<CptCode>> SuggestCptCodesAsync(SoapNote note);
+    Task<IReadOnlyList<CptCode>> SuggestCptCodesAsync(SoapNote note, TherapyDiscipline discipline);
 }
