@@ -7,7 +7,8 @@ using Theragraf.Core.Services;
 
 public record PersistActivityInput(
     TranscriptInput OriginalInput,
-    FinalizeResult Result
+    FinalizeResult Result,
+    SoapNote RedactedNote
 );
 
 public class PersistActivity(ISessionRepository repository)
@@ -23,7 +24,7 @@ public class PersistActivity(ISessionRepository repository)
             TherapistName         = input.OriginalInput.TherapistName,
             Discipline            = input.OriginalInput.Discipline.ToString(),
             SessionDurationMinutes = input.OriginalInput.SessionDurationMinutes,
-            SoapNoteJson          = JsonSerializer.Serialize(input.Result.RestoredNote),
+            SoapNoteJson          = JsonSerializer.Serialize(input.RedactedNote),
             CptCodesJson          = JsonSerializer.Serialize(input.Result.SuggestedCptCodes),
             IcdCodesJson          = JsonSerializer.Serialize(input.Result.SuggestedIcdCodes),
             CreatedAt             = DateTimeOffset.UtcNow,
