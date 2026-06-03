@@ -27,7 +27,7 @@ public class DocumentationOrchestratorTests
         new($"Subjective{suffix}", $"Objective{suffix}", $"Assessment{suffix}", $"Plan{suffix}");
 
     private static FinalizeResult BuildFinalizeResult(string suffix = "") =>
-        new(BuildSoapNote(suffix), Array.Empty<CptCode>());
+        new(BuildSoapNote(suffix), Array.Empty<CptCode>(), Array.Empty<IcdCode>());
 
     [Fact]
     public async Task RunOrchestrator_CallsAllActivitiesInOrder()
@@ -39,6 +39,7 @@ public class DocumentationOrchestratorTests
         _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote("_compliant"));
         _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(BuildFinalizeResult("_final"));
         _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
+        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
 
         await _sut.RunOrchestrator(_context);
 
@@ -60,8 +61,9 @@ public class DocumentationOrchestratorTests
         _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
         _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
         _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(new FinalizeResult(expectedNote, Array.Empty<CptCode>()));
+        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(new FinalizeResult(expectedNote, Array.Empty<CptCode>(), Array.Empty<IcdCode>()));
         _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
+        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
 
         var result = await _sut.RunOrchestrator(_context);
 
@@ -78,6 +80,7 @@ public class DocumentationOrchestratorTests
         _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
         _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(BuildFinalizeResult());
         _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
+        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
 
         await _sut.RunOrchestrator(_context);
 
@@ -95,6 +98,7 @@ public class DocumentationOrchestratorTests
         _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
         _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(BuildFinalizeResult());
         _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
+        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
 
         await _sut.RunOrchestrator(_context);
 
@@ -112,6 +116,7 @@ public class DocumentationOrchestratorTests
         _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(complianceNote);
         _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(BuildFinalizeResult());
         _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
+        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
 
         await _sut.RunOrchestrator(_context);
 

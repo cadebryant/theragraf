@@ -4,13 +4,14 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:7071" },
-    { "key": "aoaiEndpoint", "value": "https://cadehbryant-theragraf-resource.services.ai.azure.com" },
-    { "key": "aoaiDeployment", "value": "gpt-4o-mini" },
-    { "key": "aoaiApiVersion", "value": "2024-12-01-preview" },
-    { "key": "aoaiApiKey", "value": "YOUR_AOAI_KEY" },
-    { "key": "durableCode", "value": "YOUR_DURABLE_CODE" },
-    { "key": "instanceId", "value": "" },
+    { "key": "baseUrl",             "value": "http://localhost:7071" },
+    { "key": "aoaiEndpoint",        "value": "https://cadehbryant-theragraf-resource.services.ai.azure.com" },
+    { "key": "aoaiDeployment",      "value": "gpt-4o-mini" },
+    { "key": "aoaiApiVersion",      "value": "2024-12-01-preview" },
+    { "key": "aoaiApiKey",          "value": "YOUR_AOAI_KEY" },
+    { "key": "durableCode",         "value": "YOUR_DURABLE_CODE" },
+    { "key": "instanceId",          "value": "" },
+    { "key": "statusCode",          "value": "" },
     { "key": "generatedTranscript", "value": "" }
   ],
   "item": [
@@ -36,7 +37,7 @@
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
-          { "key": "api-key", "value": "{{aoaiApiKey}}" }
+          { "key": "api-key",      "value": "{{aoaiApiKey}}" }
         ],
         "url": "{{aoaiEndpoint}}/openai/deployments/{{aoaiDeployment}}/chat/completions?api-version={{aoaiApiVersion}}",
         "body": {
@@ -60,6 +61,8 @@
               "    clientId: 'client-001',",
               "    therapistName: 'Dr. Jane Doe',",
               "    sessionDate: new Date().toISOString(),",
+              "    discipline: 0,",
+              "    sessionDurationMinutes: 45,",
               "    rawTranscript: transcript",
               "});",
               "pm.collectionVariables.set('requestBody', body);"
@@ -72,6 +75,7 @@
             "exec": [
               "const json = pm.response.json();",
               "pm.collectionVariables.set('instanceId', json.instanceId);",
+              "pm.collectionVariables.set('statusQueryGetUri', json.statusQueryGetUri);",
               "pm.test('Orchestration started', () => {",
               "    pm.expect(json.instanceId).to.be.a('string');",
               "});",
@@ -98,16 +102,33 @@
           "script": {
             "exec": [
               "const json = pm.response.json();",
+              "pm.collectionVariables.set('statusCode', json.runtimeStatus);",
               "pm.test('Status received', () => {",
               "    pm.expect(['Running', 'Completed', 'Failed']).to.include(json.runtimeStatus);",
               "});",
               "console.log('Status:', json.runtimeStatus);",
               "if (json.runtimeStatus === 'Completed') {",
-              "    pm.test('SOAP note has Subjective', () => pm.expect(json.output.Subjective).to.be.a('string'));",
-              "    pm.test('SOAP note has Objective', () => pm.expect(json.output.Objective).to.be.a('string'));",
-              "    pm.test('SOAP note has Assessment', () => pm.expect(json.output.Assessment).to.be.a('string'));",
-              "    pm.test('SOAP note has Plan', () => pm.expect(json.output.Plan).to.be.a('string'));",
-              "    console.log('SOAP Note Output:', JSON.stringify(json.output, null, 2));",
+              "    pm.test('SOAP note has Subjective', () => pm.expect(json.output.RestoredNote.Subjective).to.be.a('string'));",
+              "    pm.test('SOAP note has Objective', () => pm.expect(json.output.RestoredNote.Objective).to.be.a('string'));",
+              "    pm.test('SOAP note has Assessment', () => pm.expect(json.output.RestoredNote.Assessment).to.be.a('string'));",
+              "    pm.test('SOAP note has Plan', () => pm.expect(json.output.RestoredNote.Plan).to.be.a('string'));",
+              "    pm.test('CPT codes present', () => pm.expect(json.output.SuggestedCptCodes).to.be.an('array').that.is.not.empty);",
+              "    pm.test('CPT codes have required fields', () => {",
+              "        json.output.SuggestedCptCodes.forEach(c => {",
+              "            pm.expect(c.Code).to.be.a('string');",
+              "            pm.expect(c.Description).to.be.a('string');",
+              "            pm.expect(c.Rationale).to.be.a('string');",
+              "        });",
+              "    });",
+              "    pm.test('ICD-10 codes present', () => pm.expect(json.output.SuggestedIcdCodes).to.be.an('array').that.is.not.empty);",
+              "    pm.test('ICD-10 codes have required fields', () => {",
+              "        json.output.SuggestedIcdCodes.forEach(c => {",
+              "            pm.expect(c.Code).to.be.a('string');",
+              "            pm.expect(c.Description).to.be.a('string');",
+              "            pm.expect(c.Rationale).to.be.a('string');",
+              "        });",
+              "    });",
+              "    console.log('Output:', JSON.stringify(json.output, null, 2));",
               "} else if (json.runtimeStatus === 'Failed') {",
               "    pm.test('Orchestration failed', () => { throw new Error(json.output); });",
               "}"

@@ -62,6 +62,7 @@ var host = new HostBuilder()
             kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "SoapAgent"), "SoapAgent");
             kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "ComplianceAgent"), "ComplianceAgent");
             kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "BillingAgent"), "BillingAgent");
+            kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "Icd10Agent"), "Icd10Agent");
 
             return kernel;
         });
@@ -69,6 +70,7 @@ var host = new HostBuilder()
         services.AddSingleton<ISoapAgent, SoapAgent>();
         services.AddSingleton<IComplianceAgent, ComplianceAgent>();
         services.AddSingleton<IBillingAgent, BillingAgent>();
+        services.AddSingleton<IIcd10Agent, Icd10Agent>();
     })
     .Build();
 

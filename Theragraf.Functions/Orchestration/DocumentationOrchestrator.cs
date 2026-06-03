@@ -19,7 +19,9 @@ public class DocumentationOrchestrator
                                new FinalizeInput(compliance, observation.RedactionMap));
         var cptCodes     = await context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity",
                                new BillingActivityInput(finalized.RestoredNote, input!.Discipline, input.SessionDurationMinutes));
+        var icdCodes     = await context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity",
+                               new Icd10ActivityInput(finalized.RestoredNote, input.Discipline));
 
-        return finalized with { SuggestedCptCodes = cptCodes };
+        return finalized with { SuggestedCptCodes = cptCodes, SuggestedIcdCodes = icdCodes };
     }
 }

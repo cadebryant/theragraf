@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "description": "Suggests appropriate ICD-10 diagnosis codes based on a finalized SOAP note and therapy discipline.",
+  "execution_settings": {
+    "default": {
+      "max_tokens": 800,
+      "temperature": 0.1
+    }
+  },
+  "input_variables": [
+    {
+      "name": "input",
+      "description": "The finalized SOAP note as JSON",
+      "is_required": true
+    },
+    {
+      "name": "icdCodeList",
+      "description": "Comma-separated list of ICD-10 codes relevant to the therapy discipline",
+      "is_required": true
+    },
+    {
+      "name": "discipline",
+      "description": "The therapy discipline (e.g. OccupationalTherapy, PhysicalTherapy, Psychotherapy)",
+      "is_required": true
+    }
+  ]
+}

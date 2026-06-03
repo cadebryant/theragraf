@@ -18,7 +18,7 @@ public class FinalizerActivity
             Plan:       Restore(note.Plan,        map)
         );
 
-        return Task.FromResult(new FinalizeResult(restored, Array.Empty<CptCode>()));
+        return Task.FromResult(new FinalizeResult(restored, Array.Empty<CptCode>(), Array.Empty<IcdCode>()));
     }
 
     private static string Restore(string text, IReadOnlyDictionary<string, string> map)

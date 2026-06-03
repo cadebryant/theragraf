@@ -2,5 +2,6 @@
 
 public record FinalizeResult(
     SoapNote RestoredNote,
-    IReadOnlyList<CptCode> SuggestedCptCodes
+    IReadOnlyList<CptCode> SuggestedCptCodes,
+    IReadOnlyList<IcdCode> SuggestedIcdCodes
 );

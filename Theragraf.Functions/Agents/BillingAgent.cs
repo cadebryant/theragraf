@@ -97,7 +97,7 @@ public class BillingAgent(Kernel kernel) : BaseAgent(kernel), IBillingAgent
         };
         var result = await Kernel.InvokeAsync(function, arguments);
 
-        var response = JsonSerializer.Deserialize<BillingResponse>(result.ToString(), JsonOptions)!;
+        var response = JsonSerializer.Deserialize<BillingResponse>(StripMarkdownCodeFence(result.ToString()), JsonOptions)!;
         return response.SuggestedCptCodes;
     }
 
