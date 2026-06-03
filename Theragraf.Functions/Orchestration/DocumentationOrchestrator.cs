@@ -22,6 +22,10 @@ public class DocumentationOrchestrator
         var icdCodes     = await context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity",
                                new Icd10ActivityInput(finalized.RestoredNote, input.Discipline));
 
-        return finalized with { SuggestedCptCodes = cptCodes, SuggestedIcdCodes = icdCodes };
+        var result = finalized with { SuggestedCptCodes = cptCodes, SuggestedIcdCodes = icdCodes };
+
+        await context.CallActivityAsync("PersistActivity", new PersistActivityInput(input!, result));
+
+        return result;
     }
 }

@@ -1,6 +1,7 @@
 using Azure;
 using Azure.AI.TextAnalytics;
 using Azure.AI.OpenAI;
+using Azure.Data.Tables;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -71,6 +72,11 @@ var host = new HostBuilder()
         services.AddSingleton<IComplianceAgent, ComplianceAgent>();
         services.AddSingleton<IBillingAgent, BillingAgent>();
         services.AddSingleton<IIcd10Agent, Icd10Agent>();
+
+        // Persistence
+        services.AddSingleton(sp =>
+            new TableServiceClient(config["AzureWebJobsStorage"]!));
+        services.AddSingleton<ISessionRepository, TableStorageSessionRepository>();
     })
     .Build();
 
