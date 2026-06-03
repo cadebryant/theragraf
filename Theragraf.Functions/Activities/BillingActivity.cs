@@ -9,8 +9,8 @@ public class BillingActivity(IBillingAgent billingAgent)
     [Function(nameof(BillingActivity))]
     public async Task<IReadOnlyList<CptCode>> Run([ActivityTrigger] BillingActivityInput input)
     {
-        return await billingAgent.SuggestCptCodesAsync(input.Note, input.Discipline);
+        return await billingAgent.SuggestCptCodesAsync(input.Note, input.Discipline, input.SessionDurationMinutes);
     }
 }
 
-public record BillingActivityInput(SoapNote Note, TherapyDiscipline Discipline);
+public record BillingActivityInput(SoapNote Note, TherapyDiscipline Discipline, int? SessionDurationMinutes);

@@ -82,21 +82,44 @@ public class BillingAgent(Kernel kernel) : BaseAgent(kernel), IBillingAgent
                 "96133 (neuropsychological testing, each additional hour)"
         };
 
-    public async Task<IReadOnlyList<CptCode>> SuggestCptCodesAsync(SoapNote note, TherapyDiscipline discipline)
+    public async Task<IReadOnlyList<CptCode>> SuggestCptCodesAsync(SoapNote note, TherapyDiscipline discipline, int? sessionDurationMinutes)
     {
         var function = Kernel.Plugins.GetFunction("BillingAgent", "BillingAgent");
         var soapJson = JsonSerializer.Serialize(note, JsonOptions);
         var cptList = CptCodeLists[discipline];
+        var timedGuidance = BuildTimedGuidance(sessionDurationMinutes);
         var arguments = new KernelArguments
         {
             ["input"] = soapJson,
             ["cptCodeList"] = cptList,
-            ["discipline"] = discipline.ToString()
+            ["discipline"] = discipline.ToString(),
+            ["timedGuidance"] = timedGuidance
         };
         var result = await Kernel.InvokeAsync(function, arguments);
 
         var response = JsonSerializer.Deserialize<BillingResponse>(result.ToString(), JsonOptions)!;
         return response.SuggestedCptCodes;
+    }
+
+    private static string BuildTimedGuidance(int? durationMinutes)
+    {
+        if (durationMinutes is null)
+            return "Session duration was not provided. Do not suggest billing units for timed codes; note in each timed-code rationale that units could not be calculated.";
+
+        var minutes = durationMinutes.Value;
+
+        // CMS 8-minute rule: a timed unit requires at least 8 minutes of that service.
+        // Each additional unit requires at least 8 minutes; a partial unit >= 8 min rounds up.
+        // Total billable units across all timed codes must not exceed units derivable from total time.
+        var maxUnits = (int)Math.Floor((minutes + 7) / 15.0); // conservative: floor of (minutes / 15)
+
+        return
+            $"Session duration: {minutes} minutes. " +
+            $"Apply the CMS 8-minute rule: each timed-code unit requires at least 8 minutes of direct skilled service. " +
+            $"A partial unit of 8–22 minutes = 1 unit; 23–37 min = 2 units; 38–52 min = 3 units; 53–67 min = 4 units. " +
+            $"The maximum total billable units across all timed codes for this session is approximately {maxUnits}. " +
+            $"Include recommended billing units in the rationale for each timed code. " +
+            $"Untimed codes (e.g. evaluations, self-care training 97535) are billed once per session regardless of duration.";
     }
 
     private record BillingResponse(IReadOnlyList<CptCode> SuggestedCptCodes);

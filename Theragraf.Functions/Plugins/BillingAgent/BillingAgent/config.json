@@ -22,6 +22,11 @@
       "name": "discipline",
       "description": "The therapy discipline (e.g. OccupationalTherapy, PhysicalTherapy, Psychotherapy)",
       "is_required": true
+    },
+    {
+      "name": "timedGuidance",
+      "description": "CMS 8-minute rule guidance and billable unit calculation based on session duration",
+      "is_required": true
     }
   ]
 }

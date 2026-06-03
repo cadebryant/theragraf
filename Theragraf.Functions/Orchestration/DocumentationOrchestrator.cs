@@ -18,7 +18,7 @@ public class DocumentationOrchestrator
         var finalized    = await context.CallActivityAsync<FinalizeResult>("FinalizerActivity",
                                new FinalizeInput(compliance, observation.RedactionMap));
         var cptCodes     = await context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity",
-                               new BillingActivityInput(finalized.RestoredNote, input!.Discipline));
+                               new BillingActivityInput(finalized.RestoredNote, input!.Discipline, input.SessionDurationMinutes));
 
         return finalized with { SuggestedCptCodes = cptCodes };
     }

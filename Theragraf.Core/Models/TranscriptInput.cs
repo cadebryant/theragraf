@@ -11,5 +11,6 @@ public record TranscriptInput(
     string TherapistName,
     string ClientId,
     DateTimeOffset SessionDate,
-    TherapyDiscipline Discipline = TherapyDiscipline.OccupationalTherapy
+    TherapyDiscipline Discipline = TherapyDiscipline.OccupationalTherapy,
+    int? SessionDurationMinutes = null
 );
