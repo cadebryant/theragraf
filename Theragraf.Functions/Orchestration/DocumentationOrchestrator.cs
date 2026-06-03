@@ -24,7 +24,7 @@ public class DocumentationOrchestrator
 
         var result = finalized with { SuggestedCptCodes = cptCodes, SuggestedIcdCodes = icdCodes };
 
-        await context.CallActivityAsync("PersistActivity", new PersistActivityInput(input!, result, compliance));
+        await context.CallActivityAsync("PersistActivity", new PersistActivityInput(input!, result, compliance, observation.RedactionMap));
 
         return result;
     }

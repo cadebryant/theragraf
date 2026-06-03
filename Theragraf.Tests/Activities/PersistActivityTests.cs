@@ -16,6 +16,8 @@ public class PersistActivityTests
 
     private static readonly SoapNote RedactedNote  = new("[PERSON_1] attended.", "Objective.", "Assessment.", "Plan.");
     private static readonly SoapNote RestoredNote  = new("Jane Doe attended.", "Objective.", "Assessment.", "Plan.");
+    private static readonly IReadOnlyDictionary<string, string> RedactionMap =
+        new Dictionary<string, string> { ["[PERSON_1]"] = "Jane Doe" };
     private static readonly CptCode  CptCode1      = new("97530", "Therapeutic activities", "Rationale A");
     private static readonly IcdCode  IcdCode1      = new("F82", "Developmental coordination disorder", "Rationale B");
 
@@ -38,7 +40,7 @@ public class PersistActivityTests
     [Fact]
     public async Task Run_CallsSaveAsync()
     {
-        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote);
+        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote, RedactionMap);
 
         await _sut.Run(input);
 
@@ -48,7 +50,7 @@ public class PersistActivityTests
     [Fact]
     public async Task Run_SetsPartitionKeyToClientId()
     {
-        var input = new PersistActivityInput(BuildInput("client-xyz"), BuildResult(), RedactedNote);
+        var input = new PersistActivityInput(BuildInput("client-xyz"), BuildResult(), RedactedNote, RedactionMap);
 
         await _sut.Run(input);
 
@@ -60,7 +62,7 @@ public class PersistActivityTests
     [Fact]
     public async Task Run_SetsRowKeyFromSessionDate()
     {
-        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote);
+        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote, RedactionMap);
         var expectedRowKey = SessionDate.ToString("yyyy-MM-ddTHH-mm-ssZ");
 
         await _sut.Run(input);
@@ -73,7 +75,7 @@ public class PersistActivityTests
     [Fact]
     public async Task Run_StoresRedactedNoteNotRestoredNote()
     {
-        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote);
+        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote, RedactionMap);
 
         await _sut.Run(input);
 
@@ -87,7 +89,7 @@ public class PersistActivityTests
     [Fact]
     public async Task Run_SerializesCptCodesToJson()
     {
-        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote);
+        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote, RedactionMap);
 
         await _sut.Run(input);
 
@@ -101,7 +103,7 @@ public class PersistActivityTests
     [Fact]
     public async Task Run_SerializesIcdCodesToJson()
     {
-        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote);
+        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote, RedactionMap);
 
         await _sut.Run(input);
 
@@ -115,7 +117,7 @@ public class PersistActivityTests
     [Fact]
     public async Task Run_SetsDisciplineAsString()
     {
-        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote);
+        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote, RedactionMap);
 
         await _sut.Run(input);
 
@@ -127,12 +129,26 @@ public class PersistActivityTests
     [Fact]
     public async Task Run_SetsSessionDurationMinutes()
     {
-        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote);
+        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote, RedactionMap);
 
         await _sut.Run(input);
 
         await _repository.Received(1).SaveAsync(
             Arg.Is<SessionRecord>(r => r.SessionDurationMinutes == 45),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Run_SerializesRedactionMapToJson()
+    {
+        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote, RedactionMap);
+
+        await _sut.Run(input);
+
+        await _repository.Received(1).SaveAsync(
+            Arg.Is<SessionRecord>(r =>
+                r.RedactionMapJson.Contains("[PERSON_1]") &&
+                r.RedactionMapJson.Contains("Jane Doe")),
             Arg.Any<CancellationToken>());
     }
 }

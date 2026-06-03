@@ -195,11 +195,13 @@ public class DocumentationOrchestratorTests
         await _sut.RunOrchestrator(_context);
 
         // PersistActivity receives the compliance (redacted) note — not the restored note
+        // and must include the redaction map so reads can restore PII
         await _context.Received(1).CallActivityAsync(
             "PersistActivity",
             Arg.Is<PersistActivityInput>(p =>
                 p.RedactedNote == complianceNote &&
-                p.OriginalInput == input));
+                p.OriginalInput == input &&
+                p.RedactionMap == observation.RedactionMap));
     }
 
     [Fact]

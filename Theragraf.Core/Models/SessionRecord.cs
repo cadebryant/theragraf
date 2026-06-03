@@ -17,6 +17,9 @@ public class SessionRecord
     public string Discipline { get; set; } = string.Empty;
     public int? SessionDurationMinutes { get; set; }
 
+    /// <summary>JSON-serialized redaction map (placeholder → original PII text).</summary>
+    public string RedactionMapJson { get; set; } = string.Empty;
+
     /// <summary>JSON-serialized <see cref="SoapNote"/>.</summary>
     public string SoapNoteJson { get; set; } = string.Empty;
 

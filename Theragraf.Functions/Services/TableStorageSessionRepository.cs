@@ -23,6 +23,7 @@ public class TableStorageSessionRepository : ISessionRepository
             { nameof(SessionRecord.TherapistName),         record.TherapistName },
             { nameof(SessionRecord.Discipline),            record.Discipline },
             { nameof(SessionRecord.SessionDurationMinutes), record.SessionDurationMinutes },
+            { nameof(SessionRecord.RedactionMapJson),      record.RedactionMapJson },
             { nameof(SessionRecord.SoapNoteJson),          record.SoapNoteJson },
             { nameof(SessionRecord.CptCodesJson),          record.CptCodesJson },
             { nameof(SessionRecord.IcdCodesJson),          record.IcdCodesJson },
@@ -63,9 +64,19 @@ public class TableStorageSessionRepository : ISessionRepository
 
     private static SessionResponse MapToResponse(TableEntity entity)
     {
+        var redactionMap = JsonSerializer.Deserialize<Dictionary<string, string>>(
+            entity.GetString(nameof(SessionRecord.RedactionMapJson)) ?? "{}") ?? [];
+
         var soapNote    = JsonSerializer.Deserialize<SoapNote>(entity.GetString(nameof(SessionRecord.SoapNoteJson))    ?? "{}") ?? new SoapNote("", "", "", "");
         var cptCodes    = JsonSerializer.Deserialize<List<CptCode>>(entity.GetString(nameof(SessionRecord.CptCodesJson)) ?? "[]") ?? [];
         var icdCodes    = JsonSerializer.Deserialize<List<IcdCode>>(entity.GetString(nameof(SessionRecord.IcdCodesJson)) ?? "[]") ?? [];
+
+        var restoredNote = new SoapNote(
+            Subjective: Restore(soapNote.Subjective, redactionMap),
+            Objective:  Restore(soapNote.Objective,  redactionMap),
+            Assessment: Restore(soapNote.Assessment, redactionMap),
+            Plan:       Restore(soapNote.Plan,        redactionMap)
+        );
 
         return new SessionResponse(
             ClientId:              entity.PartitionKey,
@@ -73,10 +84,17 @@ public class TableStorageSessionRepository : ISessionRepository
             TherapistName:         entity.GetString(nameof(SessionRecord.TherapistName)) ?? "",
             Discipline:            entity.GetString(nameof(SessionRecord.Discipline)) ?? "",
             SessionDurationMinutes: entity.TryGetValue(nameof(SessionRecord.SessionDurationMinutes), out var dur) ? dur as int? : null,
-            SoapNote:              soapNote,
+            SoapNote:              restoredNote,
             SuggestedCptCodes:     cptCodes,
             SuggestedIcdCodes:     icdCodes,
             CreatedAt:             entity.GetDateTimeOffset(nameof(SessionRecord.CreatedAt)) ?? DateTimeOffset.MinValue
         );
+    }
+
+    private static string Restore(string text, IReadOnlyDictionary<string, string> map)
+    {
+        foreach (var (placeholder, original) in map)
+            text = text.Replace(placeholder, original);
+        return text;
     }
 }
