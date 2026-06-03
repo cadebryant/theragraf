@@ -81,6 +81,26 @@ public class PiiRedactionServiceTests
     }
 
     [Fact]
+    public async Task RedactAsync_RepeatedEntityText_ReusesSamePlaceholder()
+    {
+        // "John Smith" appears twice; both occurrences should map to the same [PERSON_1]
+        // so the redaction map has exactly one entry and both can be restored.
+        const string raw = "John Smith called. Later John Smith left.";
+        var entity1 = CreatePiiEntity("John Smith", PiiEntityCategory.Person, offset: 0, length: 10);
+        var entity2 = CreatePiiEntity("John Smith", PiiEntityCategory.Person, offset: 19, length: 10);
+
+        _adapter.RecognizePiiEntitiesAsync(raw, "en", Arg.Any<RecognizePiiEntitiesOptions>())
+                .Returns(new List<PiiEntity> { entity1, entity2 });
+
+        var (redacted, map) = await _sut.RedactAsync(raw);
+
+        map.Should().HaveCount(1, "repeated entity text should reuse a single placeholder");
+        map.Should().ContainKey("[PERSON_1]").WhoseValue.Should().Be("John Smith");
+        redacted.Should().NotContain("John Smith");
+        redacted.Should().Contain("[PERSON_1]");
+    }
+
+    [Fact]
     public async Task RedactAsync_AdapterThrows_ExceptionPropagates()
     {
         _adapter.RecognizePiiEntitiesAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<RecognizePiiEntitiesOptions>())

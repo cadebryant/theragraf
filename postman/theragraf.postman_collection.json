@@ -12,7 +12,8 @@
     { "key": "durableCode",         "value": "YOUR_DURABLE_CODE" },
     { "key": "instanceId",          "value": "" },
     { "key": "statusCode",          "value": "" },
-    { "key": "generatedTranscript", "value": "" }
+    { "key": "generatedTranscript", "value": "" },
+    { "key": "sessionDate",         "value": "" }
   ],
   "item": [
     {
@@ -139,6 +140,64 @@
       "request": {
         "method": "GET",
         "url": "{{baseUrl}}/runtime/webhooks/durabletask/instances/{{instanceId}}?code={{durableCode}}"
+      }
+    },
+    {
+      "name": "4 - Get All Sessions for Client",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('Response is an array', () => pm.expect(json).to.be.an('array'));",
+              "if (json.length > 0) {",
+              "    const first = json[0];",
+              "    pm.test('Session has clientId', () => pm.expect(first.clientId).to.be.a('string'));",
+              "    pm.test('Session has sessionDate', () => pm.expect(first.sessionDate).to.be.a('string'));",
+              "    pm.test('Session has soapNote', () => pm.expect(first.soapNote).to.be.an('object'));",
+              "    pm.test('Session has CPT codes', () => pm.expect(first.suggestedCptCodes).to.be.an('array'));",
+              "    pm.test('Session has ICD codes', () => pm.expect(first.suggestedIcdCodes).to.be.an('array'));",
+              "    pm.collectionVariables.set('sessionDate', first.sessionDate);",
+              "    console.log('Latest session date saved:', first.sessionDate);",
+              "}",
+              "console.log('Sessions found:', json.length);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/sessions/client-001?code={{durableCode}}"
+      }
+    },
+    {
+      "name": "5 - Get Specific Session by Client and Date",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 or 404', () => {",
+              "    pm.expect([200, 404]).to.include(pm.response.code);",
+              "});",
+              "if (pm.response.code === 200) {",
+              "    const json = pm.response.json();",
+              "    pm.test('Has clientId', () => pm.expect(json.clientId).to.be.a('string'));",
+              "    pm.test('Has soapNote', () => pm.expect(json.soapNote).to.be.an('object'));",
+              "    pm.test('SoapNote has Subjective', () => pm.expect(json.soapNote.subjective).to.be.a('string'));",
+              "    pm.test('Has CPT codes', () => pm.expect(json.suggestedCptCodes).to.be.an('array'));",
+              "    pm.test('Has ICD codes', () => pm.expect(json.suggestedIcdCodes).to.be.an('array'));",
+              "    console.log('Session:', JSON.stringify(json, null, 2));",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/sessions/client-001/{{sessionDate}}?code={{durableCode}}"
       }
     }
   ]

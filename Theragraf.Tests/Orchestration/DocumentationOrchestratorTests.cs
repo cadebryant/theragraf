@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.DurableTask;
 using NSubstitute;
 using Theragraf.Core.Models;
+using Theragraf.Functions.Activities;
 using Theragraf.Functions.Orchestration;
 
 namespace Theragraf.Tests.Orchestration;
@@ -125,6 +126,101 @@ public class DocumentationOrchestratorTests
             Arg.Is<FinalizeInput>(fi =>
                 fi.Note == complianceNote &&
                 fi.RedactionMap == observation.RedactionMap));
+    }
+
+    [Fact]
+    public async Task RunOrchestrator_PassesRestoredNoteAndDisciplineToBillingActivity()
+    {
+        var input = BuildTranscriptInput();
+        var observation = BuildObservation();
+        var finalized = BuildFinalizeResult("_final");
+        _context.GetInput<TranscriptInput>().Returns(input);
+        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
+        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
+        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
+        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(finalized);
+        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
+        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
+
+        await _sut.RunOrchestrator(_context);
+
+        await _context.Received(1).CallActivityAsync<IReadOnlyList<CptCode>>(
+            "BillingActivity",
+            Arg.Is<BillingActivityInput>(b =>
+                b.Note == finalized.RestoredNote &&
+                b.Discipline == input.Discipline &&
+                b.SessionDurationMinutes == input.SessionDurationMinutes));
+    }
+
+    [Fact]
+    public async Task RunOrchestrator_PassesRestoredNoteAndDisciplineToIcd10Activity()
+    {
+        var input = BuildTranscriptInput();
+        var observation = BuildObservation();
+        var finalized = BuildFinalizeResult("_final");
+        _context.GetInput<TranscriptInput>().Returns(input);
+        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
+        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
+        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
+        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(finalized);
+        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
+        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
+
+        await _sut.RunOrchestrator(_context);
+
+        await _context.Received(1).CallActivityAsync<IReadOnlyList<IcdCode>>(
+            "Icd10Activity",
+            Arg.Is<Icd10ActivityInput>(i =>
+                i.Note == finalized.RestoredNote &&
+                i.Discipline == input.Discipline));
+    }
+
+    [Fact]
+    public async Task RunOrchestrator_CallsPersistActivityWithComplianceNoteAndCodes()
+    {
+        var input = BuildTranscriptInput();
+        var observation = BuildObservation();
+        var complianceNote = BuildSoapNote("_compliant");
+        var finalized = BuildFinalizeResult("_final");
+        var cptCodes = new[] { new CptCode("97530", "Therapeutic activities", "Reason") };
+        var icdCodes = new[] { new IcdCode("F82", "Coordination disorder", "Reason") };
+        _context.GetInput<TranscriptInput>().Returns(input);
+        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
+        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
+        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(complianceNote);
+        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(finalized);
+        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns((IReadOnlyList<CptCode>)cptCodes);
+        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns((IReadOnlyList<IcdCode>)icdCodes);
+
+        await _sut.RunOrchestrator(_context);
+
+        // PersistActivity receives the compliance (redacted) note — not the restored note
+        await _context.Received(1).CallActivityAsync(
+            "PersistActivity",
+            Arg.Is<PersistActivityInput>(p =>
+                p.RedactedNote == complianceNote &&
+                p.OriginalInput == input));
+    }
+
+    [Fact]
+    public async Task RunOrchestrator_ResultContainsMergedCptAndIcdCodes()
+    {
+        var observation = BuildObservation();
+        var finalized = BuildFinalizeResult("_final");
+        var cptCodes = new[] { new CptCode("97530", "Therapeutic activities", "Reason") };
+        var icdCodes = new[] { new IcdCode("F82", "Coordination disorder", "Reason") };
+        _context.GetInput<TranscriptInput>().Returns(BuildTranscriptInput());
+        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
+        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
+        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
+        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(finalized);
+        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns((IReadOnlyList<CptCode>)cptCodes);
+        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns((IReadOnlyList<IcdCode>)icdCodes);
+
+        var result = await _sut.RunOrchestrator(_context);
+
+        result.SuggestedCptCodes.Should().BeEquivalentTo(cptCodes);
+        result.SuggestedIcdCodes.Should().BeEquivalentTo(icdCodes);
     }
 }
 
