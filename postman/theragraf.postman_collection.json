@@ -13,6 +13,7 @@
     { "key": "instanceId",          "value": "" },
     { "key": "statusCode",          "value": "" },
     { "key": "generatedTranscript", "value": "" },
+    { "key": "therapistName",       "value": "" },
     { "key": "sessionDate",         "value": "" }
   ],
   "item": [
@@ -24,12 +25,25 @@
           "script": {
             "exec": [
               "const json = pm.response.json();",
-              "const transcript = json.choices[0].message.content;",
-              "pm.collectionVariables.set('generatedTranscript', transcript);",
+              "const raw = json.choices[0].message.content;",
+              "let parsed;",
+              "try {",
+              "    // Strip markdown code fences if the model wrapped the JSON",
+              "    const clean = raw.replace(/^```(?:json)?\\s*/i, '').replace(/```\\s*$/,'').trim();",
+              "    parsed = JSON.parse(clean);",
+              "} catch (e) {",
+              "    throw new Error('Step 1 response was not valid JSON. Raw content: ' + raw.substring(0, 300));",
+              "}",
+              "pm.collectionVariables.set('generatedTranscript', parsed.transcript);",
+              "pm.collectionVariables.set('therapistName', parsed.therapistName);",
               "pm.test('Transcript generated', () => {",
-              "    pm.expect(transcript).to.be.a('string').and.have.length.greaterThan(100);",
+              "    pm.expect(parsed.transcript).to.be.a('string').and.have.length.greaterThan(100);",
               "});",
-              "console.log('Generated transcript:', transcript);"
+              "pm.test('Therapist name extracted', () => {",
+              "    pm.expect(parsed.therapistName).to.be.a('string').and.have.length.greaterThan(0);",
+              "});",
+              "console.log('Therapist name:', parsed.therapistName);",
+              "console.log('Generated transcript:', parsed.transcript);"
             ]
           }
         }
@@ -43,7 +57,7 @@
         "url": "{{aoaiEndpoint}}/openai/deployments/{{aoaiDeployment}}/chat/completions?api-version={{aoaiApiVersion}}",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are generating realistic synthetic occupational therapy session transcripts for software testing purposes. Always use clearly fictional names. Include natural dialogue, OT-specific assessments, and functional goals. The transcript should feel like a real 20-minute session with back-and-forth conversation.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate a realistic 20-minute occupational therapy session transcript. Use random seed {{$randomInt}} to ensure variety. Randomly pick one of these scenarios: (1) stroke patient relearning ADLs such as dressing and grooming, (2) pediatric patient with fine motor delays working on handwriting and scissor skills, (3) adult with TBI working on cognitive rehabilitation including memory and executive function, (4) elderly patient recovering from hip replacement focusing on safe transfers and home modifications, (5) child with sensory processing disorder working on sensory integration, (6) adult with hand injury doing range of motion and strengthening exercises. Use completely different fictional patient and therapist names each time. Include functional assessments with specific scores or measurements, detailed patient responses showing progress or struggle, therapist clinical reasoning, home exercise program discussion, and a plan for the next session.\"\n    }\n  ],\n  \"temperature\": 1.2,\n  \"max_tokens\": 2000\n}"
+          "raw": "{\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are generating realistic synthetic occupational therapy session transcripts for software testing purposes. Always use clearly fictional names. Include natural dialogue, OT-specific assessments, and functional goals. The transcript should feel like a real 20-minute session with back-and-forth conversation. You must respond with valid JSON only — no markdown, no code fences, no extra text. The JSON must have exactly two fields: therapistName (string, the full name of the therapist in the transcript) and transcript (string, the full transcript text).\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate a realistic 20-minute occupational therapy session transcript. Use random seed {{$randomInt}} to ensure variety. Randomly pick one of these scenarios: (1) stroke patient relearning ADLs such as dressing and grooming, (2) pediatric patient with fine motor delays working on handwriting and scissor skills, (3) adult with TBI working on cognitive rehabilitation including memory and executive function, (4) elderly patient recovering from hip replacement focusing on safe transfers and home modifications, (5) child with sensory processing disorder working on sensory integration, (6) adult with hand injury doing range of motion and strengthening exercises. Use completely different fictional patient and therapist names each time. Include functional assessments with specific scores or measurements, detailed patient responses showing progress or struggle, therapist clinical reasoning, home exercise program discussion, and a plan for the next session. Return only a JSON object with fields therapistName and transcript.\"\n    }\n  ],\n  \"temperature\": 1.2,\n  \"max_tokens\": 2500\n}"
         }
       }
     },
@@ -55,18 +69,23 @@
           "script": {
             "exec": [
               "const transcript = pm.collectionVariables.get('generatedTranscript');",
+              "const therapistName = pm.collectionVariables.get('therapistName');",
               "if (!transcript) {",
               "    throw new Error('No transcript found. Run step 1 first.');",
               "}",
+              "if (!therapistName) {",
+              "    throw new Error('No therapist name found. Run step 1 first.');",
+              "}",
               "const body = JSON.stringify({",
               "    clientId: 'client-001',",
-              "    therapistName: 'Dr. Jane Doe',",
+              "    therapistName: therapistName,",
               "    sessionDate: new Date().toISOString(),",
               "    discipline: 0,",
               "    sessionDurationMinutes: 45,",
               "    rawTranscript: transcript",
               "});",
-              "pm.collectionVariables.set('requestBody', body);"
+              "pm.collectionVariables.set('requestBody', body);",
+              "console.log('Therapist name:', therapistName);"
             ]
           }
         },
