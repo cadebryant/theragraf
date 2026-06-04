@@ -3,8 +3,9 @@ namespace Theragraf.Functions.Agents;
 using System.Text.Json;
 using Microsoft.SemanticKernel;
 using Theragraf.Core.Models;
+using Theragraf.Core.Services;
 
-public class BillingAgent(Kernel kernel) : BaseAgent(kernel), IBillingAgent
+public class BillingAgent(Kernel kernel, ICmsUnitCalculator unitCalculator) : BaseAgent(kernel), IBillingAgent
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -98,7 +99,17 @@ public class BillingAgent(Kernel kernel) : BaseAgent(kernel), IBillingAgent
         var result = await Kernel.InvokeAsync(function, arguments);
 
         var response = JsonSerializer.Deserialize<BillingResponse>(StripMarkdownCodeFence(result.ToString()), JsonOptions)!;
-        return response.SuggestedCptCodes;
+
+        // Validate/clamp the LLM-suggested units with the deterministic 8-minute rule engine
+        // so a hallucinated unit count can never propagate to a claim.
+        var validated = response.SuggestedCptCodes
+            .Select(c => c with
+            {
+                BillableUnits = unitCalculator.ClampUnits(c.Code, c.BillableUnits, sessionDurationMinutes)
+            })
+            .ToList();
+
+        return validated;
     }
 
     private static string BuildTimedGuidance(int? durationMinutes)

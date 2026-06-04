@@ -3,5 +3,6 @@ namespace Theragraf.Core.Models;
 public record CptCode(
     string Code,
     string Description,
-    string Rationale
+    string Rationale,
+    int BillableUnits = 1
 );

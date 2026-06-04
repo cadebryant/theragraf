@@ -70,6 +70,7 @@ var host = new HostBuilder()
 
         services.AddSingleton<ISoapAgent, SoapAgent>();
         services.AddSingleton<IComplianceAgent, ComplianceAgent>();
+        services.AddSingleton<ICmsUnitCalculator, CmsUnitCalculator>();
         services.AddSingleton<IBillingAgent, BillingAgent>();
         services.AddSingleton<IIcd10Agent, Icd10Agent>();
 

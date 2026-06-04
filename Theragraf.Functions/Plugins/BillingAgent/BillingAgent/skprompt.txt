@@ -6,7 +6,10 @@ Only recommend codes from the following list that are supported by the session d
 Timed code guidance:
 {{$timedGuidance}}
 
-For each suggested code, provide a concise rationale grounded in the specific content of the SOAP note. For timed codes, include recommended billing units in the rationale. Only include codes that are clearly supported by the documented interventions or evaluations. Do not suggest codes for services not evidenced in the note.
+For each suggested code, provide a concise rationale grounded in the specific content of the SOAP note.
+For timed codes, set BillableUnits to the number of 15-minute units supported by the session duration and documentation.
+For untimed codes (evaluations, self-care training, group, modalities), always set BillableUnits to 1.
+Only include codes that are clearly supported by the documented interventions or evaluations. Do not suggest codes for services not evidenced in the note.
 
 SOAP Note:
 {{$input}}
@@ -14,6 +17,6 @@ SOAP Note:
 Respond ONLY with valid JSON in this exact format:
 {
   "SuggestedCptCodes": [
-    { "Code": "97530", "Description": "Therapeutic activities", "Rationale": "..." }
+    { "Code": "97530", "Description": "Therapeutic activities", "Rationale": "...", "BillableUnits": 2 }
   ]
 }
