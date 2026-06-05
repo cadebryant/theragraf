@@ -6,7 +6,7 @@
   "variable": [
     {
       "key": "aoaiEndpoint",
-      "value": "https://theragraf-oai.openai.azure.com"
+      "value": "https://cadehbryant-theragraf-resource.services.ai.azure.com"
     },
     {
       "key": "aoaiDeployment",
@@ -367,7 +367,7 @@
                 "value": "application/json"
               }
             ],
-            "url": "{{liveBaseUrl}}/api/DocumentationStart",
+            "url": "{{liveBaseUrl}}/api/DocumentationStart?code={{liveDurableCode}}",
             "body": {
               "mode": "raw",
               "raw": "{{requestBody}}"
@@ -417,7 +417,7 @@
           ],
           "request": {
             "method": "GET",
-            "url": "{{liveBaseUrl}}/runtime/webhooks/durabletask/instances/{{instanceId}}?code={{liveDurableCode}}"
+            "url": "{{statusQueryGetUri}}"
           }
         },
         {
