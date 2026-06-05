@@ -12,5 +12,7 @@ public record TranscriptInput(
     string ClientId,
     DateTimeOffset SessionDate,
     TherapyDiscipline Discipline = TherapyDiscipline.OccupationalTherapy,
-    int? SessionDurationMinutes = null
+    int? SessionDurationMinutes = null,
+    ClinicalSetting Setting = ClinicalSetting.Outpatient,
+    PayerType Payer = PayerType.Medicare
 );

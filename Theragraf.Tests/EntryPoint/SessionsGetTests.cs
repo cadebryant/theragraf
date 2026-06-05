@@ -24,6 +24,8 @@ public class SessionsGetTests
         SessionDate: "2024-10-10T10-00-00Z",
         TherapistName: "Dr. Adams",
         Discipline: "OccupationalTherapy",
+        Setting: "Outpatient",
+        Payer: "Medicare",
         SessionDurationMinutes: 45,
         SoapNote: new SoapNote("S", "O", "A", "P"),
         SuggestedCptCodes: new List<CptCode> { new("97530", "Therapeutic activities", "Rationale") },

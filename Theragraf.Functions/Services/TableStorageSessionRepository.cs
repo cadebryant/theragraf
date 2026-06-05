@@ -22,6 +22,8 @@ public class TableStorageSessionRepository : ISessionRepository
         {
             { nameof(SessionRecord.TherapistName),         record.TherapistName },
             { nameof(SessionRecord.Discipline),            record.Discipline },
+            { nameof(SessionRecord.Setting),               record.Setting },
+            { nameof(SessionRecord.Payer),                 record.Payer },
             { nameof(SessionRecord.SessionDurationMinutes), record.SessionDurationMinutes },
             { nameof(SessionRecord.RedactionMapJson),      record.RedactionMapJson },
             { nameof(SessionRecord.SoapNoteJson),          record.SoapNoteJson },
@@ -83,6 +85,8 @@ public class TableStorageSessionRepository : ISessionRepository
             SessionDate:           entity.RowKey,
             TherapistName:         entity.GetString(nameof(SessionRecord.TherapistName)) ?? "",
             Discipline:            entity.GetString(nameof(SessionRecord.Discipline)) ?? "",
+            Setting:               entity.GetString(nameof(SessionRecord.Setting)) ?? "",
+            Payer:                 entity.GetString(nameof(SessionRecord.Payer)) ?? "",
             SessionDurationMinutes: entity.TryGetValue(nameof(SessionRecord.SessionDurationMinutes), out var dur) ? dur as int? : null,
             SoapNote:              restoredNote,
             SuggestedCptCodes:     cptCodes,

@@ -25,7 +25,7 @@ public class BillingActivityTests
     public async Task Run_DelegatesToBillingAgent()
     {
         var input = new BillingActivityInput(Note, TherapyDiscipline.OccupationalTherapy, 45);
-        _billingAgent.SuggestCptCodesAsync(Note, TherapyDiscipline.OccupationalTherapy, 45)
+        _billingAgent.SuggestCptCodesAsync(Note, TherapyDiscipline.OccupationalTherapy, 45, ClinicalSetting.Outpatient, PayerType.Medicare)
             .Returns(new List<CptCode> { Code1 });
 
         var result = await _sut.Run(input);
@@ -37,24 +37,24 @@ public class BillingActivityTests
     public async Task Run_PassesCorrectDisciplineAndDuration()
     {
         var input = new BillingActivityInput(Note, TherapyDiscipline.PhysicalTherapy, 60);
-        _billingAgent.SuggestCptCodesAsync(Arg.Any<SoapNote>(), Arg.Any<TherapyDiscipline>(), Arg.Any<int?>())
+        _billingAgent.SuggestCptCodesAsync(Arg.Any<SoapNote>(), Arg.Any<TherapyDiscipline>(), Arg.Any<int?>(), Arg.Any<ClinicalSetting>(), Arg.Any<PayerType>())
             .Returns(new List<CptCode>());
 
         await _sut.Run(input);
 
-        await _billingAgent.Received(1).SuggestCptCodesAsync(Note, TherapyDiscipline.PhysicalTherapy, 60);
+        await _billingAgent.Received(1).SuggestCptCodesAsync(Note, TherapyDiscipline.PhysicalTherapy, 60, ClinicalSetting.Outpatient, PayerType.Medicare);
     }
 
     [Fact]
     public async Task Run_NullSessionDuration_PassedThroughToAgent()
     {
         var input = new BillingActivityInput(Note, TherapyDiscipline.OccupationalTherapy, null);
-        _billingAgent.SuggestCptCodesAsync(Arg.Any<SoapNote>(), Arg.Any<TherapyDiscipline>(), null)
+        _billingAgent.SuggestCptCodesAsync(Arg.Any<SoapNote>(), Arg.Any<TherapyDiscipline>(), null, Arg.Any<ClinicalSetting>(), Arg.Any<PayerType>())
             .Returns(new List<CptCode> { Code1 });
 
         var result = await _sut.Run(input);
 
-        await _billingAgent.Received(1).SuggestCptCodesAsync(Note, TherapyDiscipline.OccupationalTherapy, null);
+        await _billingAgent.Received(1).SuggestCptCodesAsync(Note, TherapyDiscipline.OccupationalTherapy, null, ClinicalSetting.Outpatient, PayerType.Medicare);
         result.Should().ContainSingle();
     }
 
@@ -62,7 +62,7 @@ public class BillingActivityTests
     public async Task Run_ReturnsAllCodesFromAgent()
     {
         var input = new BillingActivityInput(Note, TherapyDiscipline.OccupationalTherapy, 45);
-        _billingAgent.SuggestCptCodesAsync(Arg.Any<SoapNote>(), Arg.Any<TherapyDiscipline>(), Arg.Any<int?>())
+        _billingAgent.SuggestCptCodesAsync(Arg.Any<SoapNote>(), Arg.Any<TherapyDiscipline>(), Arg.Any<int?>(), Arg.Any<ClinicalSetting>(), Arg.Any<PayerType>())
             .Returns(new List<CptCode> { Code1, Code2 });
 
         var result = await _sut.Run(input);
@@ -74,7 +74,7 @@ public class BillingActivityTests
     public async Task Run_AgentThrows_ExceptionPropagates()
     {
         var input = new BillingActivityInput(Note, TherapyDiscipline.OccupationalTherapy, 45);
-        _billingAgent.SuggestCptCodesAsync(Arg.Any<SoapNote>(), Arg.Any<TherapyDiscipline>(), Arg.Any<int?>())
+        _billingAgent.SuggestCptCodesAsync(Arg.Any<SoapNote>(), Arg.Any<TherapyDiscipline>(), Arg.Any<int?>(), Arg.Any<ClinicalSetting>(), Arg.Any<PayerType>())
             .Returns<IReadOnlyList<CptCode>>(_ => throw new InvalidOperationException("LLM unavailable"));
 
         var act = async () => await _sut.Run(input);

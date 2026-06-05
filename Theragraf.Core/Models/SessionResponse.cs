@@ -9,6 +9,8 @@ public record SessionResponse(
     string SessionDate,
     string TherapistName,
     string Discipline,
+    string Setting,
+    string Payer,
     int? SessionDurationMinutes,
     SoapNote SoapNote,
     IReadOnlyList<CptCode> SuggestedCptCodes,

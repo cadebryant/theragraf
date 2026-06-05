@@ -26,7 +26,8 @@ public class PersistActivityTests
 
     private static TranscriptInput BuildInput(string clientId = "client-001") =>
         new("Raw transcript.", "Dr. Adams", clientId, SessionDate,
-            TherapyDiscipline.OccupationalTherapy, 45);
+            TherapyDiscipline.OccupationalTherapy, 45,
+            ClinicalSetting.Outpatient, PayerType.Medicare);
 
     private static FinalizeResult BuildResult() =>
         new(RestoredNote, new List<CptCode> { CptCode1 }, new List<IcdCode> { IcdCode1 });
@@ -135,6 +136,45 @@ public class PersistActivityTests
 
         await _repository.Received(1).SaveAsync(
             Arg.Is<SessionRecord>(r => r.SessionDurationMinutes == 45),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Run_SetsSettingAsString()
+    {
+        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote, RedactionMap);
+
+        await _sut.Run(input);
+
+        await _repository.Received(1).SaveAsync(
+            Arg.Is<SessionRecord>(r => r.Setting == "Outpatient"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Run_SetsPayerAsString()
+    {
+        var input = new PersistActivityInput(BuildInput(), BuildResult(), RedactedNote, RedactionMap);
+
+        await _sut.Run(input);
+
+        await _repository.Received(1).SaveAsync(
+            Arg.Is<SessionRecord>(r => r.Payer == "Medicare"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Run_SetsSnfSettingAsString()
+    {
+        var snfInput = new TranscriptInput("Raw transcript.", "Dr. Adams", "client-001", SessionDate,
+            TherapyDiscipline.OccupationalTherapy, 45,
+            ClinicalSetting.SkilledNursingFacility, PayerType.Medicare);
+        var input = new PersistActivityInput(snfInput, BuildResult(), RedactedNote, RedactionMap);
+
+        await _sut.Run(input);
+
+        await _repository.Received(1).SaveAsync(
+            Arg.Is<SessionRecord>(r => r.Setting == "SkilledNursingFacility" && r.Payer == "Medicare"),
             Arg.Any<CancellationToken>());
     }
 

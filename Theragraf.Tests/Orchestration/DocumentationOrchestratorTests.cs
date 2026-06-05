@@ -149,7 +149,9 @@ public class DocumentationOrchestratorTests
             Arg.Is<BillingActivityInput>(b =>
                 b.Note == finalized.RestoredNote &&
                 b.Discipline == input.Discipline &&
-                b.SessionDurationMinutes == input.SessionDurationMinutes));
+                b.SessionDurationMinutes == input.SessionDurationMinutes &&
+                b.Setting == input.Setting &&
+                b.Payer == input.Payer));
     }
 
     [Fact]

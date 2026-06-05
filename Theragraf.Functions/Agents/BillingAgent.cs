@@ -83,18 +83,25 @@ public class BillingAgent(Kernel kernel, ICmsUnitCalculator unitCalculator) : Ba
                 "96133 (neuropsychological testing, each additional hour)"
         };
 
-    public async Task<IReadOnlyList<CptCode>> SuggestCptCodesAsync(SoapNote note, TherapyDiscipline discipline, int? sessionDurationMinutes)
+    public async Task<IReadOnlyList<CptCode>> SuggestCptCodesAsync(
+        SoapNote note,
+        TherapyDiscipline discipline,
+        int? sessionDurationMinutes,
+        ClinicalSetting setting = ClinicalSetting.Outpatient,
+        PayerType payer = PayerType.Medicare)
     {
         var function = Kernel.Plugins.GetFunction("BillingAgent", "BillingAgent");
         var soapJson = JsonSerializer.Serialize(note, JsonOptions);
         var cptList = CptCodeLists[discipline];
-        var timedGuidance = BuildTimedGuidance(sessionDurationMinutes);
+        var timedGuidance = BuildTimedGuidance(sessionDurationMinutes, setting, payer);
         var arguments = new KernelArguments
         {
             ["input"] = soapJson,
             ["cptCodeList"] = cptList,
             ["discipline"] = discipline.ToString(),
-            ["timedGuidance"] = timedGuidance
+            ["timedGuidance"] = timedGuidance,
+            ["setting"] = setting.ToString(),
+            ["payer"] = payer.ToString()
         };
         var result = await Kernel.InvokeAsync(function, arguments);
 
@@ -112,25 +119,95 @@ public class BillingAgent(Kernel kernel, ICmsUnitCalculator unitCalculator) : Ba
         return validated;
     }
 
-    private static string BuildTimedGuidance(int? durationMinutes)
+    private static string BuildTimedGuidance(int? durationMinutes, ClinicalSetting setting, PayerType payer)
     {
+        // School-based and Early Intervention services are not billed to insurance via CPT timed units.
+        if (setting is ClinicalSetting.SchoolBased or ClinicalSetting.EarlyIntervention)
+            return
+                $"Setting: {setting}. Payer: {payer}. " +
+                "This setting does not use insurance-based CPT timed unit billing. " +
+                "Services are funded through school district or state program budgets (IDEA/504 or Early Intervention). " +
+                "Do not suggest timed billing units. Instead, note that documentation serves IEP/IFSP compliance, and only include CPT codes if the specific program requires them for Medicaid school-based claiming.";
+
+        // SNF Part A uses Medicare per-diem; timed CPT codes are not separately billable under Part A.
+        if (setting is ClinicalSetting.SkilledNursingFacility && payer is PayerType.Medicare)
+            return
+                $"Setting: {setting}. Payer: {payer}. " +
+                "Under Medicare Part A, SNF therapy is reimbursed via per-diem rates (PDPM). " +
+                "Individual CPT timed units are NOT separately billable — do not suggest timed billing units. " +
+                "Focus on evaluation codes and note total treatment minutes for PDPM classification. " +
+                "If the payer is Medicare Advantage or commercial, standard CPT billing may apply — verify the plan policy.";
+
+        // Inpatient acute hospital: CPT codes are typically bundled in the DRG; timed units not separately billed.
+        if (setting is ClinicalSetting.Inpatient)
+            return
+                $"Setting: {setting}. Payer: {payer}. " +
+                "Inpatient acute hospital therapy is typically bundled in the DRG payment. " +
+                "Timed CPT codes are generally not separately billable in this setting. " +
+                "Include evaluation codes where appropriate and document total treatment minutes for resource tracking.";
+
+        // Telehealth: standard timed rules apply but GT/95 modifier is required by most payers.
+        if (setting is ClinicalSetting.Telehealth)
+        {
+            var modifierNote = payer switch
+            {
+                PayerType.Medicare or PayerType.MedicareAdvantage =>
+                    "Append modifier GT (synchronous telehealth) or 95 to each applicable code per payer policy.",
+                PayerType.Medicaid =>
+                    "Telehealth coverage and modifiers vary by state Medicaid program. Verify state-specific policy before billing.",
+                _ =>
+                    "Verify telehealth coverage with the specific plan; append modifier 95 or GT as required by the payer."
+            };
+            return BuildCmsTimedGuidanceText(durationMinutes, setting, payer) +
+                   $" TELEHEALTH NOTE: {modifierNote}";
+        }
+
+        // Home Health: Medicare covers under a benefit period (not timed CPT units per visit for Part A).
+        if (setting is ClinicalSetting.HomeHealth && payer is PayerType.Medicare)
+            return
+                $"Setting: {setting}. Payer: {payer}. " +
+                "Medicare Home Health is reimbursed under PDGM (episode-based). " +
+                "Individual timed CPT units are not separately billable under Medicare Part A home health. " +
+                "Document visit type and functional goals. If billing Part B outpatient therapy in the home, standard CPT timed rules apply.";
+
+        // Standard outpatient or commercial/other: CMS 8-minute rule applies.
+        return BuildCmsTimedGuidanceText(durationMinutes, setting, payer);
+    }
+
+    private static string BuildCmsTimedGuidanceText(int? durationMinutes, ClinicalSetting setting, PayerType payer)
+    {
+        var contextPrefix = $"Setting: {setting}. Payer: {payer}. ";
+
         if (durationMinutes is null)
-            return "Session duration was not provided. Do not suggest billing units for timed codes; note in each timed-code rationale that units could not be calculated.";
+            return contextPrefix +
+                "Session duration was not provided. Do not suggest billing units for timed codes; note in each timed-code rationale that units could not be calculated.";
 
         var minutes = durationMinutes.Value;
+        var maxUnits = (int)Math.Floor((minutes + 7) / 15.0);
 
-        // CMS 8-minute rule: a timed unit requires at least 8 minutes of that service.
-        // Each additional unit requires at least 8 minutes; a partial unit >= 8 min rounds up.
-        // Total billable units across all timed codes must not exceed units derivable from total time.
-        var maxUnits = (int)Math.Floor((minutes + 7) / 15.0); // conservative: floor of (minutes / 15)
+        var payerNote = payer switch
+        {
+            PayerType.MedicareAdvantage =>
+                " Note: Medicare Advantage plans use the same CPT codes as traditional Medicare but may impose their own annual therapy caps or prior-authorization requirements — verify plan policy.",
+            PayerType.Medicaid =>
+                " Note: Medicaid covered codes and rates are state-specific; verify your state fee schedule before billing.",
+            PayerType.Commercial =>
+                " Note: Commercial plan benefits, visit caps, and prior-auth rules vary by plan — verify coverage before billing.",
+            PayerType.WorkersCompensation =>
+                " Note: Workers' Compensation uses state-regulated fee schedules and may require specific CPT codes or modifiers — verify the applicable state schedule.",
+            PayerType.SelfPay =>
+                " Note: Self-pay sessions have no payer-imposed CPT restrictions or unit caps.",
+            _ => string.Empty
+        };
 
-        return
-            $"Session duration: {minutes} minutes. " +
+        return contextPrefix +
             $"Apply the CMS 8-minute rule: each timed-code unit requires at least 8 minutes of direct skilled service. " +
             $"A partial unit of 8–22 minutes = 1 unit; 23–37 min = 2 units; 38–52 min = 3 units; 53–67 min = 4 units. " +
+            $"Session duration: {minutes} minutes. " +
             $"The maximum total billable units across all timed codes for this session is approximately {maxUnits}. " +
             $"Include recommended billing units in the rationale for each timed code. " +
-            $"Untimed codes (e.g. evaluations, self-care training 97535) are billed once per session regardless of duration.";
+            $"Untimed codes (e.g. evaluations, self-care training 97535) are billed once per session regardless of duration." +
+            payerNote;
     }
 
     private record BillingResponse(IReadOnlyList<CptCode> SuggestedCptCodes);

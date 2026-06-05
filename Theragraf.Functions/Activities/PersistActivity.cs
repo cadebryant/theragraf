@@ -24,6 +24,8 @@ public class PersistActivity(ISessionRepository repository)
                                         .ToString("yyyy-MM-ddTHH-mm-ssZ"),
             TherapistName         = input.OriginalInput.TherapistName,
             Discipline            = input.OriginalInput.Discipline.ToString(),
+            Setting               = input.OriginalInput.Setting.ToString(),
+            Payer                 = input.OriginalInput.Payer.ToString(),
             SessionDurationMinutes = input.OriginalInput.SessionDurationMinutes,
             RedactionMapJson       = JsonSerializer.Serialize(input.RedactionMap),
             SoapNoteJson          = JsonSerializer.Serialize(input.RedactedNote),
