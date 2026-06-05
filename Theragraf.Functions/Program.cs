@@ -2,6 +2,7 @@ using Azure;
 using Azure.AI.TextAnalytics;
 using Azure.AI.OpenAI;
 using Azure.Data.Tables;
+using Azure.Identity;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,10 +21,15 @@ var host = new HostBuilder()
         var config = context.Configuration;
 
         // Azure AI Language (PII Redaction)
-        services.AddSingleton(_ => new TextAnalyticsClient(
-            new Uri(config["AzureLanguage:Endpoint"]!),
-            new AzureKeyCredential(config["AzureLanguage:ApiKey"]!)
-        ));
+        // Uses API key locally; falls back to Managed Identity in Azure when no key is configured.
+        services.AddSingleton(_ =>
+        {
+            var endpoint = new Uri(config["AzureLanguage:Endpoint"]!);
+            var apiKey = config["AzureLanguage:ApiKey"];
+            return string.IsNullOrWhiteSpace(apiKey)
+                ? new TextAnalyticsClient(endpoint, new DefaultAzureCredential())
+                : new TextAnalyticsClient(endpoint, new AzureKeyCredential(apiKey));
+        });
         services.AddSingleton<ITextAnalyticsClientAdapter, TextAnalyticsClientAdapter>();
         services.AddSingleton<IPiiRedactionService, PiiRedactionService>();
 
@@ -34,15 +40,19 @@ var host = new HostBuilder()
 
             var deploymentName = config["AzureOpenAI:DeploymentName"]!;
             var aoaiEndpoint = config["AzureOpenAI:Endpoint"]!;
-            var aoaiApiKey = config["AzureOpenAI:ApiKey"]!;
+            var aoaiApiKey = config["AzureOpenAI:ApiKey"];
             Console.WriteLine($"[Theragraf] DeploymentName='{deploymentName}' Endpoint='{aoaiEndpoint}'");
 
-            // o4-mini requires a newer API version than SK's default
-            var azureClient = new AzureOpenAIClient(
-                new Uri(aoaiEndpoint),
-                new AzureKeyCredential(aoaiApiKey),
-                new AzureOpenAIClientOptions(AzureOpenAIClientOptions.ServiceVersion.V2025_04_01_Preview)
-            );
+            // Uses API key locally; uses Managed Identity in Azure when no key is configured.
+            var azureClient = string.IsNullOrWhiteSpace(aoaiApiKey)
+                ? new AzureOpenAIClient(
+                    new Uri(aoaiEndpoint),
+                    new DefaultAzureCredential(),
+                    new AzureOpenAIClientOptions(AzureOpenAIClientOptions.ServiceVersion.V2025_04_01_Preview))
+                : new AzureOpenAIClient(
+                    new Uri(aoaiEndpoint),
+                    new AzureKeyCredential(aoaiApiKey),
+                    new AzureOpenAIClientOptions(AzureOpenAIClientOptions.ServiceVersion.V2025_04_01_Preview));
 
             kernelBuilder.AddAzureOpenAIChatCompletion(
                 deploymentName: deploymentName,
@@ -75,8 +85,17 @@ var host = new HostBuilder()
         services.AddSingleton<IIcd10Agent, Icd10Agent>();
 
         // Persistence
+        // Uses connection string locally (Azurite); uses Managed Identity in Azure
+        // when AzureStorage:AccountName is set instead.
         services.AddSingleton(sp =>
-            new TableServiceClient(config["AzureWebJobsStorage"]!));
+        {
+            var accountName = config["AzureStorage:AccountName"];
+            return string.IsNullOrWhiteSpace(accountName)
+                ? new TableServiceClient(config["AzureWebJobsStorage"]!)
+                : new TableServiceClient(
+                    new Uri($"https://{accountName}.table.core.windows.net"),
+                    new DefaultAzureCredential());
+        });
         services.AddSingleton<ISessionRepository, TableStorageSessionRepository>();
     })
     .Build();
