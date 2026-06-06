@@ -41,35 +41,9 @@ jobs:
             --no-build \
             --output ${{ env.PUBLISH_DIR }}
 
-      - name: Create deployment ZIP
-        run: |
-          cd ${{ env.PUBLISH_DIR }}
-          zip -r ${{ github.workspace }}/publish.zip .
-
-      - name: Deploy via Kudu ZIP API
-        env:
-          PUBLISH_PROFILE: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
-        run: |
-          USERNAME=$(python3 -c "import os,xml.etree.ElementTree as ET; root=ET.fromstring(os.environ['PUBLISH_PROFILE']); p=next(x for x in root.findall('publishProfile') if x.get('publishMethod')=='MSDeploy'); print(p.get('userName'))")
-          PASSWORD=$(python3 -c "import os,xml.etree.ElementTree as ET; root=ET.fromstring(os.environ['PUBLISH_PROFILE']); p=next(x for x in root.findall('publishProfile') if x.get('publishMethod')=='MSDeploy'); print(p.get('userPWD'))")
-
-          if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
-            echo "ERROR: Failed to extract credentials from publish profile XML"
-            exit 1
-          fi
-          echo "Credentials extracted (username length: ${#USERNAME})"
-
-          HTTP_STATUS=$(curl -s -o /tmp/deploy_response.txt -w "%{http_code}" \
-            -X POST \
-            "https://${{ env.AZURE_FUNCTIONAPP_NAME }}.scm.azurewebsites.net/api/zipdeploy" \
-            --user "$USERNAME:$PASSWORD" \
-            --data-binary @${{ github.workspace }}/publish.zip \
-            --header "Content-Type: application/zip")
-
-          echo "Kudu response: $HTTP_STATUS"
-          cat /tmp/deploy_response.txt
-          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
-            echo "Deployment failed with HTTP $HTTP_STATUS"
-            exit 1
-          fi
-          echo "Deployment succeeded"
+      - name: Deploy to Azure Functions
+        uses: azure/functions-action@v1
+        with:
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          package: ${{ env.PUBLISH_DIR }}
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
