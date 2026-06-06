@@ -129,6 +129,20 @@ az functionapp config appsettings set --resource-group $RG --name $FUNCAPP --set
 
 ### Deploy
 
+#### Automated (GitHub Actions — recommended)
+
+Every push to `main` automatically builds, tests, and deploys to Azure via the workflow in `.github/workflows/deploy.yml`.
+
+**One-time setup — add the publish profile as a GitHub secret:**
+
+1. In the Azure Portal, open **theragraf-functions → Overview → Get publish profile** and copy the XML content.
+2. In GitHub, go to **Settings → Secrets and variables → Actions → New repository secret**.
+3. Name it `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` and paste the XML as the value.
+
+After this, every push to `main` will trigger an automated deployment. You can also trigger it manually from **Actions → Build, Test & Deploy to Azure → Run workflow**.
+
+#### Manual (fallback)
+
 ```powershell
 cd Theragraf.Functions
 func azure functionapp publish theragraf-functions
