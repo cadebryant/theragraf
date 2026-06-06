@@ -17,6 +17,6 @@ public class ComplianceAgent(Kernel kernel) : BaseAgent(kernel), IComplianceAgen
 
         var result = await Kernel.InvokeAsync(function, arguments);
 
-        return JsonSerializer.Deserialize<ComplianceResult>(result.ToString(), JsonOptions)!;
+        return JsonSerializer.Deserialize<ComplianceResult>(StripMarkdownCodeFence(result.ToString()), JsonOptions)!;
     }
 }

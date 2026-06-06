@@ -11,6 +11,6 @@ public class SoapAgent(Kernel kernel) : BaseAgent(kernel), ISoapAgent
         var function = Kernel.Plugins.GetFunction("SoapAgent", "SoapAgent");
         var arguments = new KernelArguments { ["input"] = input.RedactedTranscript };
         var result = await Kernel.InvokeAsync(function, arguments);
-        return JsonSerializer.Deserialize<SoapNote>(result.ToString())!;
+        return JsonSerializer.Deserialize<SoapNote>(StripMarkdownCodeFence(result.ToString()))!;
     }
 }
