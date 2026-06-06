@@ -30,26 +30,47 @@ public class DocumentationOrchestratorTests
     private static FinalizeResult BuildFinalizeResult(string suffix = "") =>
         new(BuildSoapNote(suffix), Array.Empty<CptCode>(), Array.Empty<IcdCode>());
 
+    /// <summary>
+    /// Configures all activity stubs with default return values.
+    /// Uses Arg.Any&lt;TaskOptions?&gt;() so tests remain valid after retry options were added.
+    /// </summary>
+    private void ConfigureActivityStubs(
+        ObservationResult? observation = null,
+        SoapNote? soapNote = null,
+        SoapNote? complianceNote = null,
+        FinalizeResult? finalizeResult = null,
+        IReadOnlyList<CptCode>? cptCodes = null,
+        IReadOnlyList<IcdCode>? icdCodes = null)
+    {
+        observation    ??= BuildObservation();
+        soapNote       ??= BuildSoapNote("_soap");
+        complianceNote ??= BuildSoapNote("_compliant");
+        finalizeResult ??= BuildFinalizeResult("_final");
+        cptCodes       ??= Array.Empty<CptCode>();
+        icdCodes       ??= Array.Empty<IcdCode>();
+
+        _context.CallActivityAsync<ObservationResult>("IngestionActivity",  Arg.Any<object?>(), Arg.Any<TaskOptions?>()).Returns(observation);
+        _context.CallActivityAsync<SoapNote>("SoapActivity",                Arg.Any<object?>(), Arg.Any<TaskOptions?>()).Returns(soapNote);
+        _context.CallActivityAsync<SoapNote>("ComplianceActivity",          Arg.Any<object?>(), Arg.Any<TaskOptions?>()).Returns(complianceNote);
+        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity",     Arg.Any<object?>(), Arg.Any<TaskOptions?>()).Returns(finalizeResult);
+        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object?>(), Arg.Any<TaskOptions?>()).Returns(cptCodes);
+        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object?>(), Arg.Any<TaskOptions?>()).Returns(icdCodes);
+    }
+
     [Fact]
     public async Task RunOrchestrator_CallsAllActivitiesInOrder()
     {
-        var observation = BuildObservation();
         _context.GetInput<TranscriptInput>().Returns(BuildTranscriptInput());
-        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
-        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote("_soap"));
-        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote("_compliant"));
-        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(BuildFinalizeResult("_final"));
-        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
-        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
+        ConfigureActivityStubs();
 
         await _sut.RunOrchestrator(_context);
 
         Received.InOrder(() =>
         {
-            _ = _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>());
-            _ = _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>());
-            _ = _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>());
-            _ = _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>());
+            _ = _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object?>(), Arg.Any<TaskOptions?>());
+            _ = _context.CallActivityAsync<SoapNote>("SoapActivity",               Arg.Any<object?>(), Arg.Any<TaskOptions?>());
+            _ = _context.CallActivityAsync<SoapNote>("ComplianceActivity",         Arg.Any<object?>(), Arg.Any<TaskOptions?>());
+            _ = _context.CallActivityAsync<FinalizeResult>("FinalizerActivity",    Arg.Any<object?>(), Arg.Any<TaskOptions?>());
         });
     }
 
@@ -57,14 +78,8 @@ public class DocumentationOrchestratorTests
     public async Task RunOrchestrator_ReturnsRestoredNoteFromFinalizerActivity()
     {
         var expectedNote = BuildSoapNote("_final");
-        var observation = BuildObservation();
         _context.GetInput<TranscriptInput>().Returns(BuildTranscriptInput());
-        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
-        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(new FinalizeResult(expectedNote, Array.Empty<CptCode>(), Array.Empty<IcdCode>()));
-        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
-        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
+        ConfigureActivityStubs(finalizeResult: new FinalizeResult(expectedNote, Array.Empty<CptCode>(), Array.Empty<IcdCode>()));
 
         var result = await _sut.RunOrchestrator(_context);
 
@@ -76,48 +91,32 @@ public class DocumentationOrchestratorTests
     {
         var observation = BuildObservation("Redacted text.");
         _context.GetInput<TranscriptInput>().Returns(BuildTranscriptInput());
-        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
-        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(BuildFinalizeResult());
-        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
-        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
+        ConfigureActivityStubs(observation: observation);
 
         await _sut.RunOrchestrator(_context);
 
-        await _context.Received(1).CallActivityAsync<SoapNote>("SoapActivity", observation);
+        await _context.Received(1).CallActivityAsync<SoapNote>("SoapActivity", observation, Arg.Any<TaskOptions?>());
     }
 
     [Fact]
     public async Task RunOrchestrator_PassesSoapNoteToComplianceActivity()
     {
         var soapNote = BuildSoapNote("_soap");
-        var observation = BuildObservation();
         _context.GetInput<TranscriptInput>().Returns(BuildTranscriptInput());
-        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
-        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(soapNote);
-        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(BuildFinalizeResult());
-        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
-        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
+        ConfigureActivityStubs(soapNote: soapNote);
 
         await _sut.RunOrchestrator(_context);
 
-        await _context.Received(1).CallActivityAsync<SoapNote>("ComplianceActivity", soapNote);
+        await _context.Received(1).CallActivityAsync<SoapNote>("ComplianceActivity", soapNote, Arg.Any<TaskOptions?>());
     }
 
     [Fact]
     public async Task RunOrchestrator_PassesFinalizeInputWithRedactionMapToFinalizerActivity()
     {
-        var observation = BuildObservation();
+        var observation    = BuildObservation();
         var complianceNote = BuildSoapNote("_compliant");
         _context.GetInput<TranscriptInput>().Returns(BuildTranscriptInput());
-        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
-        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(complianceNote);
-        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(BuildFinalizeResult());
-        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
-        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
+        ConfigureActivityStubs(observation: observation, complianceNote: complianceNote);
 
         await _sut.RunOrchestrator(_context);
 
@@ -125,22 +124,17 @@ public class DocumentationOrchestratorTests
             "FinalizerActivity",
             Arg.Is<FinalizeInput>(fi =>
                 fi.Note == complianceNote &&
-                fi.RedactionMap == observation.RedactionMap));
+                fi.RedactionMap == observation.RedactionMap),
+            Arg.Any<TaskOptions?>());
     }
 
     [Fact]
     public async Task RunOrchestrator_PassesRestoredNoteAndDisciplineToBillingActivity()
     {
-        var input = BuildTranscriptInput();
-        var observation = BuildObservation();
+        var input    = BuildTranscriptInput();
         var finalized = BuildFinalizeResult("_final");
         _context.GetInput<TranscriptInput>().Returns(input);
-        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
-        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(finalized);
-        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
-        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
+        ConfigureActivityStubs(finalizeResult: finalized);
 
         await _sut.RunOrchestrator(_context);
 
@@ -151,22 +145,17 @@ public class DocumentationOrchestratorTests
                 b.Discipline == input.Discipline &&
                 b.SessionDurationMinutes == input.SessionDurationMinutes &&
                 b.Setting == input.Setting &&
-                b.Payer == input.Payer));
+                b.Payer == input.Payer),
+            Arg.Any<TaskOptions?>());
     }
 
     [Fact]
     public async Task RunOrchestrator_PassesRestoredNoteAndDisciplineToIcd10Activity()
     {
-        var input = BuildTranscriptInput();
-        var observation = BuildObservation();
+        var input    = BuildTranscriptInput();
         var finalized = BuildFinalizeResult("_final");
         _context.GetInput<TranscriptInput>().Returns(input);
-        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
-        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(finalized);
-        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns(Array.Empty<CptCode>());
-        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns(Array.Empty<IcdCode>());
+        ConfigureActivityStubs(finalizeResult: finalized);
 
         await _sut.RunOrchestrator(_context);
 
@@ -174,52 +163,49 @@ public class DocumentationOrchestratorTests
             "Icd10Activity",
             Arg.Is<Icd10ActivityInput>(i =>
                 i.Note == finalized.RestoredNote &&
-                i.Discipline == input.Discipline));
+                i.Discipline == input.Discipline),
+            Arg.Any<TaskOptions?>());
     }
 
     [Fact]
     public async Task RunOrchestrator_CallsPersistActivityWithComplianceNoteAndCodes()
     {
-        var input = BuildTranscriptInput();
-        var observation = BuildObservation();
+        var input          = BuildTranscriptInput();
+        var observation    = BuildObservation();
         var complianceNote = BuildSoapNote("_compliant");
-        var finalized = BuildFinalizeResult("_final");
-        var cptCodes = new[] { new CptCode("97530", "Therapeutic activities", "Reason") };
-        var icdCodes = new[] { new IcdCode("F82", "Coordination disorder", "Reason") };
+        var finalized      = BuildFinalizeResult("_final");
+        var cptCodes       = new[] { new CptCode("97530", "Therapeutic activities", "Reason") };
+        var icdCodes       = new[] { new IcdCode("F82", "Coordination disorder", "Reason") };
         _context.GetInput<TranscriptInput>().Returns(input);
-        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
-        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(complianceNote);
-        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(finalized);
-        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns((IReadOnlyList<CptCode>)cptCodes);
-        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns((IReadOnlyList<IcdCode>)icdCodes);
+        ConfigureActivityStubs(
+            observation: observation,
+            complianceNote: complianceNote,
+            finalizeResult: finalized,
+            cptCodes: cptCodes,
+            icdCodes: icdCodes);
 
         await _sut.RunOrchestrator(_context);
 
-        // PersistActivity receives the compliance (redacted) note — not the restored note
-        // and must include the redaction map so reads can restore PII
         await _context.Received(1).CallActivityAsync(
             "PersistActivity",
             Arg.Is<PersistActivityInput>(p =>
                 p.RedactedNote == complianceNote &&
                 p.OriginalInput == input &&
-                p.RedactionMap == observation.RedactionMap));
+                p.RedactionMap == observation.RedactionMap),
+            Arg.Any<TaskOptions?>());
     }
 
     [Fact]
     public async Task RunOrchestrator_ResultContainsMergedCptAndIcdCodes()
     {
-        var observation = BuildObservation();
         var finalized = BuildFinalizeResult("_final");
-        var cptCodes = new[] { new CptCode("97530", "Therapeutic activities", "Reason") };
-        var icdCodes = new[] { new IcdCode("F82", "Coordination disorder", "Reason") };
+        var cptCodes  = new[] { new CptCode("97530", "Therapeutic activities", "Reason") };
+        var icdCodes  = new[] { new IcdCode("F82", "Coordination disorder", "Reason") };
         _context.GetInput<TranscriptInput>().Returns(BuildTranscriptInput());
-        _context.CallActivityAsync<ObservationResult>("IngestionActivity", Arg.Any<object>()).Returns(observation);
-        _context.CallActivityAsync<SoapNote>("SoapActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<SoapNote>("ComplianceActivity", Arg.Any<object>()).Returns(BuildSoapNote());
-        _context.CallActivityAsync<FinalizeResult>("FinalizerActivity", Arg.Any<object>()).Returns(finalized);
-        _context.CallActivityAsync<IReadOnlyList<CptCode>>("BillingActivity", Arg.Any<object>()).Returns((IReadOnlyList<CptCode>)cptCodes);
-        _context.CallActivityAsync<IReadOnlyList<IcdCode>>("Icd10Activity", Arg.Any<object>()).Returns((IReadOnlyList<IcdCode>)icdCodes);
+        ConfigureActivityStubs(
+            finalizeResult: finalized,
+            cptCodes: cptCodes,
+            icdCodes: icdCodes);
 
         var result = await _sut.RunOrchestrator(_context);
 
