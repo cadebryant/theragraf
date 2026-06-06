@@ -35,4 +35,13 @@
   <ItemGroup>
     <ProjectReference Include="..\Theragraf.Core\Theragraf.Core.csproj" />
   </ItemGroup>
+
+  <!-- Auto-start Azurite when building in Debug configuration -->
+  <Target Name="StartAzurite" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+    <Message Text="Starting Azurite storage emulator..." Importance="high" />
+    <Exec Command="powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\tools\Start-Azurite.ps1&quot;"
+          ContinueOnError="true"
+          ConsoleToMSBuild="true" />
+  </Target>
+
 </Project>
