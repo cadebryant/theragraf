@@ -50,20 +50,14 @@ jobs:
         env:
           PUBLISH_PROFILE: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
         run: |
-          USERNAME=$(python3 -c "
-          import os, xml.etree.ElementTree as ET
-          tree = ET.fromstring(os.environ['PUBLISH_PROFILE'])
-          profile = next(p for p in tree.findall('publishProfile')
-                         if p.get('publishMethod') == 'MSDeploy')
-          print(profile.get('userName'))
-          ")
-          PASSWORD=$(python3 -c "
-          import os, xml.etree.ElementTree as ET
-          tree = ET.fromstring(os.environ['PUBLISH_PROFILE'])
-          profile = next(p for p in tree.findall('publishProfile')
-                         if p.get('publishMethod') == 'MSDeploy')
-          print(profile.get('userPWD'))
-          ")
+          USERNAME=$(python3 -c "import os,xml.etree.ElementTree as ET; root=ET.fromstring(os.environ['PUBLISH_PROFILE']); p=next(x for x in root.findall('publishProfile') if x.get('publishMethod')=='MSDeploy'); print(p.get('userName'))")
+          PASSWORD=$(python3 -c "import os,xml.etree.ElementTree as ET; root=ET.fromstring(os.environ['PUBLISH_PROFILE']); p=next(x for x in root.findall('publishProfile') if x.get('publishMethod')=='MSDeploy'); print(p.get('userPWD'))")
+
+          if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
+            echo "ERROR: Failed to extract credentials from publish profile XML"
+            exit 1
+          fi
+          echo "Credentials extracted (username length: ${#USERNAME})"
 
           HTTP_STATUS=$(curl -s -o /tmp/deploy_response.txt -w "%{http_code}" \
             -X POST \
