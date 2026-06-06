@@ -41,9 +41,28 @@ jobs:
             --no-build \
             --output ${{ env.PUBLISH_DIR }}
 
-      - name: Deploy to Azure Functions
-        uses: Azure/functions-action@v1
-        with:
-          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-          package: ${{ env.PUBLISH_DIR }}
-          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+      - name: Create deployment ZIP
+        run: |
+          cd ${{ env.PUBLISH_DIR }}
+          zip -r ${{ github.workspace }}/publish.zip .
+
+      - name: Deploy via Kudu ZIP API
+        run: |
+          USERNAME=$(echo '${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}' \
+            | grep -oP '(?<=userName=")[^"]+' | head -1)
+          PASSWORD=$(echo '${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}' \
+            | grep -oP '(?<=userPWD=")[^"]+' | head -1)
+
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            "https://${{ env.AZURE_FUNCTIONAPP_NAME }}.scm.azurewebsites.net/api/zipdeploy" \
+            --user "$USERNAME:$PASSWORD" \
+            --data-binary @${{ github.workspace }}/publish.zip \
+            --header "Content-Type: application/zip")
+
+          echo "Kudu response: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "Deployment failed with HTTP $HTTP_STATUS"
+            exit 1
+          fi
+          echo "Deployment succeeded"
