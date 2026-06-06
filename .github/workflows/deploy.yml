@@ -47,13 +47,25 @@ jobs:
           zip -r ${{ github.workspace }}/publish.zip .
 
       - name: Deploy via Kudu ZIP API
+        env:
+          PUBLISH_PROFILE: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
         run: |
-          USERNAME=$(echo '${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}' \
-            | grep -oP '(?<=userName=")[^"]+' | head -1)
-          PASSWORD=$(echo '${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}' \
-            | grep -oP '(?<=userPWD=")[^"]+' | head -1)
+          USERNAME=$(python3 -c "
+          import os, xml.etree.ElementTree as ET
+          tree = ET.fromstring(os.environ['PUBLISH_PROFILE'])
+          profile = next(p for p in tree.findall('publishProfile')
+                         if p.get('publishMethod') == 'MSDeploy')
+          print(profile.get('userName'))
+          ")
+          PASSWORD=$(python3 -c "
+          import os, xml.etree.ElementTree as ET
+          tree = ET.fromstring(os.environ['PUBLISH_PROFILE'])
+          profile = next(p for p in tree.findall('publishProfile')
+                         if p.get('publishMethod') == 'MSDeploy')
+          print(profile.get('userPWD'))
+          ")
 
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          HTTP_STATUS=$(curl -s -o /tmp/deploy_response.txt -w "%{http_code}" \
             -X POST \
             "https://${{ env.AZURE_FUNCTIONAPP_NAME }}.scm.azurewebsites.net/api/zipdeploy" \
             --user "$USERNAME:$PASSWORD" \
@@ -61,6 +73,7 @@ jobs:
             --header "Content-Type: application/zip")
 
           echo "Kudu response: $HTTP_STATUS"
+          cat /tmp/deploy_response.txt
           if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
             echo "Deployment failed with HTTP $HTTP_STATUS"
             exit 1
