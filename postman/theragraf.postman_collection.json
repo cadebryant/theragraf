@@ -324,7 +324,27 @@
                     "console.log('Open this URL in your browser:', json.verification_uri);",
                     "console.log('Enter this code:              ', json.user_code);",
                     "console.log('Then run step 0b to get your token.');",
-                    "console.log('==================================================')"
+                    "console.log('==================================================');",
+                    "const template = `",
+                    "  <style>",
+                    "    body { font-family: sans-serif; padding: 24px; }",
+                    "    .card { background: #f0f4ff; border: 2px solid #4a6cf7; border-radius: 10px; padding: 20px 28px; max-width: 480px; }",
+                    "    h2 { margin: 0 0 12px; color: #2d3a8c; font-size: 1.1rem; }",
+                    "    .step { margin: 10px 0; font-size: 0.95rem; }",
+                    "    .step span { font-weight: bold; color: #1a1a1a; }",
+                    "    a.btn { display:inline-block; margin-top:14px; padding:10px 20px; background:#4a6cf7; color:#fff; border-radius:6px; text-decoration:none; font-weight:bold; }",
+                    "    .code-box { font-size:1.8rem; font-weight:bold; letter-spacing:4px; color:#2d3a8c; background:#fff; border:2px dashed #4a6cf7; border-radius:6px; padding:10px 16px; display:inline-block; margin:10px 0; }",
+                    "  </style>",
+                    "  <div class='card'>",
+                    "    <h2>&#128274; Sign in to get your access token</h2>",
+                    "    <div class='step'>1. Click the button below (or open the URL manually)</div>",
+                    "    <a class='btn' href='{{verification_uri}}' target='_blank'>Open sign-in page</a>",
+                    "    <div class='step' style='margin-top:16px'>2. Enter this code when prompted:</div>",
+                    "    <div class='code-box'>{{user_code}}</div>",
+                    "    <div class='step' style='margin-top:16px'>3. After signing in, come back and run <span>step 0b</span> to retrieve your token.</div>",
+                    "  </div>",
+                    "`;",
+                    "pm.visualizer.set(template, { verification_uri: json.verification_uri, user_code: json.user_code });"
                   ]
                 }
               }
@@ -355,9 +375,10 @@
                     "if (json.access_token) {",
                     "    pm.collectionVariables.set('accessToken', json.access_token);",
                     "    pm.test('Access token acquired', () => pm.expect(json.access_token).to.be.a('string'));",
-                    "    console.log('Token acquired — you can now run steps 2 onwards.');",
+                    "    console.log('Token acquired. You can now run steps 1 onwards.');",
                     "} else if (json.error === 'authorization_pending') {",
-                    "    pm.test('Waiting for user to approve — re-run step 0b', () => { throw new Error('authorization_pending'); });",
+                    "    pm.test('Pending: sign in at the URL shown in step 0a, then re-run this step', () => pm.expect(true).to.be.true);",
+                    "    console.log('Still waiting. Complete browser sign-in, then re-run step 0b.');",
                     "} else {",
                     "    pm.test('Token error: ' + json.error, () => { throw new Error(json.error_description); });",
                     "}"
