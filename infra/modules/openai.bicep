@@ -1,42 +1,13 @@
 /*
-  openai.bicep â€” Azure OpenAI account + gpt-4o-mini model deployment
+  openai.bicep — Read existing Azure OpenAI account (lives in Default-Web-EastUS).
+  This module never creates or modifies the resource; it only reads its name
+  and endpoint so they can be passed to the Function App and role assignments.
 */
 
-param location string
-param suffix string
-param deploymentName string
-param capacity int
+param accountName string
 
-var accountName = 'theragraf-oai-${suffix}'
-
-resource openAiAccount 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
+resource openAiAccount 'Microsoft.CognitiveServices/accounts@2024-10-01' existing = {
   name: accountName
-  location: location
-  kind: 'OpenAI'
-  sku: {
-	name: 'S0'
-  }
-  properties: {
-	customSubDomainName: accountName
-	publicNetworkAccess: 'Enabled'
-  }
-}
-
-resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
-  parent: openAiAccount
-  name: deploymentName
-  sku: {
-	name: 'Standard'
-	capacity: capacity
-  }
-  properties: {
-	model: {
-	  format: 'OpenAI'
-	  name: 'gpt-4o-mini'
-	  version: '2024-07-18'
-	}
-	versionUpgradeOption: 'OnceCurrentVersionExpired'
-  }
 }
 
 output accountName string = openAiAccount.name

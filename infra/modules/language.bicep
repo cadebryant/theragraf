@@ -1,23 +1,13 @@
 /*
-  language.bicep â€” Azure AI Language account (used for PII redaction)
+  language.bicep — Read existing Azure AI Language account (lives in Default-Web-EastUS).
+  This module never creates or modifies the resource; it only reads its name
+  and endpoint so they can be passed to the Function App and role assignments.
 */
 
-param location string
-param suffix string
+param accountName string
 
-var accountName = 'theragraf-lang-${suffix}'
-
-resource languageAccount 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
+resource languageAccount 'Microsoft.CognitiveServices/accounts@2024-10-01' existing = {
   name: accountName
-  location: location
-  kind: 'TextAnalytics'
-  sku: {
-	name: 'S'
-  }
-  properties: {
-	customSubDomainName: accountName
-	publicNetworkAccess: 'Enabled'
-  }
 }
 
 output accountName string = languageAccount.name

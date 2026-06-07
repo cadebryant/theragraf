@@ -18,7 +18,7 @@ on:
           - prod
 
 env:
-  AZURE_RESOURCE_GROUP: 'theragraf-rg'
+  AZURE_LOCATION: 'eastus'
 
 jobs:
   deploy-infra:
@@ -53,24 +53,24 @@ jobs:
       - name: Validate Bicep template
         run: |
           ENV="${{ github.event.inputs.environment || 'dev' }}"
-          az deployment group validate \
-            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+          az deployment sub validate \
+            --location eastus \
             --template-file infra/main.bicep \
             --parameters "infra/parameters/${ENV}.bicepparam"
 
       - name: What-if (preview changes)
         run: |
           ENV="${{ github.event.inputs.environment || 'dev' }}"
-          az deployment group what-if \
-            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+          az deployment sub what-if \
+            --location eastus \
             --template-file infra/main.bicep \
             --parameters "infra/parameters/${ENV}.bicepparam"
 
       - name: Deploy infrastructure
         run: |
           ENV="${{ github.event.inputs.environment || 'dev' }}"
-          az deployment group create \
-            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+          az deployment sub create \
+            --location eastus \
             --template-file infra/main.bicep \
             --parameters "infra/parameters/${ENV}.bicepparam" \
             --name "theragraf-infra-${ENV}-${{ github.run_number }}"

@@ -1,8 +1,11 @@
 using '../main.bicep'
 
-param environmentName = 'dev'
-param location = 'eastus'
-param functionAppName = 'theragraf-functions'
-param openAiDeploymentName = 'gpt-4o-mini'
-param openAiCapacity = 10
-param storageAccountName = 'theragrafstorage'
+param environmentName        = 'dev'
+param location               = 'eastus'
+param appResourceGroup       = 'theragraf-rg'
+param cognitiveResourceGroup = 'Default-Web-EastUS'
+param functionAppName        = 'theragraf-functions'
+param openAiDeploymentName   = 'gpt-4o-mini'
+param openAiAccountName      = 'theragraf-oai'
+param languageAccountName    = 'theragraf-language'
+param storageAccountName     = 'theragrafstorage'
