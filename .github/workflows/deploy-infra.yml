@@ -1,0 +1,76 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infra/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+env:
+  AZURE_RESOURCE_GROUP: 'theragraf-rg'
+
+jobs:
+  deploy-infra:
+    name: Bicep deployment (${{ github.event.inputs.environment || 'dev' }})
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          az login --service-principal \
+            --username "$AZURE_CLIENT_ID" \
+            --password "$AZURE_CLIENT_SECRET" \
+            --tenant "$AZURE_TENANT_ID" \
+            --output none
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+
+      - name: Ensure resource group exists
+        run: |
+          az group create \
+            --name "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --location eastus \
+            --output none
+
+      - name: Validate Bicep template
+        run: |
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          az deployment group validate \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --template-file infra/main.bicep \
+            --parameters "infra/parameters/${ENV}.bicepparam"
+
+      - name: What-if (preview changes)
+        run: |
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          az deployment group what-if \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --template-file infra/main.bicep \
+            --parameters "infra/parameters/${ENV}.bicepparam"
+
+      - name: Deploy infrastructure
+        run: |
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          az deployment group create \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --template-file infra/main.bicep \
+            --parameters "infra/parameters/${ENV}.bicepparam" \
+            --name "theragraf-infra-${ENV}-${{ github.run_number }}"
