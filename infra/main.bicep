@@ -54,6 +54,12 @@ param apiClientId string = 'd84a7ccd-aaa1-4adf-8211-7c03fa3d319a'
 @description('Name for the Cosmos DB account (must be globally unique).')
 param cosmosAccountName string = 'theragraf-cosmos'
 
+@description('Name of the existing App Service Plan hosting the Function App.')
+param appServicePlanName string = '${functionAppName}-plan'
+
+@description('Optional Entra ID object ID of a developer to grant Cosmos Data Explorer access.')
+param developerPrincipalId string = ''
+
 // -- Shared naming suffix ------------------------------------------------------
 
 var suffix = toLower(environmentName)
@@ -118,6 +124,7 @@ module functionApp 'modules/functionApp.bicep' = {
     tenantId: tenantId
     apiClientId: apiClientId
     cosmosEndpoint: cosmos.outputs.endpoint
+    appServicePlanName: appServicePlanName
   }
 }
 
@@ -163,6 +170,7 @@ module cosmosRoleAssignment 'modules/cosmosRoleAssignment.bicep' = {
   params: {
     cosmosAccountName: cosmos.outputs.accountName
     functionAppPrincipalId: functionApp.outputs.principalId
+    developerPrincipalId: developerPrincipalId
   }
 }
 

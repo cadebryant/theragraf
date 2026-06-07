@@ -18,34 +18,25 @@ param tenantId string
 param apiClientId string
 param cosmosEndpoint string
 
-var planName = '${functionAppName}-plan'
+@description('Name of the existing Consumption App Service Plan. Defaults to the plan created alongside the Function App.')
+param appServicePlanName string = '${functionAppName}-plan'
 
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
-  name: planName
-  location: location
-  sku: {
-	name: 'Y1'
-	tier: 'Dynamic'
-  }
-  kind: 'linux'
-  properties: {
-	reserved: true  // required for Linux
-  }
+resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' existing = {
+  name: appServicePlanName
 }
 
 resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
   name: functionAppName
   location: location
-  kind: 'functionapp,linux'
+  kind: 'functionapp'
   identity: {
 	type: 'SystemAssigned'
   }
   properties: {
 	serverFarmId: appServicePlan.id
-	reserved: true
 	httpsOnly: true
 	siteConfig: {
-	  linuxFxVersion: 'dotnet-isolated|10.0'
+	  netFrameworkVersion: 'v10.0'
 	  functionAppScaleLimit: 200
 	  appSettings: [
 		// ── Functions runtime ────────────────────────────────────────────────

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "17084273914172452013"
+      "templateHash": "11852201866735604787"
     }
   },
   "parameters": {
@@ -95,6 +95,20 @@
       "defaultValue": "theragraf-cosmos",
       "metadata": {
         "description": "Name for the Cosmos DB account (must be globally unique)."
+      }
+    },
+    "appServicePlanName": {
+      "type": "string",
+      "defaultValue": "[format('{0}-plan', parameters('functionAppName'))]",
+      "metadata": {
+        "description": "Name of the existing App Service Plan hosting the Function App."
+      }
+    },
+    "developerPrincipalId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional Entra ID object ID of a developer to grant Cosmos Data Explorer access."
       }
     }
   },
@@ -410,6 +424,9 @@
           },
           "cosmosEndpoint": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'cosmos'), '2025-04-01').outputs.endpoint.value]"
+          },
+          "appServicePlanName": {
+            "value": "[parameters('appServicePlanName')]"
           }
         },
         "template": {
@@ -419,7 +436,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "10386512575416080317"
+              "templateHash": "16316141260599217395"
             }
           },
           "parameters": {
@@ -452,41 +469,30 @@
             },
             "cosmosEndpoint": {
               "type": "string"
+            },
+            "appServicePlanName": {
+              "type": "string",
+              "defaultValue": "[format('{0}-plan', parameters('functionAppName'))]",
+              "metadata": {
+                "description": "Name of the existing Consumption App Service Plan. Defaults to the plan created alongside the Function App."
+              }
             }
           },
-          "variables": {
-            "planName": "[format('{0}-plan', parameters('functionAppName'))]"
-          },
           "resources": [
-            {
-              "type": "Microsoft.Web/serverfarms",
-              "apiVersion": "2023-12-01",
-              "name": "[variables('planName')]",
-              "location": "[parameters('location')]",
-              "sku": {
-                "name": "Y1",
-                "tier": "Dynamic"
-              },
-              "kind": "linux",
-              "properties": {
-                "reserved": true
-              }
-            },
             {
               "type": "Microsoft.Web/sites",
               "apiVersion": "2023-12-01",
               "name": "[parameters('functionAppName')]",
               "location": "[parameters('location')]",
-              "kind": "functionapp,linux",
+              "kind": "functionapp",
               "identity": {
                 "type": "SystemAssigned"
               },
               "properties": {
-                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
-                "reserved": true,
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
                 "httpsOnly": true,
                 "siteConfig": {
-                  "linuxFxVersion": "dotnet-isolated|10.0",
+                  "netFrameworkVersion": "v10.0",
                   "functionAppScaleLimit": 200,
                   "appSettings": [
                     {
@@ -543,10 +549,7 @@
                     }
                   ]
                 }
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]"
-              ]
+              }
             }
           ],
           "outputs": {
@@ -838,7 +841,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "6510793968121388691"
+              "templateHash": "6002227671842441011"
             }
           },
           "parameters": {
@@ -861,7 +864,7 @@
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName'))]",
-              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiAccountName')), parameters('functionAppPrincipalId'), variables('cognitiveServicesOpenAiUser'))]",
+              "name": "bed4fc11-4960-4755-912d-0a15b16d3a64",
               "properties": {
                 "roleDefinitionId": "[variables('cognitiveServicesOpenAiUser')]",
                 "principalId": "[parameters('functionAppPrincipalId')]",
@@ -872,7 +875,7 @@
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('languageAccountName'))]",
-              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('languageAccountName')), parameters('functionAppPrincipalId'), variables('cognitiveServicesUser'))]",
+              "name": "74c3589a-4d22-4266-ac37-c7fd64715ea5",
               "properties": {
                 "roleDefinitionId": "[variables('cognitiveServicesUser')]",
                 "principalId": "[parameters('functionAppPrincipalId')]",
@@ -904,6 +907,9 @@
           },
           "functionAppPrincipalId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'functionApp'), '2025-04-01').outputs.principalId.value]"
+          },
+          "developerPrincipalId": {
+            "value": "[parameters('developerPrincipalId')]"
           }
         },
         "template": {
@@ -913,7 +919,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "15328069843413018764"
+              "templateHash": "15434406763003238056"
             }
           },
           "parameters": {
@@ -922,6 +928,13 @@
             },
             "functionAppPrincipalId": {
               "type": "string"
+            },
+            "developerPrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional Entra ID object ID of a developer to grant Data Explorer access. Leave empty to skip."
+              }
             }
           },
           "variables": {
@@ -935,6 +948,17 @@
               "properties": {
                 "roleDefinitionId": "[format('{0}/sqlRoleDefinitions/{1}', resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), variables('cosmosDataContributorRoleId'))]",
                 "principalId": "[parameters('functionAppPrincipalId')]",
+                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName'))]"
+              }
+            },
+            {
+              "condition": "[not(empty(parameters('developerPrincipalId')))]",
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+              "apiVersion": "2024-05-15",
+              "name": "[format('{0}/{1}', parameters('cosmosAccountName'), guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), parameters('developerPrincipalId'), variables('cosmosDataContributorRoleId')))]",
+              "properties": {
+                "roleDefinitionId": "[format('{0}/sqlRoleDefinitions/{1}', resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), variables('cosmosDataContributorRoleId'))]",
+                "principalId": "[parameters('developerPrincipalId')]",
                 "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName'))]"
               }
             }

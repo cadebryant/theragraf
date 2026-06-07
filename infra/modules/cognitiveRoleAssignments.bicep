@@ -26,7 +26,7 @@ var cognitiveServicesOpenAiUser = subscriptionResourceId('Microsoft.Authorizatio
 var cognitiveServicesUser       = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')
 
 resource openAiUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(openAiAccount.id, functionAppPrincipalId, cognitiveServicesOpenAiUser)
+  name: 'bed4fc11-4960-4755-912d-0a15b16d3a64'
   scope: openAiAccount
   properties: {
 	roleDefinitionId: cognitiveServicesOpenAiUser
@@ -36,7 +36,7 @@ resource openAiUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 
 resource languageUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(languageAccount.id, functionAppPrincipalId, cognitiveServicesUser)
+  name: '74c3589a-4d22-4266-ac37-c7fd64715ea5'
   scope: languageAccount
   properties: {
 	roleDefinitionId: cognitiveServicesUser
