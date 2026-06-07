@@ -9,4 +9,6 @@ public interface ISessionRepository
     Task<IReadOnlyList<SessionResponse>> GetByClientIdAsync(string clientId, CancellationToken cancellationToken = default);
 
     Task<SessionResponse?> GetByClientIdAndDateAsync(string clientId, string rowKey, CancellationToken cancellationToken = default);
+
+    Task<bool> DeleteAsync(string clientId, string rowKey, CancellationToken cancellationToken = default);
 }

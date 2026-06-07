@@ -64,6 +64,19 @@ public class TableStorageSessionRepository : ISessionRepository
         }
     }
 
+    public async Task<bool> DeleteAsync(string clientId, string rowKey, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _client.DeleteEntityAsync(clientId, rowKey, cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            return false;
+        }
+    }
+
     private static SessionResponse MapToResponse(TableEntity entity)
     {
         var redactionMap = JsonSerializer.Deserialize<Dictionary<string, string>>(

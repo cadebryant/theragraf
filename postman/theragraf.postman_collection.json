@@ -299,13 +299,35 @@
           ],
           "request": {
             "method": "GET",
-            "method": "GET",
             "header": [
               {
                 "key": "Authorization",
                 "value": "Bearer {{accessToken}}"
               }
             ],
+            "url": "{{baseUrl}}/api/sessions/client-001/{{sessionDate}}"
+          }
+        },
+        {
+          "name": "6 - Delete Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204 or 404', () => pm.expect([204, 404]).to.include(pm.response.code));",
+                  "if (pm.response.code === 204) {",
+                  "    console.log('Session deleted successfully.');",
+                  "} else {",
+                  "    console.log('Session not found — may have already been deleted.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
             "url": "{{baseUrl}}/api/sessions/client-001/{{sessionDate}}"
           }
         }
@@ -654,6 +676,34 @@
           ],
           "request": {
             "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{liveBaseUrl}}/api/sessions/client-001/{{sessionDate}}"
+          }
+        },
+        {
+          "name": "6 - Delete Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204 or 404', () => pm.expect([204, 404]).to.include(pm.response.code));",
+                  "if (pm.response.code === 204) {",
+                  "    console.log('Session deleted successfully.');",
+                  "} else {",
+                  "    console.log('Session not found — may have already been deleted.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
             "header": [
               {
                 "key": "Authorization",
