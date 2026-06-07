@@ -18,6 +18,13 @@ using Theragraf.Core.Services;public class SessionsGet(ISessionRepository reposi
         string clientId,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+            await badRequest.WriteStringAsync("clientId is required.", cancellationToken);
+            return badRequest;
+        }
+
         _logger.LogInformation("GetSessionsByClient called for clientId={ClientId}", clientId);
 
         IReadOnlyList<SessionResponse> sessions;
@@ -47,6 +54,21 @@ using Theragraf.Core.Services;public class SessionsGet(ISessionRepository reposi
         string sessionDate,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+            await badRequest.WriteStringAsync("clientId is required.", cancellationToken);
+            return badRequest;
+        }
+
+        if (!DateTimeOffset.TryParseExact(sessionDate, "yyyy-MM-ddTHH-mm-ssZ",
+                null, System.Globalization.DateTimeStyles.AssumeUniversal, out _))
+        {
+            var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+            await badRequest.WriteStringAsync("sessionDate must be in yyyy-MM-ddTHH-mm-ssZ format.", cancellationToken);
+            return badRequest;
+        }
+
         _logger.LogInformation("GetSessionByClientAndDate called for clientId={ClientId} date={Date}",
             clientId, sessionDate);
 

@@ -132,9 +132,19 @@ public class SessionsGetTests
             .Returns((SessionResponse?)null);
         var req = BuildRequest();
 
-        var response = await _sut.GetByClientAndDate(req, "client-001", "bad-date", CancellationToken.None);
+        var response = await _sut.GetByClientAndDate(req, "client-001", "2024-10-10T10-00-00Z", CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetByClientAndDate_InvalidDateFormat_ReturnsBadRequest()
+    {
+        var req = BuildRequest();
+
+        var response = await _sut.GetByClientAndDate(req, "client-001", "bad-date", CancellationToken.None);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]

@@ -45,6 +45,22 @@ public class DocumentationStart(ILoggerFactory loggerFactory)
             return badRequest;
         }
 
+        if (input.SessionDate == default)
+        {
+            var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+            await badRequest.WriteStringAsync("SessionDate is required.", cancellationToken);
+            return badRequest;
+        }
+
+        if (input.SessionDurationMinutes.HasValue &&
+            (input.SessionDurationMinutes.Value <= 0 || input.SessionDurationMinutes.Value > 480))
+        {
+            var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+            await badRequest.WriteStringAsync(
+                "SessionDurationMinutes must be between 1 and 480.", cancellationToken);
+            return badRequest;
+        }
+
         string instanceId;
         try
         {
