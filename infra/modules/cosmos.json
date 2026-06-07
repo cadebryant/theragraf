@@ -1,0 +1,150 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.43.8.12551",
+      "templateHash": "13954579176025392771"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "accountName": {
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2024-05-15",
+      "name": "[parameters('accountName')]",
+      "location": "[parameters('location')]",
+      "kind": "GlobalDocumentDB",
+      "properties": {
+        "databaseAccountOfferType": "Standard",
+        "consistencyPolicy": {
+          "defaultConsistencyLevel": "Session"
+        },
+        "locations": [
+          {
+            "locationName": "[parameters('location')]",
+            "failoverPriority": 0,
+            "isZoneRedundant": false
+          }
+        ],
+        "capabilities": [
+          {
+            "name": "EnableServerless"
+          }
+        ],
+        "enableAutomaticFailover": false,
+        "enableMultipleWriteLocations": false,
+        "publicNetworkAccess": "Enabled",
+        "disableLocalAuth": true
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+      "apiVersion": "2024-05-15",
+      "name": "[format('{0}/{1}', parameters('accountName'), 'theragraf')]",
+      "properties": {
+        "resource": {
+          "id": "theragraf"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('accountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2024-05-15",
+      "name": "[format('{0}/{1}/{2}', parameters('accountName'), 'theragraf', 'sessions')]",
+      "properties": {
+        "resource": {
+          "id": "sessions",
+          "partitionKey": {
+            "paths": [
+              "/clientId"
+            ],
+            "kind": "Hash"
+          },
+          "indexingPolicy": {
+            "indexingMode": "consistent",
+            "includedPaths": [
+              {
+                "path": "/*"
+              }
+            ],
+            "excludedPaths": [
+              {
+                "path": "/soapNote/*"
+              },
+              {
+                "path": "/redactionMap/*"
+              }
+            ],
+            "compositeIndexes": [
+              [
+                {
+                  "path": "/clientId",
+                  "order": "ascending"
+                },
+                {
+                  "path": "/id",
+                  "order": "descending"
+                }
+              ],
+              [
+                {
+                  "path": "/clientId",
+                  "order": "ascending"
+                },
+                {
+                  "path": "/discipline",
+                  "order": "ascending"
+                }
+              ],
+              [
+                {
+                  "path": "/clientId",
+                  "order": "ascending"
+                },
+                {
+                  "path": "/therapistName",
+                  "order": "ascending"
+                }
+              ],
+              [
+                {
+                  "path": "/clientId",
+                  "order": "ascending"
+                },
+                {
+                  "path": "/createdAt",
+                  "order": "descending"
+                }
+              ]
+            ]
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('accountName'), 'theragraf')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "accountName": {
+      "type": "string",
+      "value": "[parameters('accountName')]"
+    },
+    "endpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('accountName')), '2024-05-15').documentEndpoint]"
+    }
+  }
+}

@@ -29,6 +29,7 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
 	enableAutomaticFailover: false
 	enableMultipleWriteLocations: false
 	publicNetworkAccess: 'Enabled'
+	disableLocalAuth: true  // key-based access disabled; Managed Identity only
   }
 }
 
@@ -63,16 +64,16 @@ resource sessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/c
 			{ path: '/id',       order: 'descending' }
 		  ]
 		  [
-			{ path: '/clientId',     order: 'ascending' }
-			{ path: '/discipline',   order: 'ascending' }
+			{ path: '/clientId',    order: 'ascending' }
+			{ path: '/discipline',  order: 'ascending' }
 		  ]
 		  [
-			{ path: '/clientId',     order: 'ascending' }
+			{ path: '/clientId',      order: 'ascending' }
 			{ path: '/therapistName', order: 'ascending' }
 		  ]
 		  [
-			{ path: '/clientId',     order: 'ascending' }
-			{ path: '/createdAt',    order: 'descending' }
+			{ path: '/clientId',  order: 'ascending' }
+			{ path: '/createdAt', order: 'descending' }
 		  ]
 		]
 	  }
