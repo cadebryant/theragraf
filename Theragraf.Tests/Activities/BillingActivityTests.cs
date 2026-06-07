@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using Theragraf.Core.Exceptions;
 using Theragraf.Core.Models;
 using Theragraf.Functions.Activities;
 using Theragraf.Functions.Agents;
@@ -80,6 +81,6 @@ public class BillingActivityTests
 
         var act = async () => await _sut.Run(input);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("LLM unavailable");
+        await act.Should().ThrowAsync<AgentException>().WithMessage("LLM unavailable");
     }
 }
