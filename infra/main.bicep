@@ -51,8 +51,9 @@ module storage 'modules/storage.bicep' = {
   params: {
 	location: location
 	suffix: suffix
-	storageAccountName: empty(storageAccountName) ? 'theragraf${take(uniqueString(resourceGroup().id, suffix), 6)}' : storageAccountName
+	storageAccountName: storageAccountName
   }
+}
 }
 
 module openai 'modules/openai.bicep' = {
