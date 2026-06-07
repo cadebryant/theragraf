@@ -9,6 +9,9 @@
     "AzureOpenAI__DeploymentName": "<your-deployment-name>",
     "AzureLanguage__Endpoint": "https://<your-resource>.cognitiveservices.azure.com/",
     "AzureLanguage__ApiKey": "<your-key-or-leave-blank-if-using-managed-identity>",
-    "AzureStorage__AccountName": "<your-storage-account-name-or-leave-blank-for-local-azurite>"
+    "AzureStorage__AccountName": "<your-storage-account-name-or-leave-blank-for-local-azurite>",
+    "Auth__Disabled": "false",
+    "AzureAd__TenantId": "<your-entra-tenant-id>",
+    "AzureAd__ClientId": "<theragraf-api-app-registration-client-id>"
   }
 }

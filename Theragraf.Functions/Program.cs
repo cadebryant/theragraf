@@ -14,10 +14,14 @@ using OpenAI;
 using System.ClientModel;
 using Theragraf.Core.Services;
 using Theragraf.Functions.Agents;
+using Theragraf.Functions.Middleware;
 using Theragraf.Functions.Services;
 
 var host = new HostBuilder()
-    .ConfigureFunctionsWorkerDefaults()
+    .ConfigureFunctionsWorkerDefaults(workerApp =>
+    {
+        workerApp.UseMiddleware<JwtAuthMiddleware>();
+    })
     .ConfigureServices((context, services) =>
     {
         services.AddApplicationInsightsTelemetryWorkerService();

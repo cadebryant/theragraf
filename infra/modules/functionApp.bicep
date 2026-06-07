@@ -14,6 +14,8 @@ param appInsightsConnectionString string
 param openAiEndpoint string
 param openAiDeploymentName string
 param languageEndpoint string
+param tenantId string
+param apiClientId string
 
 var planName = '${functionAppName}-plan'
 
@@ -86,6 +88,15 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 		{
 		  name: 'AzureStorage__AccountName'
 		  value: storageAccountName
+		}
+		// ── Entra ID authentication ──────────────────────────────────────────
+		{
+		  name: 'AzureAd__TenantId'
+		  value: tenantId
+		}
+		{
+		  name: 'AzureAd__ClientId'
+		  value: apiClientId
 		}
 	  ]
 	}

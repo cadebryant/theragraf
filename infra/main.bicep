@@ -45,6 +45,12 @@ param languageAccountName string = 'theragraf-language'
 @description('Storage account name. Must match the existing account in appResourceGroup.')
 param storageAccountName string = 'theragrafstorage'
 
+@description('Entra ID tenant ID for JWT authentication.')
+param tenantId string = '9525f140-7768-4f65-8ebb-54bd5151f7cb'
+
+@description('Client ID of the theragraf-api Entra ID app registration.')
+param apiClientId string = 'd84a7ccd-aaa1-4adf-8211-7c03fa3d319a'
+
 // -- Shared naming suffix ------------------------------------------------------
 
 var suffix = toLower(environmentName)
@@ -106,6 +112,8 @@ module functionApp 'modules/functionApp.bicep' = {
     openAiEndpoint: openai.outputs.endpoint
     openAiDeploymentName: openAiDeploymentName
     languageEndpoint: language.outputs.endpoint
+    tenantId: tenantId
+    apiClientId: apiClientId
   }
 }
 

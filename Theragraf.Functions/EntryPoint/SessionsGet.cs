@@ -14,7 +14,7 @@ using Theragraf.Core.Services;public class SessionsGet(ISessionRepository reposi
     /// <summary>GET /api/sessions/{clientId} — list all sessions for a client.</summary>
     [Function("GetSessionsByClient")]
     public async Task<HttpResponseData> GetByClient(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "sessions/{clientId}")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sessions/{clientId}")] HttpRequestData req,
         string clientId,
         CancellationToken cancellationToken)
     {
@@ -49,7 +49,7 @@ using Theragraf.Core.Services;public class SessionsGet(ISessionRepository reposi
     /// <summary>GET /api/sessions/{clientId}/{sessionDate} — get one specific session.</summary>
     [Function("GetSessionByClientAndDate")]
     public async Task<HttpResponseData> GetByClientAndDate(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "sessions/{clientId}/{sessionDate}")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sessions/{clientId}/{sessionDate}")] HttpRequestData req,
         string clientId,
         string sessionDate,
         CancellationToken cancellationToken)

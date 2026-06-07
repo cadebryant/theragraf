@@ -15,7 +15,7 @@ public class DocumentationStart(ILoggerFactory loggerFactory)
 
     [Function("DocumentationStart")]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req,
         [DurableClient] DurableTaskClient durableClient,
         CancellationToken cancellationToken)
     {

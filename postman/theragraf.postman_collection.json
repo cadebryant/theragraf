@@ -60,6 +60,22 @@
     {
       "key": "liveDurableCode",
       "value": "YOUR_LIVE_DURABLE_CODE"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "deviceCode",
+      "value": ""
+    },
+    {
+      "key": "tenantId",
+      "value": "9525f140-7768-4f65-8ebb-54bd5151f7cb"
+    },
+    {
+      "key": "apiClientId",
+      "value": "d84a7ccd-aaa1-4adf-8211-7c03fa3d319a"
     }
   ],
   "item": [
@@ -160,6 +176,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "url": "{{baseUrl}}/api/DocumentationStart",
@@ -243,7 +263,14 @@
           ],
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/api/sessions/client-001?code={{durableCode}}"
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sessions/client-001"
           }
         },
         {
@@ -268,7 +295,14 @@
           ],
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/api/sessions/client-001/{{sessionDate}}?code={{durableCode}}"
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sessions/client-001/{{sessionDate}}"
           }
         }
       ]
@@ -277,7 +311,78 @@
       "name": "Live (Azure)",
       "item": [
         {
-          "name": "1 - Generate Synthetic OT Transcript",
+          "name": "0a - Request Device Code",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "pm.collectionVariables.set('deviceCode', json.device_code);",
+                    "pm.test('Device code received', () => pm.expect(json.device_code).to.be.a('string'));",
+                    "console.log('==================================================');",
+                    "console.log('Open this URL in your browser:', json.verification_uri);",
+                    "console.log('Enter this code:              ', json.user_code);",
+                    "console.log('Then run step 0b to get your token.');",
+                    "console.log('==================================================')"
+                  ]
+                }
+              }
+            ],
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+              ],
+              "url": "https://login.microsoftonline.com/{{tenantId}}/oauth2/v2.0/devicecode",
+              "body": {
+                "mode": "urlencoded",
+                "urlencoded": [
+                  { "key": "client_id", "value": "{{apiClientId}}" },
+                  { "key": "scope",     "value": "api://{{apiClientId}}/access_as_user offline_access" }
+                ]
+              }
+            }
+          },
+          {
+            "name": "0b - Poll for Token",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "const json = pm.response.json();",
+                    "if (json.access_token) {",
+                    "    pm.collectionVariables.set('accessToken', json.access_token);",
+                    "    pm.test('Access token acquired', () => pm.expect(json.access_token).to.be.a('string'));",
+                    "    console.log('Token acquired — you can now run steps 2 onwards.');",
+                    "} else if (json.error === 'authorization_pending') {",
+                    "    pm.test('Waiting for user to approve — re-run step 0b', () => { throw new Error('authorization_pending'); });",
+                    "} else {",
+                    "    pm.test('Token error: ' + json.error, () => { throw new Error(json.error_description); });",
+                    "}"
+                  ]
+                }
+              }
+            ],
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+              ],
+              "url": "https://login.microsoftonline.com/{{tenantId}}/oauth2/v2.0/token",
+              "body": {
+                "mode": "urlencoded",
+                "urlencoded": [
+                  { "key": "grant_type",  "value": "urn:ietf:params:oauth:grant-type:device_code" },
+                  { "key": "client_id",   "value": "{{apiClientId}}" },
+                  { "key": "device_code", "value": "{{deviceCode}}" }
+                ]
+              }
+            }
+          },
+          {
+            "name": "1 - Generate Synthetic OT Transcript",
           "event": [
             {
               "listen": "test",
@@ -370,9 +475,13 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{liveBaseUrl}}/api/DocumentationStart?code={{liveDurableCode}}",
+            "url": "{{liveBaseUrl}}/api/DocumentationStart",
             "body": {
               "mode": "raw",
               "raw": "{{requestBody}}"
@@ -453,7 +562,13 @@
           ],
           "request": {
             "method": "GET",
-            "url": "{{liveBaseUrl}}/api/sessions/client-001?code={{liveDurableCode}}"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{liveBaseUrl}}/api/sessions/client-001"
           }
         },
         {
@@ -478,7 +593,13 @@
           ],
           "request": {
             "method": "GET",
-            "url": "{{liveBaseUrl}}/api/sessions/client-001/{{sessionDate}}?code={{liveDurableCode}}"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{liveBaseUrl}}/api/sessions/client-001/{{sessionDate}}"
           }
         }
       ]

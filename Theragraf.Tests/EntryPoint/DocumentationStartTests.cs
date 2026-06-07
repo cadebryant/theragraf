@@ -145,6 +145,29 @@ public class DocumentationStartTests
     }
 
     [Fact]
+    public async Task Run_DefaultSessionDate_Returns400()
+    {
+        var input = new { RawTranscript = "transcript", TherapistName = "Dr. Adams", ClientId = "client-001", SessionDate = default(DateTimeOffset) };
+
+        var response = await _sut.Run(BuildRequest(input), _durableClient, CancellationToken.None);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(481)]
+    public async Task Run_InvalidSessionDurationMinutes_Returns400(int duration)
+    {
+        var input = new { RawTranscript = "transcript", TherapistName = "Dr. Adams", ClientId = "client-001", SessionDate = DateTimeOffset.UtcNow, SessionDurationMinutes = duration };
+
+        var response = await _sut.Run(BuildRequest(input), _durableClient, CancellationToken.None);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Run_MalformedJson_Returns400()
     {
         var response = await _sut.Run(BuildMalformedRequest(), _durableClient, CancellationToken.None);
