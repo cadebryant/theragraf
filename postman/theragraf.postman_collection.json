@@ -248,9 +248,11 @@
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
-                  "pm.test('Response is an array', () => pm.expect(json).to.be.an('array'));",
-                  "if (json.length > 0) {",
-                  "    const first = json[0];",
+                  "pm.test('Response has items array', () => pm.expect(json.items).to.be.an('array'));",
+                  "pm.test('Response has pageSize',    () => pm.expect(json.pageSize).to.be.a('number'));",
+                  "pm.test('Response has hasMore',     () => pm.expect(json.hasMore).to.be.a('boolean'));",
+                  "if (json.items.length > 0) {",
+                  "    const first = json.items[0];",
                   "    pm.test('Session has clientId',      () => pm.expect(first.clientId).to.be.a('string'));",
                   "    pm.test('Session has sessionDate',   () => pm.expect(first.sessionDate).to.be.a('string'));",
                   "    pm.test('Session has soapNote',      () => pm.expect(first.soapNote).to.be.an('object'));",
@@ -260,13 +262,15 @@
                   "    pm.collectionVariables.set('sessionDate', first.sessionDate);",
                   "    console.log('Latest session date saved:', first.sessionDate);",
                   "}",
-                  "console.log('Sessions found:', json.length);"
+                  "if (json.continuationToken) {",
+                  "    console.log('Next page token:', json.continuationToken);",
+                  "}",
+                  "console.log('Sessions on this page:', json.items.length, '| hasMore:', json.hasMore);"
                 ]
               }
             }
           ],
           "request": {
-            "method": "GET",
             "method": "GET",
             "header": [
               {
@@ -626,9 +630,11 @@
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
-                  "pm.test('Response is an array', () => pm.expect(json).to.be.an('array'));",
-                  "if (json.length > 0) {",
-                  "    const first = json[0];",
+                  "pm.test('Response has items array', () => pm.expect(json.items).to.be.an('array'));",
+                  "pm.test('Response has pageSize',    () => pm.expect(json.pageSize).to.be.a('number'));",
+                  "pm.test('Response has hasMore',     () => pm.expect(json.hasMore).to.be.a('boolean'));",
+                  "if (json.items.length > 0) {",
+                  "    const first = json.items[0];",
                   "    pm.test('Session has clientId',      () => pm.expect(first.clientId).to.be.a('string'));",
                   "    pm.test('Session has sessionDate',   () => pm.expect(first.sessionDate).to.be.a('string'));",
                   "    pm.test('Session has soapNote',      () => pm.expect(first.soapNote).to.be.an('object'));",
@@ -638,7 +644,10 @@
                   "    pm.collectionVariables.set('sessionDate', first.sessionDate);",
                   "    console.log('Latest session date saved:', first.sessionDate);",
                   "}",
-                  "console.log('Sessions found:', json.length);"
+                  "if (json.continuationToken) {",
+                  "    console.log('Next page token:', json.continuationToken);",
+                  "}",
+                  "console.log('Sessions on this page:', json.items.length, '| hasMore:', json.hasMore);"
                 ]
               }
             }

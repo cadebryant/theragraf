@@ -16,6 +16,7 @@ param openAiDeploymentName string
 param languageEndpoint string
 param tenantId string
 param apiClientId string
+param cosmosEndpoint string
 
 var planName = '${functionAppName}-plan'
 
@@ -84,11 +85,6 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 		  name: 'AzureLanguage__Endpoint'
 		  value: languageEndpoint
 		}
-		// ── Table Storage (Managed Identity — account name only) ─────────────
-		{
-		  name: 'AzureStorage__AccountName'
-		  value: storageAccountName
-		}
 		// ── Entra ID authentication ──────────────────────────────────────────
 		{
 		  name: 'AzureAd__TenantId'
@@ -97,6 +93,19 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 		{
 		  name: 'AzureAd__ClientId'
 		  value: apiClientId
+		}
+		// ── Cosmos DB (Managed Identity — endpoint only) ─────────────────────
+		{
+		  name: 'CosmosDb__AccountEndpoint'
+		  value: cosmosEndpoint
+		}
+		{
+		  name: 'CosmosDb__DatabaseName'
+		  value: 'theragraf'
+		}
+		{
+		  name: 'CosmosDb__ContainerName'
+		  value: 'sessions'
 		}
 	  ]
 	}

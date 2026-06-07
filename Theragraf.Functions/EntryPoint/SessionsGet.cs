@@ -6,12 +6,18 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
-using Theragraf.Core.Services;public class SessionsGet(ISessionRepository repository, ILoggerFactory loggerFactory)
+using Theragraf.Core.Services;
+
+public class SessionsGet(ISessionRepository repository, ILoggerFactory loggerFactory)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<SessionsGet>();
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    /// <summary>GET /api/sessions/{clientId} — list all sessions for a client.</summary>
+    /// <summary>
+    /// GET /api/sessions/{clientId}
+    /// Query params: pageSize, continuationToken, discipline, therapist, payer,
+    ///               dateFrom (ISO-8601), dateTo (ISO-8601), sortBy, sortOrder (asc|desc)
+    /// </summary>
     [Function("GetSessionsByClient")]
     public async Task<HttpResponseData> GetByClient(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sessions/{clientId}")] HttpRequestData req,
@@ -25,12 +31,35 @@ using Theragraf.Core.Services;public class SessionsGet(ISessionRepository reposi
             return badRequest;
         }
 
-        _logger.LogInformation("GetSessionsByClient called for clientId={ClientId}", clientId);
+        var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
 
-        IReadOnlyList<SessionResponse> sessions;
+        if (!int.TryParse(query["pageSize"], out var pageSize) || pageSize < 1)
+            pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        var continuationToken = query["continuationToken"];
+
+        DateTimeOffset? dateFrom = DateTimeOffset.TryParse(query["dateFrom"], out var df) ? df : null;
+        DateTimeOffset? dateTo   = DateTimeOffset.TryParse(query["dateTo"],   out var dt) ? dt : null;
+
+        var options = new SessionQueryOptions(
+            Discipline:  query["discipline"],
+            Therapist:   query["therapist"],
+            Payer:       query["payer"],
+            DateFrom:    dateFrom,
+            DateTo:      dateTo,
+            SortBy:      query["sortBy"]    ?? "sessionDate",
+            SortOrder:   query["sortOrder"] ?? "desc"
+        );
+
+        _logger.LogInformation(
+            "GetSessionsByClient clientId={ClientId} pageSize={PageSize} sortBy={SortBy} sortOrder={SortOrder}",
+            clientId, pageSize, options.SortBy, options.SortOrder);
+
+        PagedResult<SessionResponse> result;
         try
         {
-            sessions = await repository.GetByClientIdAsync(clientId, cancellationToken);
+            result = await repository.GetByClientIdPagedAsync(clientId, pageSize, continuationToken, options, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -42,7 +71,7 @@ using Theragraf.Core.Services;public class SessionsGet(ISessionRepository reposi
 
         var response = req.CreateResponse(HttpStatusCode.OK);
         response.Headers.Add("Content-Type", "application/json; charset=utf-8");
-        await response.WriteStringAsync(JsonSerializer.Serialize(sessions, JsonOptions), cancellationToken);
+        await response.WriteStringAsync(JsonSerializer.Serialize(result, JsonOptions), cancellationToken);
         return response;
     }
 

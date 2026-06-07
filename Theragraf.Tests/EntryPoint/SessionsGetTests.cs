@@ -39,11 +39,15 @@ public class SessionsGetTests
         _sut = new SessionsGet(_repository, NullLoggerFactory.Instance);
     }
 
-    private HttpRequestData BuildRequest()
+    private PagedResult<SessionResponse> SinglePage(IEnumerable<SessionResponse> items) =>
+        new(items.ToList(), 20, false, null);
+
+    private HttpRequestData BuildRequest(string url = "http://localhost/api/sessions/client-001")
     {
         var context = Substitute.For<FunctionContext>();
         context.InstanceServices.Returns(new ServiceCollection().BuildServiceProvider());
         var request = Substitute.For<HttpRequestData>(context);
+        request.Url.Returns(new Uri(url));
         request.Body.Returns(new MemoryStream());
         request.CreateResponse().Returns(_ =>
         {
@@ -64,11 +68,10 @@ public class SessionsGetTests
     [Fact]
     public async Task GetByClient_ReturnsOk()
     {
-        _repository.GetByClientIdAsync("client-001", Arg.Any<CancellationToken>())
-            .Returns(new List<SessionResponse> { SampleSession });
-        var req = BuildRequest();
+        _repository.GetByClientIdPagedAsync("client-001", Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(SinglePage([SampleSession]));
 
-        var response = await _sut.GetByClient(req, "client-001", CancellationToken.None);
+        var response = await _sut.GetByClient(BuildRequest(), "client-001", CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -76,39 +79,139 @@ public class SessionsGetTests
     [Fact]
     public async Task GetByClient_CallsRepositoryWithCorrectClientId()
     {
-        _repository.GetByClientIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(new List<SessionResponse>());
-        var req = BuildRequest();
+        _repository.GetByClientIdPagedAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(SinglePage([]));
 
-        await _sut.GetByClient(req, "client-abc", CancellationToken.None);
+        await _sut.GetByClient(BuildRequest(), "client-abc", CancellationToken.None);
 
-        await _repository.Received(1).GetByClientIdAsync("client-abc", Arg.Any<CancellationToken>());
+        await _repository.Received(1).GetByClientIdPagedAsync("client-abc", Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task GetByClient_EmptyList_ReturnsOk()
     {
-        _repository.GetByClientIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(new List<SessionResponse>());
-        var req = BuildRequest();
+        _repository.GetByClientIdPagedAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(SinglePage([]));
 
-        var response = await _sut.GetByClient(req, "client-001", CancellationToken.None);
+        var response = await _sut.GetByClient(BuildRequest(), "client-001", CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
-    public async Task GetByClient_WritesSessionJsonToBody()
+    public async Task GetByClient_WritesPagedEnvelopeToBody()
     {
-        _repository.GetByClientIdAsync("client-001", Arg.Any<CancellationToken>())
-            .Returns(new List<SessionResponse> { SampleSession });
-        var req = BuildRequest();
+        _repository.GetByClientIdPagedAsync("client-001", Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(SinglePage([SampleSession]));
 
-        var response = await _sut.GetByClient(req, "client-001", CancellationToken.None);
+        var response = await _sut.GetByClient(BuildRequest(), "client-001", CancellationToken.None);
 
         response.Body.Position = 0;
         var body = await new StreamReader(response.Body, Encoding.UTF8).ReadToEndAsync();
-        body.Should().Contain("client-001").And.Contain("97530").And.Contain("F82");
+        body.Should().Contain("items").And.Contain("pageSize").And.Contain("hasMore")
+            .And.Contain("client-001").And.Contain("97530").And.Contain("F82");
+    }
+
+    [Fact]
+    public async Task GetByClient_DefaultPageSizeIs20()
+    {
+        _repository.GetByClientIdPagedAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(SinglePage([]));
+
+        await _sut.GetByClient(BuildRequest(), "client-001", CancellationToken.None);
+
+        await _repository.Received(1).GetByClientIdPagedAsync("client-001", 20, Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetByClient_CustomPageSizePassedToRepository()
+    {
+        _repository.GetByClientIdPagedAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(SinglePage([]));
+
+        await _sut.GetByClient(BuildRequest("http://localhost/api/sessions/client-001?pageSize=5"), "client-001", CancellationToken.None);
+
+        await _repository.Received(1).GetByClientIdPagedAsync("client-001", 5, Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetByClient_PageSizeClampedTo100()
+    {
+        _repository.GetByClientIdPagedAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(SinglePage([]));
+
+        await _sut.GetByClient(BuildRequest("http://localhost/api/sessions/client-001?pageSize=999"), "client-001", CancellationToken.None);
+
+        await _repository.Received(1).GetByClientIdPagedAsync("client-001", 100, Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetByClient_ContinuationTokenPassedToRepository()
+    {
+        var token = "dGVzdA==";
+        _repository.GetByClientIdPagedAsync(Arg.Any<string>(), Arg.Any<int>(), token, Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(SinglePage([]));
+
+        await _sut.GetByClient(
+            BuildRequest($"http://localhost/api/sessions/client-001?continuationToken={Uri.EscapeDataString(token)}"),
+            "client-001", CancellationToken.None);
+
+        await _repository.Received(1).GetByClientIdPagedAsync("client-001", 20, token, Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetByClient_HasMoreTrue_ContinuationTokenInResponse()
+    {
+        var pagedResult = new PagedResult<SessionResponse>([SampleSession], 1, true, "bmV4dA==");
+        _repository.GetByClientIdPagedAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(pagedResult);
+
+        var response = await _sut.GetByClient(
+            BuildRequest("http://localhost/api/sessions/client-001?pageSize=1"), "client-001", CancellationToken.None);
+
+        response.Body.Position = 0;
+        var body = await new StreamReader(response.Body, Encoding.UTF8).ReadToEndAsync();
+        body.Should().Contain("\"hasMore\":true").And.Contain("bmV4dA==");
+    }
+
+    [Fact]
+    public async Task GetByClient_FilterParamsForwardedToRepository()
+    {
+        _repository.GetByClientIdPagedAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(SinglePage([]));
+
+        await _sut.GetByClient(
+            BuildRequest("http://localhost/api/sessions/client-001?discipline=PT&payer=Medicare&therapist=Dr+Adams"),
+            "client-001", CancellationToken.None);
+
+        await _repository.Received(1).GetByClientIdPagedAsync(
+            "client-001", 20, null,
+            Arg.Is<SessionQueryOptions?>(o => o != null && o.Discipline == "PT" && o.Payer == "Medicare" && o.Therapist == "Dr Adams"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetByClient_SortParamsForwardedToRepository()
+    {
+        _repository.GetByClientIdPagedAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(SinglePage([]));
+
+        await _sut.GetByClient(
+            BuildRequest("http://localhost/api/sessions/client-001?sortBy=therapistName&sortOrder=asc"),
+            "client-001", CancellationToken.None);
+
+        await _repository.Received(1).GetByClientIdPagedAsync(
+            "client-001", 20, null,
+            Arg.Is<SessionQueryOptions?>(o => o != null && o.SortBy == "therapistName" && o.SortOrder == "asc"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetByClient_MissingClientId_ReturnsBadRequest()
+    {
+        var response = await _sut.GetByClient(BuildRequest(), "", CancellationToken.None);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     // ── GetByClientAndDate ───────────────────────────────────────────────────

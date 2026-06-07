@@ -51,6 +51,9 @@ param tenantId string = '9525f140-7768-4f65-8ebb-54bd5151f7cb'
 @description('Client ID of the theragraf-api Entra ID app registration.')
 param apiClientId string = 'd84a7ccd-aaa1-4adf-8211-7c03fa3d319a'
 
+@description('Name for the Cosmos DB account (must be globally unique).')
+param cosmosAccountName string = 'theragraf-cosmos'
+
 // -- Shared naming suffix ------------------------------------------------------
 
 var suffix = toLower(environmentName)
@@ -114,6 +117,18 @@ module functionApp 'modules/functionApp.bicep' = {
     languageEndpoint: language.outputs.endpoint
     tenantId: tenantId
     apiClientId: apiClientId
+    cosmosEndpoint: cosmos.outputs.endpoint
+  }
+}
+
+// -- Cosmos DB (app resource group) -------------------------------------------
+
+module cosmos 'modules/cosmos.bicep' = {
+  name: 'cosmos'
+  scope: appRg
+  params: {
+    location: location
+    accountName: cosmosAccountName
   }
 }
 
@@ -140,11 +155,24 @@ module cognitiveRoleAssignments 'modules/cognitiveRoleAssignments.bicep' = {
   }
 }
 
+// -- Role assignments — Cosmos DB (app resource group) ------------------------
+
+module cosmosRoleAssignment 'modules/cosmosRoleAssignment.bicep' = {
+  name: 'cosmosRoleAssignment'
+  scope: appRg
+  params: {
+    cosmosAccountName: cosmos.outputs.accountName
+    functionAppPrincipalId: functionApp.outputs.principalId
+  }
+}
+
 // -- Outputs -------------------------------------------------------------------
 
 output functionAppName string = functionAppName
 output functionAppHostname string = functionApp.outputs.defaultHostname
 output storageAccountName string = storage.outputs.storageAccountName
+output cosmosAccountName string = cosmos.outputs.accountName
+output cosmosEndpoint string = cosmos.outputs.endpoint
 output openAiEndpoint string = openai.outputs.endpoint
 output languageEndpoint string = language.outputs.endpoint
 output appInsightsName string = monitoring.outputs.appInsightsName

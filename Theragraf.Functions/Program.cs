@@ -1,8 +1,8 @@
 using Azure;
 using Azure.AI.TextAnalytics;
 using Azure.AI.OpenAI;
-using Azure.Data.Tables;
 using Azure.Identity;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -94,19 +94,23 @@ var host = new HostBuilder()
         services.AddSingleton<IBillingAgent, BillingAgent>();
         services.AddSingleton<IIcd10Agent, Icd10Agent>();
 
-        // Persistence
-        // Uses connection string locally (Azurite); uses Managed Identity in Azure
-        // when AzureStorage:AccountName is set instead.
+        // Persistence — Azure Cosmos DB for NoSQL
+        // Local: connection string from CosmosDb:ConnectionString (Cosmos Emulator)
+        // Azure: endpoint + Managed Identity when CosmosDb:AccountEndpoint is set
         services.AddSingleton(sp =>
         {
-            var accountName = config["AzureStorage:AccountName"];
-            return string.IsNullOrWhiteSpace(accountName)
-                ? new TableServiceClient(config["AzureWebJobsStorage"]!)
-                : new TableServiceClient(
-                    new Uri($"https://{accountName}.table.core.windows.net"),
-                    new DefaultAzureCredential());
+            var endpoint = config["CosmosDb:AccountEndpoint"];
+            return string.IsNullOrWhiteSpace(endpoint)
+                ? new CosmosClient(config["CosmosDb:ConnectionString"]!)
+                : new CosmosClient(endpoint, new DefaultAzureCredential());
         });
-        services.AddSingleton<ISessionRepository, TableStorageSessionRepository>();
+        services.AddSingleton<ISessionRepository>(sp =>
+        {
+            var cosmosClient = sp.GetRequiredService<CosmosClient>();
+            var dbName       = config["CosmosDb:DatabaseName"] ?? "theragraf";
+            var container    = config["CosmosDb:ContainerName"] ?? "sessions";
+            return new CosmosSessionRepository(cosmosClient, dbName, container);
+        });
     })
     .Build();
 

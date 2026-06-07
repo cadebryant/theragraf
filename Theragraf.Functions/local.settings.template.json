@@ -10,6 +10,9 @@
     "AzureLanguage__Endpoint": "https://<your-resource>.cognitiveservices.azure.com/",
     "AzureLanguage__ApiKey": "<your-key-or-leave-blank-if-using-managed-identity>",
     "AzureStorage__AccountName": "<your-storage-account-name-or-leave-blank-for-local-azurite>",
+    "CosmosDb__ConnectionString": "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMzsKvFb4wFAFkFsKA==",
+    "CosmosDb__DatabaseName": "theragraf",
+    "CosmosDb__ContainerName": "sessions",
     "Auth__Disabled": "false",
     "AzureAd__TenantId": "<your-entra-tenant-id>",
     "AzureAd__ClientId": "<theragraf-api-app-registration-client-id>"
