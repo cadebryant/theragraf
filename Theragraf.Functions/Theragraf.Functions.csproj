@@ -21,10 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.13.2" />
+    <PackageReference Include="Azure.Identity" Version="1.17.0" />
     <PackageReference Include="Azure.AI.TextAnalytics" Version="5.3.0" />
     <PackageReference Include="Azure.Data.Tables" Version="12.11.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" Version="2.51.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.DurableTask" Version="1.16.5" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.3.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.7" OutputItemType="Analyzer" />
@@ -39,9 +40,7 @@
   <!-- Auto-start Azurite when building in Debug configuration -->
   <Target Name="StartAzurite" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug'">
     <Message Text="Starting Azurite storage emulator..." Importance="high" />
-    <Exec Command="powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\tools\Start-Azurite.ps1&quot;"
-          ContinueOnError="true"
-          ConsoleToMSBuild="true" />
+    <Exec Command="powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\tools\Start-Azurite.ps1&quot;" ContinueOnError="true" ConsoleToMSBuild="true" />
   </Target>
 
 </Project>

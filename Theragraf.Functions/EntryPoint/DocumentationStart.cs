@@ -45,8 +45,19 @@ public class DocumentationStart(ILoggerFactory loggerFactory)
             return badRequest;
         }
 
-        var instanceId = await durableClient.ScheduleNewOrchestrationInstanceAsync(
-            "DocumentationOrchestrator", input, cancellationToken);
+        string instanceId;
+        try
+        {
+            instanceId = await durableClient.ScheduleNewOrchestrationInstanceAsync(
+                "DocumentationOrchestrator", input, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to schedule orchestration for client {ClientId}", input.ClientId);
+            var error = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await error.WriteStringAsync("An unexpected error occurred while starting the documentation pipeline.", cancellationToken);
+            return error;
+        }
 
         _logger.LogInformation("Started orchestration {InstanceId} for client {ClientId}",
             instanceId, input.ClientId);

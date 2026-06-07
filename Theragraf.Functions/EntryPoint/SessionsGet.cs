@@ -5,9 +5,8 @@ using System.Text.Json;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
-using Theragraf.Core.Services;
-
-public class SessionsGet(ISessionRepository repository, ILoggerFactory loggerFactory)
+using Theragraf.Core.Models;
+using Theragraf.Core.Services;public class SessionsGet(ISessionRepository repository, ILoggerFactory loggerFactory)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<SessionsGet>();
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -21,7 +20,18 @@ public class SessionsGet(ISessionRepository repository, ILoggerFactory loggerFac
     {
         _logger.LogInformation("GetSessionsByClient called for clientId={ClientId}", clientId);
 
-        var sessions = await repository.GetByClientIdAsync(clientId, cancellationToken);
+        IReadOnlyList<SessionResponse> sessions;
+        try
+        {
+            sessions = await repository.GetByClientIdAsync(clientId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GetSessionsByClient failed for clientId={ClientId}", clientId);
+            var error = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await error.WriteStringAsync("An unexpected error occurred while retrieving sessions.", cancellationToken);
+            return error;
+        }
 
         var response = req.CreateResponse(HttpStatusCode.OK);
         response.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -40,7 +50,18 @@ public class SessionsGet(ISessionRepository repository, ILoggerFactory loggerFac
         _logger.LogInformation("GetSessionByClientAndDate called for clientId={ClientId} date={Date}",
             clientId, sessionDate);
 
-        var session = await repository.GetByClientIdAndDateAsync(clientId, sessionDate, cancellationToken);
+        SessionResponse? session;
+        try
+        {
+            session = await repository.GetByClientIdAndDateAsync(clientId, sessionDate, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GetSessionByClientAndDate failed for clientId={ClientId}", clientId);
+            var error = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await error.WriteStringAsync("An unexpected error occurred while retrieving the session.", cancellationToken);
+            return error;
+        }
 
         if (session is null)
         {

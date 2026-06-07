@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
@@ -14,7 +15,7 @@ public class IngestionActivityTests
     public IngestionActivityTests()
     {
         _redactionService = Substitute.For<IPiiRedactionService>();
-        _sut = new IngestionActivity(_redactionService);
+        _sut = new IngestionActivity(_redactionService, NullLoggerFactory.Instance);
     }
 
     private static TranscriptInput BuildInput(string transcript = "Raw session transcript.") =>

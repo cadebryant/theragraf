@@ -1,16 +1,17 @@
 namespace Theragraf.Functions.Agents;
 
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Theragraf.Core.Models;
 
-public class SoapAgent(Kernel kernel) : BaseAgent(kernel), ISoapAgent
+public class SoapAgent(Kernel kernel, ILoggerFactory loggerFactory)
+    : BaseAgent(kernel, loggerFactory.CreateLogger<SoapAgent>()), ISoapAgent
 {
     public async Task<SoapNote> GenerateSoapNoteAsync(ObservationResult input)
     {
-        var function = Kernel.Plugins.GetFunction("SoapAgent", "SoapAgent");
-        var arguments = new KernelArguments { ["input"] = input.RedactedTranscript };
-        var result = await Kernel.InvokeAsync(function, arguments);
-        return JsonSerializer.Deserialize<SoapNote>(StripMarkdownCodeFence(result.ToString()))!;
+        var raw = await InvokePluginAsync("SoapAgent", "SoapAgent",
+            new KernelArguments { ["input"] = input.RedactedTranscript });
+        return JsonSerializer.Deserialize<SoapNote>(StripMarkdownCodeFence(raw))!;
     }
 }

@@ -1,10 +1,12 @@
 namespace Theragraf.Functions.Agents;
 
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Theragraf.Core.Models;
 
-public class Icd10Agent(Kernel kernel) : BaseAgent(kernel), IIcd10Agent
+public class Icd10Agent(Kernel kernel, ILoggerFactory loggerFactory)
+    : BaseAgent(kernel, loggerFactory.CreateLogger<Icd10Agent>()), IIcd10Agent
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 

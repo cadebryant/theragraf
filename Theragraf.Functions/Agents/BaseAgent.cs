@@ -1,20 +1,45 @@
 namespace Theragraf.Functions.Agents;
 
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
+using Theragraf.Core.Exceptions;
 using Theragraf.Core.Models;
 
 public abstract class BaseAgent : IClinicalAgent
 {
     protected readonly Kernel Kernel;
+    protected readonly ILogger Logger;
 
-    protected BaseAgent(Kernel kernel)
+    protected BaseAgent(Kernel kernel, ILogger logger)
     {
         Kernel = kernel;
+        Logger = logger;
     }
 
     public virtual Task<string> ProcessAsync(string input)
     {
         throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Invokes a Semantic Kernel plugin function with structured logging.
+    /// Logs only plugin/function names — never prompt content or responses.
+    /// </summary>
+    protected async Task<string> InvokePluginAsync(string pluginName, string functionName, KernelArguments arguments)
+    {
+        Logger.LogInformation("Invoking SK plugin={PluginName} function={FunctionName}", pluginName, functionName);
+        try
+        {
+            var function = Kernel.Plugins.GetFunction(pluginName, functionName);
+            var result = await Kernel.InvokeAsync(function, arguments);
+            Logger.LogInformation("SK plugin={PluginName} function={FunctionName} completed", pluginName, functionName);
+            return result.ToString();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "SK plugin={PluginName} function={FunctionName} failed", pluginName, functionName);
+            throw new AgentException(pluginName, $"SK invocation failed: {ex.Message}", ex);
+        }
     }
 
     /// <summary>

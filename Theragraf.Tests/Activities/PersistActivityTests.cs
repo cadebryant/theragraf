@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
@@ -35,7 +36,7 @@ public class PersistActivityTests
     public PersistActivityTests()
     {
         _repository = Substitute.For<ISessionRepository>();
-        _sut = new PersistActivity(_repository);
+        _sut = new PersistActivity(_repository, NullLoggerFactory.Instance);
     }
 
     [Fact]

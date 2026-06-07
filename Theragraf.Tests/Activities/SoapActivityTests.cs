@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Theragraf.Core.Models;
 using Theragraf.Functions.Activities;
@@ -14,7 +15,7 @@ public class SoapActivityTests
     public SoapActivityTests()
     {
         _soapAgent = Substitute.For<ISoapAgent>();
-        _sut = new SoapActivity(_soapAgent);
+        _sut = new SoapActivity(_soapAgent, NullLoggerFactory.Instance);
     }
 
     private static ObservationResult BuildObservation(string transcript = "Patient reports anxiety.") =>

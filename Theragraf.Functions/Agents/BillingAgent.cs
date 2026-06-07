@@ -1,11 +1,13 @@
 namespace Theragraf.Functions.Agents;
 
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
 
-public class BillingAgent(Kernel kernel, ICmsUnitCalculator unitCalculator) : BaseAgent(kernel), IBillingAgent
+public class BillingAgent(Kernel kernel, ICmsUnitCalculator unitCalculator, ILoggerFactory loggerFactory)
+    : BaseAgent(kernel, loggerFactory.CreateLogger<BillingAgent>()), IBillingAgent
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 

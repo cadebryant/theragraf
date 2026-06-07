@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Theragraf.Core.Models;
 using Theragraf.Functions.Activities;
@@ -18,7 +19,7 @@ public class BillingActivityTests
     public BillingActivityTests()
     {
         _billingAgent = Substitute.For<IBillingAgent>();
-        _sut = new BillingActivity(_billingAgent);
+        _sut = new BillingActivity(_billingAgent, NullLoggerFactory.Instance);
     }
 
     [Fact]

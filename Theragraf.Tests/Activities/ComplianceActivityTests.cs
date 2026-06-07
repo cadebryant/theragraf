@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Theragraf.Core.Models;
 using Theragraf.Functions.Activities;
@@ -14,7 +15,7 @@ public class ComplianceActivityTests
     public ComplianceActivityTests()
     {
         _complianceAgent = Substitute.For<IComplianceAgent>();
-        _sut = new ComplianceActivity(_complianceAgent);
+        _sut = new ComplianceActivity(_complianceAgent, NullLoggerFactory.Instance);
     }
 
     private static SoapNote BuildSoapNote(

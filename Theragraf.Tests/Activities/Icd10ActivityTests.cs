@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Theragraf.Core.Models;
 using Theragraf.Functions.Activities;
@@ -18,7 +19,7 @@ public class Icd10ActivityTests
     public Icd10ActivityTests()
     {
         _icd10Agent = Substitute.For<IIcd10Agent>();
-        _sut = new Icd10Activity(_icd10Agent);
+        _sut = new Icd10Activity(_icd10Agent, NullLoggerFactory.Instance);
     }
 
     [Fact]

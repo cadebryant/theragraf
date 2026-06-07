@@ -7,6 +7,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using OpenAI;
 using System.ClientModel;
@@ -18,6 +19,8 @@ var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureServices((context, services) =>
     {
+        services.ConfigureFunctionsApplicationInsights();
+
         var config = context.Configuration;
 
         // Azure AI Language (PII Redaction)
@@ -36,12 +39,14 @@ var host = new HostBuilder()
         // Semantic Kernel — Azure OpenAI
         services.AddSingleton<Kernel>(sp =>
         {
+            var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Theragraf.Startup");
             var kernelBuilder = Kernel.CreateBuilder();
 
             var deploymentName = config["AzureOpenAI:DeploymentName"]!;
             var aoaiEndpoint = config["AzureOpenAI:Endpoint"]!;
             var aoaiApiKey = config["AzureOpenAI:ApiKey"];
-            Console.WriteLine($"[Theragraf] DeploymentName='{deploymentName}' Endpoint='{aoaiEndpoint}'");
+            logger.LogInformation("Configuring Semantic Kernel: deployment={DeploymentName} endpoint={Endpoint}",
+                deploymentName, aoaiEndpoint);
 
             // Uses API key locally; uses Managed Identity in Azure when no key is configured.
             var azureClient = string.IsNullOrWhiteSpace(aoaiApiKey)
@@ -67,8 +72,7 @@ var host = new HostBuilder()
             if (!Directory.Exists(pluginsPath))
                 throw new DirectoryNotFoundException($"Plugins directory not found at: {pluginsPath}");
 
-            Console.WriteLine($"[Theragraf] Loading plugins from: {pluginsPath}");
-            Console.WriteLine($"[Theragraf] Plugin dirs: {string.Join(", ", Directory.GetDirectories(pluginsPath))}");
+            logger.LogInformation("Loading SK plugins from {PluginsPath}", pluginsPath);
 
             kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "SoapAgent"), "SoapAgent");
             kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "ComplianceAgent"), "ComplianceAgent");
