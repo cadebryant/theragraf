@@ -34,7 +34,7 @@ param cognitiveResourceGroup string = 'Default-Web-EastUS'
 param functionAppName string = 'theragraf-functions'
 
 @description('Name of the Azure OpenAI deployment (model deployment, not the account).')
-param openAiDeploymentName string = 'gpt-4o-mini'
+param openAiDeploymentName string = 'gpt-4o'
 
 @description('Name of the existing Azure OpenAI account.')
 param openAiAccountName string = 'theragraf-oai'

@@ -99,10 +99,17 @@ var host = new HostBuilder()
         // Azure: endpoint + Managed Identity when CosmosDb:AccountEndpoint is set
         services.AddSingleton(sp =>
         {
+            var options = new CosmosClientOptions
+            {
+                SerializerOptions = new CosmosSerializationOptions
+                {
+                    PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
+                }
+            };
             var endpoint = config["CosmosDb:AccountEndpoint"];
             return string.IsNullOrWhiteSpace(endpoint)
-                ? new CosmosClient(config["CosmosDb:ConnectionString"]!)
-                : new CosmosClient(endpoint, new DefaultAzureCredential());
+                ? new CosmosClient(config["CosmosDb:ConnectionString"]!, options)
+                : new CosmosClient(endpoint, new DefaultAzureCredential(), options);
         });
         services.AddSingleton<ISessionRepository>(sp =>
         {

@@ -80,6 +80,10 @@
     {
       "key": "clientSecret",
       "value": "YOUR_CLIENT_SECRET"
+    },
+    {
+      "key": "clientId",
+      "value": ""
     }
   ],
   "item": [
@@ -147,7 +151,12 @@
                   "if (!transcript) { throw new Error('No transcript found. Run step 1 first.'); }",
                   "if (!therapistName) { throw new Error('No therapist name found. Run step 1 first.'); }",
                   "const body = JSON.stringify({",
-                  "    clientId: 'client-001',",
+                  "const names = ['alex','blake','casey','dana','drew','jamie','morgan','parker','quinn','riley','sage','taylor'];",
+                  "const name = names[Math.floor(Math.random() * names.length)];",
+                  "const suffix = Math.random().toString(36).slice(2, 6);",
+                  "const clientId = 'client-' + name + '-' + suffix;",
+                  "pm.collectionVariables.set('clientId', clientId);",
+                  "    clientId: clientId,",
                   "    therapistName: therapistName,",
                   "    sessionDate: new Date().toISOString(),",
                   "    discipline: 0,",
@@ -157,6 +166,7 @@
                   "    rawTranscript: transcript",
                   "});",
                   "pm.collectionVariables.set('requestBody', body);",
+                  "console.log('Client ID:', clientId);",
                   "console.log('Therapist name:', therapistName);"
                 ]
               }
@@ -278,7 +288,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/sessions/client-001"
+            "url": "{{baseUrl}}/api/sessions/{{clientId}}"
           }
         },
         {
@@ -309,7 +319,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{baseUrl}}/api/sessions/client-001/{{sessionDate}}"
+            "url": "{{baseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}"
           }
         },
         {
@@ -332,7 +342,7 @@
           "request": {
             "method": "DELETE",
             "header": [],
-            "url": "{{baseUrl}}/api/sessions/client-001/{{sessionDate}}"
+            "url": "{{baseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}"
           }
         }
       ]
@@ -529,7 +539,12 @@
                   "if (!transcript) { throw new Error('No transcript found. Run step 1 first.'); }",
                   "if (!therapistName) { throw new Error('No therapist name found. Run step 1 first.'); }",
                   "const body = JSON.stringify({",
-                  "    clientId: 'client-001',",
+                  "const names = ['alex','blake','casey','dana','drew','jamie','morgan','parker','quinn','riley','sage','taylor'];",
+                  "const name = names[Math.floor(Math.random() * names.length)];",
+                  "const suffix = Math.random().toString(36).slice(2, 6);",
+                  "const clientId = 'client-' + name + '-' + suffix;",
+                  "pm.collectionVariables.set('clientId', clientId);",
+                  "    clientId: clientId,",
                   "    therapistName: therapistName,",
                   "    sessionDate: new Date().toISOString(),",
                   "    discipline: 0,",
@@ -539,6 +554,7 @@
                   "    rawTranscript: transcript",
                   "});",
                   "pm.collectionVariables.set('requestBody', body);",
+                  "console.log('Client ID:', clientId);",
                   "console.log('Therapist name:', therapistName);"
                 ]
               }
@@ -660,7 +676,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{liveBaseUrl}}/api/sessions/client-001"
+            "url": "{{liveBaseUrl}}/api/sessions/{{clientId}}"
           }
         },
         {
@@ -691,7 +707,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{liveBaseUrl}}/api/sessions/client-001/{{sessionDate}}"
+            "url": "{{liveBaseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}"
           }
         },
         {
@@ -719,7 +735,7 @@
                 "value": "Bearer {{accessToken}}"
               }
             ],
-            "url": "{{liveBaseUrl}}/api/sessions/client-001/{{sessionDate}}"
+            "url": "{{liveBaseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}"
           }
         }
       ]

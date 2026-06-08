@@ -484,3 +484,10 @@ $RECYCLE.BIN/
 
 # Azurite local storage emulator data
 .azurite/
+
+# Azure Functions publish output
+_publish/
+_publish.zip
+
+# NuGet / Cosmos SDK native runtime binaries (publish artifacts, not source)
+runtimes/
