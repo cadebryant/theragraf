@@ -63,11 +63,15 @@ public class CosmosSessionRepository : ISessionRepository
     public async Task<IReadOnlyList<SessionResponse>> GetByClientIdAsync(
         string clientId, CancellationToken cancellationToken = default)
     {
-        var query = new QueryDefinition(
-            "SELECT * FROM c WHERE c.clientId = @clientId ORDER BY c.id DESC")
-            .WithParameter("@clientId", clientId);
+        var requestOptions = new QueryRequestOptions { PartitionKey = new PartitionKey(clientId) };
 
-        return await ExecuteQueryAsync(query, clientId, cancellationToken);
+        var iterator = _container
+            .GetItemLinqQueryable<SessionDocument>(requestOptions: requestOptions)
+            .Where(d => d.ClientId == clientId)
+            .OrderByDescending(d => d.Id)
+            .ToFeedIterator();
+
+        return await DrainIteratorAsync(iterator, cancellationToken);
     }
 
     public async Task<SessionResponse?> GetByClientIdAndDateAsync(
@@ -163,54 +167,40 @@ public class CosmosSessionRepository : ISessionRepository
     internal static (string Sql, List<(string Name, object Value)> Parameters) BuildQuery(
         string clientId, SessionQueryOptions options)
     {
-        var sb = new StringBuilder("SELECT * FROM c WHERE c.clientId = @clientId");
+        var sb         = new StringBuilder(CosmosSessionQueries.BaseSelect);
         var parameters = new List<(string, object)> { ("@clientId", clientId) };
 
         if (!string.IsNullOrWhiteSpace(options.Discipline))
         {
-            sb.Append(" AND c.discipline = @discipline");
+            sb.Append(CosmosSessionQueries.FilterDiscipline);
             parameters.Add(("@discipline", options.Discipline));
         }
 
         if (!string.IsNullOrWhiteSpace(options.Therapist))
         {
-            sb.Append(" AND c.therapistName = @therapist");
+            sb.Append(CosmosSessionQueries.FilterTherapist);
             parameters.Add(("@therapist", options.Therapist));
         }
 
         if (!string.IsNullOrWhiteSpace(options.Payer))
         {
-            sb.Append(" AND c.payer = @payer");
+            sb.Append(CosmosSessionQueries.FilterPayer);
             parameters.Add(("@payer", options.Payer));
         }
 
         if (options.DateFrom.HasValue)
         {
-            sb.Append(" AND c.id >= @dateFrom");
+            sb.Append(CosmosSessionQueries.FilterDateFrom);
             parameters.Add(("@dateFrom", options.DateFrom.Value.UtcDateTime.ToString("yyyy-MM-ddTHH-mm-ssZ")));
         }
 
         if (options.DateTo.HasValue)
         {
-            sb.Append(" AND c.id <= @dateTo");
+            sb.Append(CosmosSessionQueries.FilterDateTo);
             parameters.Add(("@dateTo", options.DateTo.Value.UtcDateTime.ToString("yyyy-MM-ddTHH-mm-ssZ")));
         }
 
-        var sortField = options.SortBy?.ToLowerInvariant() switch
-        {
-            "therapistname" or "therapist" => "c.therapistName",
-            "discipline"                   => "c.discipline",
-            "setting"                      => "c.setting",
-            "payer"                        => "c.payer",
-            "duration"                     => "c.sessionDurationMinutes",
-            "createdat"                    => "c.createdAt",
-            _                              => "c.id",   // default: sessionDate
-        };
-
-        var sortDir = string.Equals(options.SortOrder, "asc", StringComparison.OrdinalIgnoreCase)
-            ? "ASC" : "DESC";
-
-        sb.Append($" ORDER BY {sortField} {sortDir}");
+        sb.Append(CosmosSessionQueries.OrderByClause(options));
 
         return (sb.ToString(), parameters);
     }
@@ -250,18 +240,19 @@ public class CosmosSessionRepository : ISessionRepository
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
-    private async Task<IReadOnlyList<SessionResponse>> ExecuteQueryAsync(
-        QueryDefinition query, string clientId, CancellationToken cancellationToken)
+    private static async Task<IReadOnlyList<SessionResponse>> DrainIteratorAsync(
+        FeedIterator<SessionDocument> iterator, CancellationToken cancellationToken)
     {
         var results = new List<SessionResponse>();
-        var options = new QueryRequestOptions { PartitionKey = new PartitionKey(clientId) };
 
-        using var iterator = _container.GetItemQueryIterator<SessionDocument>(query, requestOptions: options);
-        while (iterator.HasMoreResults)
+        using (iterator)
         {
-            var page = await iterator.ReadNextAsync(cancellationToken);
-            foreach (var doc in page)
-                results.Add(MapToResponse(doc));
+            while (iterator.HasMoreResults)
+            {
+                var page = await iterator.ReadNextAsync(cancellationToken);
+                foreach (var doc in page)
+                    results.Add(MapToResponse(doc));
+            }
         }
 
         return results;
