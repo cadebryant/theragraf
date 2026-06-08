@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<TargetFramework>net10.0</TargetFramework>
+	<ImplicitUsings>enable</ImplicitUsings>
+	<Nullable>enable</Nullable>
+	<IsPackable>false</IsPackable>
+	<IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<PackageReference Include="coverlet.collector"         Version="6.0.0" />
+	<PackageReference Include="FluentAssertions"           Version="8.10.0" />
+	<PackageReference Include="Microsoft.Azure.Cosmos"     Version="3.47.0" />
+	<PackageReference Include="Microsoft.NET.Test.Sdk"     Version="17.8.0" />
+	<PackageReference Include="xunit"                      Version="2.5.3" />
+	<PackageReference Include="xunit.runner.visualstudio"  Version="2.5.3" />
+	<PackageReference Include="Xunit.SkippableFact"        Version="1.4.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<ProjectReference Include="..\Theragraf.Core\Theragraf.Core.csproj" />
+	<ProjectReference Include="..\Theragraf.Functions\Theragraf.Functions.csproj" />
+  </ItemGroup>
+
+  <!-- Auto-start Cosmos DB Emulator before building/running integration tests -->
+  <Target Name="StartCosmosEmulator" BeforeTargets="Build">
+	<Message Text="Starting Azure Cosmos DB Emulator..." Importance="high" />
+	<Exec Command="powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\tools\Start-CosmosEmulator.ps1&quot;" ContinueOnError="true" ConsoleToMSBuild="true" />
+  </Target>
+
+</Project>

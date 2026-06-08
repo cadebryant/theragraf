@@ -4,5 +4,6 @@
   </Folder>
   <Project Path="Theragraf.Core/Theragraf.Core.csproj" />
   <Project Path="Theragraf.Functions/Theragraf.Functions.csproj" />
+  <Project Path="Theragraf.IntegrationTests/Theragraf.IntegrationTests.csproj" />
   <Project Path="Theragraf.Tests/Theragraf.Tests.csproj" />
 </Solution>
