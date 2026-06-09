@@ -65,4 +65,26 @@ internal static class CosmosSessionQueries
 
         return $" ORDER BY {field} {direction}";
     }
+
+    // ── Stats projections ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Projects only the fields required for stats aggregation — omits redactionMap
+    /// and encryptedRedactionMap to avoid loading PHI unnecessarily.
+    /// Filter: <c>@therapistName</c>
+    /// </summary>
+    internal const string StatsProjectionByTherapist =
+        "SELECT c.id, c.clientId, c.therapistName, c.discipline, c.setting, c.payer, " +
+        "c.sessionDurationMinutes, c.suggestedCptCodes, c.suggestedIcdCodes " +
+        "FROM c WHERE c.therapistName = @therapistName";
+
+    /// <summary>
+    /// Projects only the fields required for stats aggregation — omits redactionMap
+    /// and encryptedRedactionMap to avoid loading PHI unnecessarily.
+    /// Filter: <c>@clientId</c> (partition-key query).
+    /// </summary>
+    internal const string StatsProjectionByClient =
+        "SELECT c.id, c.clientId, c.therapistName, c.discipline, c.setting, c.payer, " +
+        "c.sessionDurationMinutes, c.suggestedCptCodes, c.suggestedIcdCodes " +
+        "FROM c WHERE c.clientId = @clientId";
 }

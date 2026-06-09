@@ -33,4 +33,16 @@ public interface ISessionRepository
         IReadOnlyList<CptCode>?            cptCodes,
         IReadOnlyList<IcdCode>?            icdCodes,
         CancellationToken                  cancellationToken = default);
+
+    /// <summary>
+    /// Returns aggregated statistics for every session belonging to <paramref name="therapistName"/>
+    /// across all clients. This is a cross-partition scan.
+    /// </summary>
+    Task<TherapistStats> GetTherapistStatsAsync(string therapistName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns aggregated statistics for every session belonging to <paramref name="clientId"/>.
+    /// This is a single-partition read.
+    /// </summary>
+    Task<ClientStats> GetClientStatsAsync(string clientId, CancellationToken cancellationToken = default);
 }

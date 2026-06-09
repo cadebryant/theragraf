@@ -40,7 +40,8 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         string subjective  = "Patient reports mild pain.",
         string objective   = "ROM measured at 90 degrees.",
         string assessment  = "Progressing well.",
-        string plan        = "Continue current plan.")
+        string plan        = "Continue current plan.",
+        string? clientId   = null)
     {
         var soap = new SoapNote(subjective, objective, assessment, plan);
         var cptCodes = new List<CptCode> { new("97110", "Therapeutic exercise", "Standard exercise") };
@@ -48,7 +49,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
 
         return new SessionRecord
         {
-            PartitionKey           = _clientId,
+            PartitionKey           = clientId ?? _clientId,
             RowKey                 = rowKey,
             TherapistName          = therapist,
             Discipline             = discipline,
@@ -591,5 +592,222 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         result!.SoapNote.Subjective.Should().Be("Original SOAP.");
         result.SuggestedCptCodes.Should().HaveCount(1);
         result.SuggestedCptCodes[0].Code.Should().Be("97150");
+    }
+
+    // ── GetTherapistStatsAsync ────────────────────────────────────────────────
+
+    [SkippableFact]
+    public async Task GetTherapistStatsAsync_ReturnsZeroedStats_WhenNoSessionsExist()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var stats  = await repo.GetTherapistStatsAsync($"Dr. Nobody-{Guid.NewGuid():N}");
+
+        stats.TotalSessions.Should().Be(0);
+        stats.TotalClients.Should().Be(0);
+        stats.TotalBillableUnits.Should().Be(0);
+        stats.SessionsByDiscipline.Should().BeEmpty();
+        stats.TopCptCodes.Should().BeEmpty();
+    }
+
+    [SkippableFact]
+    public async Task GetTherapistStatsAsync_CountsTotalSessionsAndClients()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo     = CreateRepository();
+        var therapist = $"Dr. Stats-{Guid.NewGuid():N}";
+
+        // Two sessions for the same client, one for a different client
+        var clientA = $"stats-client-a-{Guid.NewGuid():N}";
+        var clientB = $"stats-client-b-{Guid.NewGuid():N}";
+
+        await repo.SaveAsync(BuildRecord("2025-10-01T10-00-00Z", therapist: therapist, clientId: clientA));
+        await repo.SaveAsync(BuildRecord("2025-10-02T10-00-00Z", therapist: therapist, clientId: clientA));
+        await repo.SaveAsync(BuildRecord("2025-10-03T10-00-00Z", therapist: therapist, clientId: clientB));
+
+        var stats = await repo.GetTherapistStatsAsync(therapist);
+
+        stats.TotalSessions.Should().Be(3);
+        stats.TotalClients.Should().Be(2);
+    }
+
+    [SkippableFact]
+    public async Task GetTherapistStatsAsync_BreaksDownSessionsByDiscipline()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo     = CreateRepository();
+        var therapist = $"Dr. Discipline-{Guid.NewGuid():N}";
+
+        await repo.SaveAsync(BuildRecord("2025-10-04T10-00-00Z", therapist: therapist, discipline: "PT"));
+        await repo.SaveAsync(BuildRecord("2025-10-05T10-00-00Z", therapist: therapist, discipline: "OT"));
+        await repo.SaveAsync(BuildRecord("2025-10-06T10-00-00Z", therapist: therapist, discipline: "PT"));
+
+        var stats = await repo.GetTherapistStatsAsync(therapist);
+
+        stats.SessionsByDiscipline.Should().ContainKey("PT").WhoseValue.Should().Be(2);
+        stats.SessionsByDiscipline.Should().ContainKey("OT").WhoseValue.Should().Be(1);
+    }
+
+    [SkippableFact]
+    public async Task GetTherapistStatsAsync_BreaksDownSessionsByPayer()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo     = CreateRepository();
+        var therapist = $"Dr. Payer-{Guid.NewGuid():N}";
+
+        await repo.SaveAsync(BuildRecord("2025-10-07T10-00-00Z", therapist: therapist, payer: "Medicare"));
+        await repo.SaveAsync(BuildRecord("2025-10-08T10-00-00Z", therapist: therapist, payer: "Medicaid"));
+        await repo.SaveAsync(BuildRecord("2025-10-09T10-00-00Z", therapist: therapist, payer: "Medicare"));
+
+        var stats = await repo.GetTherapistStatsAsync(therapist);
+
+        stats.SessionsByPayer.Should().ContainKey("Medicare").WhoseValue.Should().Be(2);
+        stats.SessionsByPayer.Should().ContainKey("Medicaid").WhoseValue.Should().Be(1);
+    }
+
+    [SkippableFact]
+    public async Task GetTherapistStatsAsync_SumsAverageSessionDuration()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo     = CreateRepository();
+        var therapist = $"Dr. Duration-{Guid.NewGuid():N}";
+
+        await repo.SaveAsync(BuildRecord("2025-10-10T10-00-00Z", therapist: therapist, duration: 30));
+        await repo.SaveAsync(BuildRecord("2025-10-11T10-00-00Z", therapist: therapist, duration: 60));
+
+        var stats = await repo.GetTherapistStatsAsync(therapist);
+
+        stats.AverageSessionDurationMinutes.Should().Be(45.0);
+    }
+
+    [SkippableFact]
+    public async Task GetTherapistStatsAsync_SumsTotalBillableUnits()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo     = CreateRepository();
+        var therapist = $"Dr. Units-{Guid.NewGuid():N}";
+
+        // Each BuildRecord includes 1 CPT code with BillableUnits = 1
+        await repo.SaveAsync(BuildRecord("2025-10-12T10-00-00Z", therapist: therapist));
+        await repo.SaveAsync(BuildRecord("2025-10-13T10-00-00Z", therapist: therapist));
+
+        var stats = await repo.GetTherapistStatsAsync(therapist);
+
+        stats.TotalBillableUnits.Should().Be(2);
+    }
+
+    [SkippableFact]
+    public async Task GetTherapistStatsAsync_AggregatesTopCptCodes()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo     = CreateRepository();
+        var therapist = $"Dr. Cpt-{Guid.NewGuid():N}";
+
+        await repo.SaveAsync(BuildRecord("2025-10-14T10-00-00Z", therapist: therapist));
+        await repo.SaveAsync(BuildRecord("2025-10-15T10-00-00Z", therapist: therapist));
+
+        var stats = await repo.GetTherapistStatsAsync(therapist);
+
+        stats.TopCptCodes.Should().NotBeEmpty();
+        stats.TopCptCodes[0].Code.Should().Be("97110"); // Both BuildRecord sessions use 97110
+        stats.TopCptCodes[0].Count.Should().Be(2);
+    }
+
+    // ── GetClientStatsAsync ───────────────────────────────────────────────────
+
+    [SkippableFact]
+    public async Task GetClientStatsAsync_ReturnsZeroedStats_WhenNoSessionsExist()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo  = CreateRepository();
+        var stats = await repo.GetClientStatsAsync($"unknown-client-{Guid.NewGuid():N}");
+
+        stats.TotalSessions.Should().Be(0);
+        stats.TotalBillableUnits.Should().Be(0);
+        stats.FirstSessionDate.Should().BeNull();
+        stats.LastSessionDate.Should().BeNull();
+        stats.SessionsByTherapist.Should().BeEmpty();
+        stats.TopCptCodes.Should().BeEmpty();
+    }
+
+    [SkippableFact]
+    public async Task GetClientStatsAsync_CountsTotalSessions()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo = CreateRepository();
+
+        await repo.SaveAsync(BuildRecord("2025-11-01T10-00-00Z"));
+        await repo.SaveAsync(BuildRecord("2025-11-02T10-00-00Z"));
+        await repo.SaveAsync(BuildRecord("2025-11-03T10-00-00Z"));
+
+        var stats = await repo.GetClientStatsAsync(_clientId);
+
+        stats.TotalSessions.Should().Be(3);
+        stats.ClientId.Should().Be(_clientId);
+    }
+
+    [SkippableFact]
+    public async Task GetClientStatsAsync_TracksFirstAndLastSessionDate()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo = CreateRepository();
+
+        await repo.SaveAsync(BuildRecord("2025-11-04T10-00-00Z"));
+        await repo.SaveAsync(BuildRecord("2025-11-06T10-00-00Z"));
+        await repo.SaveAsync(BuildRecord("2025-11-05T10-00-00Z"));
+
+        var stats = await repo.GetClientStatsAsync(_clientId);
+
+        stats.FirstSessionDate.Should().NotBeNull();
+        stats.LastSessionDate.Should().NotBeNull();
+        stats.FirstSessionDate!.Value.Date.Should().Be(new DateTime(2025, 11, 4));
+        stats.LastSessionDate!.Value.Date.Should().Be(new DateTime(2025, 11, 6));
+    }
+
+    [SkippableFact]
+    public async Task GetClientStatsAsync_BreaksDownSessionsByTherapist()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo = CreateRepository();
+
+        await repo.SaveAsync(BuildRecord("2025-11-07T10-00-00Z", therapist: "Dr. Smith"));
+        await repo.SaveAsync(BuildRecord("2025-11-08T10-00-00Z", therapist: "Dr. Jones"));
+        await repo.SaveAsync(BuildRecord("2025-11-09T10-00-00Z", therapist: "Dr. Smith"));
+
+        var stats = await repo.GetClientStatsAsync(_clientId);
+
+        stats.SessionsByTherapist.Should().ContainKey("Dr. Smith").WhoseValue.Should().Be(2);
+        stats.SessionsByTherapist.Should().ContainKey("Dr. Jones").WhoseValue.Should().Be(1);
+    }
+
+    [SkippableFact]
+    public async Task GetClientStatsAsync_SumsAverageSessionDuration()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo = CreateRepository();
+
+        await repo.SaveAsync(BuildRecord("2025-11-10T10-00-00Z", duration: 30));
+        await repo.SaveAsync(BuildRecord("2025-11-11T10-00-00Z", duration: 60));
+        await repo.SaveAsync(BuildRecord("2025-11-12T10-00-00Z", duration: 45));
+
+        var stats = await repo.GetClientStatsAsync(_clientId);
+
+        stats.AverageSessionDurationMinutes.Should().Be(45.0);
+    }
+
+    [SkippableFact]
+    public async Task GetClientStatsAsync_AggregatesTopIcdCodes()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo = CreateRepository();
+
+        await repo.SaveAsync(BuildRecord("2025-11-13T10-00-00Z"));
+        await repo.SaveAsync(BuildRecord("2025-11-14T10-00-00Z"));
+
+        var stats = await repo.GetClientStatsAsync(_clientId);
+
+        stats.TopIcdCodes.Should().NotBeEmpty();
+        stats.TopIcdCodes[0].Code.Should().Be("M54.5"); // Both BuildRecord sessions use M54.5
+        stats.TopIcdCodes[0].Count.Should().Be(2);
     }
 }

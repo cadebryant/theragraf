@@ -336,7 +336,169 @@ public class CosmosSessionRepository : ISessionRepository
         return text;
     }
 
-    // ── Internal helpers ──────────────────────────────────────────────────────
+    // ── Stats ─────────────────────────────────────────────────────────────────
+
+    public async Task<TherapistStats> GetTherapistStatsAsync(
+        string therapistName, CancellationToken cancellationToken = default)
+    {
+        var query = new QueryDefinition(CosmosSessionQueries.StatsProjectionByTherapist)
+            .WithParameter("@therapistName", therapistName);
+
+        var docs = await DrainStatsIteratorAsync(
+            _container.GetItemQueryIterator<SessionStatsProjection>(query), cancellationToken);
+
+        var clients       = docs.Select(d => d.ClientId).Distinct().Count();
+        var durations     = docs.Where(d => d.SessionDurationMinutes.HasValue)
+                                .Select(d => d.SessionDurationMinutes!.Value).ToList();
+        var avgDuration   = durations.Count > 0 ? durations.Average() : 0.0;
+
+        return new TherapistStats(
+            TherapistName:                therapistName,
+            TotalSessions:                docs.Count,
+            TotalClients:                 clients,
+            AverageSessionDurationMinutes: Math.Round(avgDuration, 1),
+            TotalBillableUnits:           docs.Sum(d => d.SuggestedCptCodes.Sum(c => c.BillableUnits)),
+            SessionsByDiscipline:         GroupCount(docs, d => d.Discipline),
+            SessionsBySetting:            GroupCount(docs, d => d.Setting),
+            SessionsByPayer:              GroupCount(docs, d => d.Payer),
+            TopCptCodes:                  TopCodes(docs, d => d.SuggestedCptCodes),
+            TopIcdCodes:                  TopIcdCodes(docs)
+        );
+    }
+
+    public async Task<ClientStats> GetClientStatsAsync(
+        string clientId, CancellationToken cancellationToken = default)
+    {
+        var requestOptions = new QueryRequestOptions { PartitionKey = new PartitionKey(clientId) };
+        var query = new QueryDefinition(CosmosSessionQueries.StatsProjectionByClient)
+            .WithParameter("@clientId", clientId);
+
+        var docs = await DrainStatsIteratorAsync(
+            _container.GetItemQueryIterator<SessionStatsProjection>(query, requestOptions: requestOptions),
+            cancellationToken);
+
+        var durations   = docs.Where(d => d.SessionDurationMinutes.HasValue)
+                              .Select(d => d.SessionDurationMinutes!.Value).ToList();
+        var avgDuration = durations.Count > 0 ? durations.Average() : 0.0;
+
+        // Session dates are stored as the document id in yyyy-MM-ddTHH-mm-ssZ format.
+        // Lexicographic min/max gives us first/last reliably.
+        DateTimeOffset? first = null, last = null;
+        if (docs.Count > 0)
+        {
+            var sorted = docs.Select(d => d.Id).OrderBy(id => id).ToList();
+            first = ParseSessionDate(sorted.First());
+            last  = ParseSessionDate(sorted.Last());
+        }
+
+        return new ClientStats(
+            ClientId:                     clientId,
+            TotalSessions:                docs.Count,
+            AverageSessionDurationMinutes: Math.Round(avgDuration, 1),
+            TotalBillableUnits:           docs.Sum(d => d.SuggestedCptCodes.Sum(c => c.BillableUnits)),
+            FirstSessionDate:             first,
+            LastSessionDate:              last,
+            SessionsByTherapist:          GroupCount(docs, d => d.TherapistName),
+            SessionsByDiscipline:         GroupCount(docs, d => d.Discipline),
+            SessionsBySetting:            GroupCount(docs, d => d.Setting),
+            SessionsByPayer:              GroupCount(docs, d => d.Payer),
+            TopCptCodes:                  TopCodes(docs, d => d.SuggestedCptCodes),
+            TopIcdCodes:                  TopIcdCodes(docs)
+        );
+    }
+
+    // ── Stats helpers ─────────────────────────────────────────────────────────
+
+    private static IReadOnlyDictionary<string, int> GroupCount(
+        IEnumerable<SessionStatsProjection> docs, Func<SessionStatsProjection, string> key) =>
+        docs.GroupBy(key)
+            .OrderByDescending(g => g.Count())
+            .ToDictionary(g => g.Key, g => g.Count());
+
+    private static IReadOnlyList<CodeFrequency> TopCodes(
+        IEnumerable<SessionStatsProjection> docs,
+        Func<SessionStatsProjection, IEnumerable<CptCode>> selector,
+        int topN = 10) =>
+        docs.SelectMany(selector)
+            .GroupBy(c => c.Code)
+            .Select(g => new CodeFrequency(
+                Code:               g.Key,
+                Description:        g.First().Description,
+                Count:              g.Count(),
+                TotalBillableUnits: g.Sum(c => c.BillableUnits)))
+            .OrderByDescending(f => f.Count)
+            .Take(topN)
+            .ToList();
+
+    private static IReadOnlyList<CodeFrequency> TopIcdCodes(
+        IEnumerable<SessionStatsProjection> docs, int topN = 10) =>
+        docs.SelectMany(d => d.SuggestedIcdCodes)
+            .GroupBy(c => c.Code)
+            .Select(g => new CodeFrequency(
+                Code:               g.Key,
+                Description:        g.First().Description,
+                Count:              g.Count(),
+                TotalBillableUnits: 0))
+            .OrderByDescending(f => f.Count)
+            .Take(topN)
+            .ToList();
+
+    private static DateTimeOffset? ParseSessionDate(string id)
+    {
+        if (DateTimeOffset.TryParseExact(id, "yyyy-MM-ddTHH-mm-ssZ",
+                null, System.Globalization.DateTimeStyles.AssumeUniversal, out var result))
+            return result;
+        return null;
+    }
+
+    private static async Task<List<SessionStatsProjection>> DrainStatsIteratorAsync(
+        FeedIterator<SessionStatsProjection> iterator, CancellationToken cancellationToken)
+    {
+        var results = new List<SessionStatsProjection>();
+        using (iterator)
+        {
+            while (iterator.HasMoreResults)
+            {
+                var page = await iterator.ReadNextAsync(cancellationToken);
+                results.AddRange(page);
+            }
+        }
+        return results;
+    }
+
+    /// <summary>
+    /// Lightweight Cosmos projection used only for stats aggregation.
+    /// Omits redaction map fields to avoid loading PHI.
+    /// </summary>
+    private sealed class SessionStatsProjection
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("clientId")]
+        public string ClientId { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("therapistName")]
+        public string TherapistName { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("discipline")]
+        public string Discipline { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("setting")]
+        public string Setting { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("payer")]
+        public string Payer { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sessionDurationMinutes")]
+        public int? SessionDurationMinutes { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("suggestedCptCodes")]
+        public List<CptCode> SuggestedCptCodes { get; set; } = [];
+
+        [System.Text.Json.Serialization.JsonPropertyName("suggestedIcdCodes")]
+        public List<IcdCode> SuggestedIcdCodes { get; set; } = [];
+    }
 
     private async Task<IReadOnlyList<SessionResponse>> DrainIteratorAsync(
         FeedIterator<SessionDocument> iterator, CancellationToken cancellationToken)
