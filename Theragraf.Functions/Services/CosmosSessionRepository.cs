@@ -60,13 +60,23 @@ public class CosmosSessionRepository : ISessionRepository
 
     // ── Read (unpaged) ────────────────────────────────────────────────────────
 
+    // GetItemLinqQueryable has its own LINQ serializer that does NOT inherit
+    // CosmosClientOptions.SerializerOptions. Passing CosmosLinqSerializerOptions
+    // explicitly ensures generated SQL uses camelCase field names to match the stored documents.
+    private static readonly CosmosLinqSerializerOptions _linqSerializerOptions = new()
+    {
+        PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
+    };
+
     public async Task<IReadOnlyList<SessionResponse>> GetByClientIdAsync(
         string clientId, CancellationToken cancellationToken = default)
     {
         var requestOptions = new QueryRequestOptions { PartitionKey = new PartitionKey(clientId) };
 
         var iterator = _container
-            .GetItemLinqQueryable<SessionDocument>(requestOptions: requestOptions)
+            .GetItemLinqQueryable<SessionDocument>(
+                requestOptions:       requestOptions,
+                linqSerializerOptions: _linqSerializerOptions)
             .Where(d => d.ClientId == clientId)
             .OrderByDescending(d => d.Id)
             .ToFeedIterator();
