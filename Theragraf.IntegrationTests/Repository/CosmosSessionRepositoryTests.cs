@@ -26,7 +26,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
     private readonly string _clientId = $"integration-{Guid.NewGuid():N}";
 
     private CosmosSessionRepository CreateRepository() =>
-        new(cosmos.Client, CosmosFixture.DatabaseName, CosmosFixture.ContainerName);
+        new(cosmos.Client, CosmosFixture.DatabaseName, CosmosFixture.ContainerName, new NullRedactionMapEncryption());
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

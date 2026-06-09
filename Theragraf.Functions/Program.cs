@@ -2,6 +2,7 @@ using Azure;
 using Azure.AI.TextAnalytics;
 using Azure.AI.OpenAI;
 using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
@@ -97,6 +98,15 @@ var host = new HostBuilder()
         // Persistence — Azure Cosmos DB for NoSQL
         // Local: connection string from CosmosDb:ConnectionString (Cosmos Emulator)
         // Azure: endpoint + Managed Identity when CosmosDb:AccountEndpoint is set
+        // Redaction-map encryption — AES-256-GCM via Key Vault in Azure; pass-through locally
+        services.AddSingleton<IRedactionMapEncryption>(sp =>
+        {
+            var vaultUriStr = config["KeyVault:VaultUri"];
+            if (string.IsNullOrWhiteSpace(vaultUriStr))
+                return new NullRedactionMapEncryption();
+            return new AesGcmRedactionMapEncryption(new Uri(vaultUriStr), new DefaultAzureCredential());
+        });
+
         services.AddSingleton(sp =>
         {
             var options = new CosmosClientOptions
@@ -114,9 +124,10 @@ var host = new HostBuilder()
         services.AddSingleton<ISessionRepository>(sp =>
         {
             var cosmosClient = sp.GetRequiredService<CosmosClient>();
+            var encryption   = sp.GetRequiredService<IRedactionMapEncryption>();
             var dbName       = config["CosmosDb:DatabaseName"] ?? "theragraf";
             var container    = config["CosmosDb:ContainerName"] ?? "sessions";
-            return new CosmosSessionRepository(cosmosClient, dbName, container);
+            return new CosmosSessionRepository(cosmosClient, dbName, container, encryption);
         });
     })
     .Build();

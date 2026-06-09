@@ -54,6 +54,9 @@ param apiClientId string = 'd84a7ccd-aaa1-4adf-8211-7c03fa3d319a'
 @description('Name for the Cosmos DB account (must be globally unique).')
 param cosmosAccountName string = 'theragraf-cosmos'
 
+@description('Name for the Azure Key Vault (must be globally unique, 3-24 chars).')
+param keyVaultName string = 'theragraf-kv-${toLower(environmentName)}'
+
 @description('Name of the existing App Service Plan hosting the Function App.')
 param appServicePlanName string = '${functionAppName}-plan'
 
@@ -125,6 +128,7 @@ module functionApp 'modules/functionApp.bicep' = {
     apiClientId: apiClientId
     cosmosEndpoint: cosmos.outputs.endpoint
     appServicePlanName: appServicePlanName
+    keyVaultUri: keyVault.outputs.vaultUri
   }
 }
 
@@ -136,6 +140,18 @@ module cosmos 'modules/cosmos.bicep' = {
   params: {
     location: location
     accountName: cosmosAccountName
+  }
+}
+
+// -- Key Vault (app resource group) -------------------------------------------
+
+module keyVault 'modules/keyVault.bicep' = {
+  name: 'keyVault'
+  scope: appRg
+  params: {
+    location: location
+    suffix: suffix
+    keyVaultName: keyVaultName
   }
 }
 
@@ -174,6 +190,18 @@ module cosmosRoleAssignment 'modules/cosmosRoleAssignment.bicep' = {
   }
 }
 
+// -- Role assignments — Key Vault (app resource group) -------------------------
+
+module keyVaultRoleAssignment 'modules/keyVaultRoleAssignment.bicep' = {
+  name: 'keyVaultRoleAssignment'
+  scope: appRg
+  params: {
+    keyVaultName: keyVault.outputs.keyVaultName
+    functionAppPrincipalId: functionApp.outputs.principalId
+    developerPrincipalId: developerPrincipalId
+  }
+}
+
 // -- Outputs -------------------------------------------------------------------
 
 output functionAppName string = functionAppName
@@ -184,3 +212,5 @@ output cosmosEndpoint string = cosmos.outputs.endpoint
 output openAiEndpoint string = openai.outputs.endpoint
 output languageEndpoint string = language.outputs.endpoint
 output appInsightsName string = monitoring.outputs.appInsightsName
+output keyVaultName string = keyVault.outputs.keyVaultName
+output keyVaultUri string = keyVault.outputs.vaultUri

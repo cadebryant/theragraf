@@ -30,8 +30,27 @@ public class SessionDocument
     [JsonPropertyName("sessionDurationMinutes")]
     public int? SessionDurationMinutes { get; set; }
 
+    /// <summary>
+    /// Redaction map stored as a plain dictionary when encryption is disabled (local dev).
+    /// Null when <see cref="RedactionMapIsEncrypted"/> is <see langword="true"/>.
+    /// </summary>
     [JsonPropertyName("redactionMap")]
-    public Dictionary<string, string> RedactionMap { get; set; } = [];
+    public Dictionary<string, string>? RedactionMap { get; set; }
+
+    /// <summary>
+    /// AES-256-GCM encrypted, base64-encoded redaction map blob (nonce|ciphertext|tag).
+    /// Null when <see cref="RedactionMapIsEncrypted"/> is <see langword="false"/>.
+    /// </summary>
+    [JsonPropertyName("encryptedRedactionMap")]
+    public string? EncryptedRedactionMap { get; set; }
+
+    /// <summary>
+    /// <see langword="true"/> when <see cref="EncryptedRedactionMap"/> carries the data;
+    /// <see langword="false"/> when <see cref="RedactionMap"/> carries the data.
+    /// Allows safe rollout alongside existing unencrypted documents.
+    /// </summary>
+    [JsonPropertyName("redactionMapIsEncrypted")]
+    public bool RedactionMapIsEncrypted { get; set; }
 
     [JsonPropertyName("soapNote")]
     public SoapNote SoapNote { get; set; } = new("", "", "", "");

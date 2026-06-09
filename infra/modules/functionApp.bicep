@@ -18,6 +18,9 @@ param tenantId string
 param apiClientId string
 param cosmosEndpoint string
 
+@description('URI of the Azure Key Vault used for redaction-map encryption key storage.')
+param keyVaultUri string
+
 @description('Name of the existing Consumption App Service Plan. Defaults to the plan created alongside the Function App.')
 param appServicePlanName string = '${functionAppName}-plan'
 
@@ -97,6 +100,11 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 		{
 		  name: 'CosmosDb__ContainerName'
 		  value: 'sessions'
+		}
+		// ── Key Vault (redaction-map encryption key) ──────────────────────────
+		{
+		  name: 'KeyVault__VaultUri'
+		  value: keyVaultUri
 		}
 	  ]
 	}

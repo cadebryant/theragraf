@@ -12,11 +12,17 @@ using Theragraf.Core.Services;
 /// </summary>
 public class CosmosSessionRepository : ISessionRepository
 {
-    private readonly Container _container;
+    private readonly Container                _container;
+    private readonly IRedactionMapEncryption  _encryption;
 
-    public CosmosSessionRepository(CosmosClient cosmosClient, string databaseName, string containerName)
+    public CosmosSessionRepository(
+        CosmosClient            cosmosClient,
+        string                  databaseName,
+        string                  containerName,
+        IRedactionMapEncryption encryption)
     {
-        _container = cosmosClient.GetContainer(databaseName, containerName);
+        _container  = cosmosClient.GetContainer(databaseName, containerName);
+        _encryption = encryption;
     }
 
     // ── Write ─────────────────────────────────────────────────────────────────
@@ -39,20 +45,36 @@ public class CosmosSessionRepository : ISessionRepository
             ? new List<IcdCode>()
             : System.Text.Json.JsonSerializer.Deserialize<List<IcdCode>>(record.IcdCodesJson) ?? [];
 
+        // Encrypt the redaction map when Key Vault is configured; otherwise store plaintext.
+        string?                      encryptedBlob    = null;
+        Dictionary<string, string>?  plainRedactionMap = null;
+
+        if (_encryption.IsEnabled)
+        {
+            var plainJson = System.Text.Json.JsonSerializer.Serialize(redactionMap);
+            encryptedBlob = _encryption.Encrypt(plainJson);
+        }
+        else
+        {
+            plainRedactionMap = redactionMap;
+        }
+
         var doc = new SessionDocument
         {
-            Id                    = record.RowKey,
-            ClientId              = record.PartitionKey,
-            TherapistName         = record.TherapistName,
-            Discipline            = record.Discipline,
-            Setting               = record.Setting,
-            Payer                 = record.Payer,
-            SessionDurationMinutes = record.SessionDurationMinutes,
-            RedactionMap          = redactionMap,
-            SoapNote              = soapNote,
-            SuggestedCptCodes     = cptCodes,
-            SuggestedIcdCodes     = icdCodes,
-            CreatedAt             = record.CreatedAt,
+            Id                       = record.RowKey,
+            ClientId                 = record.PartitionKey,
+            TherapistName            = record.TherapistName,
+            Discipline               = record.Discipline,
+            Setting                  = record.Setting,
+            Payer                    = record.Payer,
+            SessionDurationMinutes   = record.SessionDurationMinutes,
+            RedactionMap             = plainRedactionMap,
+            EncryptedRedactionMap    = encryptedBlob,
+            RedactionMapIsEncrypted  = _encryption.IsEnabled,
+            SoapNote                 = soapNote,
+            SuggestedCptCodes        = cptCodes,
+            SuggestedIcdCodes        = icdCodes,
+            CreatedAt                = record.CreatedAt,
         };
 
         await _container.UpsertItemAsync(doc, new PartitionKey(doc.ClientId), cancellationToken: cancellationToken);
@@ -217,27 +239,40 @@ public class CosmosSessionRepository : ISessionRepository
 
     // ── Mapping ───────────────────────────────────────────────────────────────
 
-    private static SessionResponse MapToResponse(SessionDocument doc)
+    private SessionResponse MapToResponse(SessionDocument doc)
     {
+        // Resolve the redaction map: decrypt if flagged, fall back to plain dict.
+        Dictionary<string, string> redactionMap;
+        if (doc.RedactionMapIsEncrypted && !string.IsNullOrEmpty(doc.EncryptedRedactionMap))
+        {
+            var plainJson = _encryption.Decrypt(doc.EncryptedRedactionMap);
+            redactionMap  = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(plainJson)
+                            ?? [];
+        }
+        else
+        {
+            redactionMap = doc.RedactionMap ?? [];
+        }
+
         var restoredNote = new SoapNote(
-            Subjective: Restore(doc.SoapNote.Subjective, doc.RedactionMap),
-            Objective:  Restore(doc.SoapNote.Objective,  doc.RedactionMap),
-            Assessment: Restore(doc.SoapNote.Assessment, doc.RedactionMap),
-            Plan:       Restore(doc.SoapNote.Plan,        doc.RedactionMap)
+            Subjective: Restore(doc.SoapNote.Subjective, redactionMap),
+            Objective:  Restore(doc.SoapNote.Objective,  redactionMap),
+            Assessment: Restore(doc.SoapNote.Assessment, redactionMap),
+            Plan:       Restore(doc.SoapNote.Plan,        redactionMap)
         );
 
         return new SessionResponse(
-            ClientId:              doc.ClientId,
-            SessionDate:           doc.Id,
-            TherapistName:         doc.TherapistName,
-            Discipline:            doc.Discipline,
-            Setting:               doc.Setting,
-            Payer:                 doc.Payer,
+            ClientId:               doc.ClientId,
+            SessionDate:            doc.Id,
+            TherapistName:          doc.TherapistName,
+            Discipline:             doc.Discipline,
+            Setting:                doc.Setting,
+            Payer:                  doc.Payer,
             SessionDurationMinutes: doc.SessionDurationMinutes,
-            SoapNote:              restoredNote,
-            SuggestedCptCodes:     doc.SuggestedCptCodes,
-            SuggestedIcdCodes:     doc.SuggestedIcdCodes,
-            CreatedAt:             doc.CreatedAt
+            SoapNote:               restoredNote,
+            SuggestedCptCodes:      doc.SuggestedCptCodes,
+            SuggestedIcdCodes:      doc.SuggestedIcdCodes,
+            CreatedAt:              doc.CreatedAt
         );
     }
 
@@ -250,7 +285,7 @@ public class CosmosSessionRepository : ISessionRepository
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
-    private static async Task<IReadOnlyList<SessionResponse>> DrainIteratorAsync(
+    private async Task<IReadOnlyList<SessionResponse>> DrainIteratorAsync(
         FeedIterator<SessionDocument> iterator, CancellationToken cancellationToken)
     {
         var results = new List<SessionResponse>();
