@@ -127,6 +127,18 @@ var host = new HostBuilder()
             var encryption   = sp.GetRequiredService<IRedactionMapEncryption>();
             var dbName       = config["CosmosDb:DatabaseName"] ?? "theragraf";
             var container    = config["CosmosDb:ContainerName"] ?? "sessions";
+
+            // When running against the local emulator (no AccountEndpoint configured),
+            // ensure the database and container exist. In Azure, Bicep owns provisioning.
+            var endpoint = config["CosmosDb:AccountEndpoint"];
+            if (string.IsNullOrWhiteSpace(endpoint))
+            {
+                var db = cosmosClient.CreateDatabaseIfNotExistsAsync(dbName).GetAwaiter().GetResult();
+                db.Database.CreateContainerIfNotExistsAsync(
+                    new ContainerProperties { Id = container, PartitionKeyPath = "/clientId" })
+                    .GetAwaiter().GetResult();
+            }
+
             return new CosmosSessionRepository(cosmosClient, dbName, container, encryption);
         });
     })
