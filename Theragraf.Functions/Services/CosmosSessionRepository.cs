@@ -194,6 +194,59 @@ public class CosmosSessionRepository : ISessionRepository
         }
     }
 
+    // ── Update ────────────────────────────────────────────────────────────────
+
+    public async Task<SessionResponse?> UpdateAsync(
+        string                              clientId,
+        string                              rowKey,
+        SoapNote?                           redactedNote,
+        IReadOnlyDictionary<string, string> newRedactionMap,
+        IReadOnlyList<CptCode>?             cptCodes,
+        IReadOnlyList<IcdCode>?             icdCodes,
+        CancellationToken                   cancellationToken = default)
+    {
+        SessionDocument doc;
+        try
+        {
+            var response = await _container.ReadItemAsync<SessionDocument>(
+                rowKey, new PartitionKey(clientId), cancellationToken: cancellationToken);
+            doc = response.Resource;
+        }
+        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        // Apply SOAP note changes
+        if (redactedNote is not null)
+            doc.SoapNote = redactedNote;
+
+        // Apply code changes
+        if (cptCodes is not null)
+            doc.SuggestedCptCodes = cptCodes.ToList();
+        if (icdCodes is not null)
+            doc.SuggestedIcdCodes = icdCodes.ToList();
+
+        // Persist the new redaction map (re-encrypt if Key Vault is active)
+        if (_encryption.IsEnabled)
+        {
+            var plainJson = System.Text.Json.JsonSerializer.Serialize(newRedactionMap);
+            doc.EncryptedRedactionMap  = _encryption.Encrypt(plainJson);
+            doc.RedactionMapIsEncrypted = true;
+            doc.RedactionMap           = null;
+        }
+        else
+        {
+            doc.RedactionMap            = new Dictionary<string, string>(newRedactionMap);
+            doc.EncryptedRedactionMap   = null;
+            doc.RedactionMapIsEncrypted = false;
+        }
+
+        await _container.UpsertItemAsync(doc, new PartitionKey(clientId), cancellationToken: cancellationToken);
+
+        return MapToResponse(doc);
+    }
+
     // ── Query builder ─────────────────────────────────────────────────────────
 
     internal static (string Sql, List<(string Name, object Value)> Parameters) BuildQuery(

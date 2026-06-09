@@ -323,7 +323,48 @@
           }
         },
         {
-          "name": "6 - Delete Session",
+          "name": "6 - Update Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 or 404', () => pm.expect([200, 404]).to.include(pm.response.code));",
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.test('Has clientId',  () => pm.expect(json.clientId).to.be.a('string'));",
+                  "    pm.test('Has soapNote',  () => pm.expect(json.soapNote).to.be.an('object'));",
+                  "    pm.test('Has CPT codes', () => pm.expect(json.suggestedCptCodes).to.be.an('array'));",
+                  "    pm.test('Has ICD codes', () => pm.expect(json.suggestedIcdCodes).to.be.an('array'));",
+                  "    console.log('Updated session:', JSON.stringify(json, null, 2));",
+                  "} else {",
+                  "    console.log('Session not found — run steps 2-4 first to create and retrieve a session.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"soapNote\": {\n    \"subjective\": \"Patient reports significant improvement in pain levels, now 2/10. Tolerated full session well with no fatigue complaints.\",\n    \"plan\": \"Progress to phase 2 strengthening exercises. Schedule follow-up in 1 week. Patient to continue home exercise program daily.\"\n  },\n  \"suggestedCptCodes\": [\n    { \"code\": \"97110\", \"description\": \"Therapeutic Exercise\", \"rationale\": \"Progressive strengthening to address functional deficits\", \"billableUnits\": 2 },\n    { \"code\": \"97530\", \"description\": \"Therapeutic Activities\", \"rationale\": \"Functional task training for ADL independence\", \"billableUnits\": 2 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "7 - Delete Session",
           "event": [
             {
               "listen": "test",
@@ -711,7 +752,48 @@
           }
         },
         {
-          "name": "6 - Delete Session",
+          "name": "6 - Update Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 or 404', () => pm.expect([200, 404]).to.include(pm.response.code));",
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.test('Has clientId',  () => pm.expect(json.clientId).to.be.a('string'));",
+                  "    pm.test('Has soapNote',  () => pm.expect(json.soapNote).to.be.an('object'));",
+                  "    pm.test('Has CPT codes', () => pm.expect(json.suggestedCptCodes).to.be.an('array'));",
+                  "    pm.test('Has ICD codes', () => pm.expect(json.suggestedIcdCodes).to.be.an('array'));",
+                  "    console.log('Updated session:', JSON.stringify(json, null, 2));",
+                  "} else {",
+                  "    console.log('Session not found — run steps 2-4 first to create and retrieve a session.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{liveBaseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"soapNote\": {\n    \"subjective\": \"Patient reports significant improvement in pain levels, now 2/10. Tolerated full session well with no fatigue complaints.\",\n    \"plan\": \"Progress to phase 2 strengthening exercises. Schedule follow-up in 1 week. Patient to continue home exercise program daily.\"\n  },\n  \"suggestedCptCodes\": [\n    { \"code\": \"97110\", \"description\": \"Therapeutic Exercise\", \"rationale\": \"Progressive strengthening to address functional deficits\", \"billableUnits\": 2 },\n    { \"code\": \"97530\", \"description\": \"Therapeutic Activities\", \"rationale\": \"Functional task training for ADL independence\", \"billableUnits\": 2 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "7 - Delete Session",
           "event": [
             {
               "listen": "test",

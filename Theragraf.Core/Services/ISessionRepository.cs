@@ -18,4 +18,19 @@ public interface ISessionRepository
     Task<SessionResponse?> GetByClientIdAndDateAsync(string clientId, string rowKey, CancellationToken cancellationToken = default);
 
     Task<bool> DeleteAsync(string clientId, string rowKey, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Applies a partial update to an existing session document.
+    /// Returns the updated <see cref="SessionResponse"/>, or <see langword="null"/> if not found.
+    /// The <paramref name="redactedNote"/> and <paramref name="newRedactionMap"/> must already
+    /// have PII replaced with placeholders before this method is called.
+    /// </summary>
+    Task<SessionResponse?> UpdateAsync(
+        string                             clientId,
+        string                             rowKey,
+        SoapNote?                          redactedNote,
+        IReadOnlyDictionary<string,string> newRedactionMap,
+        IReadOnlyList<CptCode>?            cptCodes,
+        IReadOnlyList<IcdCode>?            icdCodes,
+        CancellationToken                  cancellationToken = default);
 }

@@ -391,4 +391,205 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         result!.SoapNote.Subjective.Should().Be("John Doe reports knee pain.");
         result.SoapNote.Objective.Should().Be("Phone: 555-1234");
     }
+
+    // ── Update ────────────────────────────────────────────────────────────────
+
+    [SkippableFact]
+    public async Task UpdateAsync_ReturnsNull_WhenDocumentNotFound()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var result = await repo.UpdateAsync(
+            _clientId, "2099-01-01T00-00-00Z",
+            redactedNote:    null,
+            newRedactionMap: new Dictionary<string, string>(),
+            cptCodes:        null,
+            icdCodes:        null);
+
+        result.Should().BeNull();
+    }
+
+    [SkippableFact]
+    public async Task UpdateAsync_UpdatesSoapNote()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var rowKey = "2025-09-01T10-00-00Z";
+
+        await repo.SaveAsync(BuildRecord(rowKey, subjective: "Original subjective."));
+
+        var updatedNote = new SoapNote(
+            Subjective: "Updated subjective.",
+            Objective:  "ROM measured at 90 degrees.",
+            Assessment: "Progressing well.",
+            Plan:       "Continue current plan."
+        );
+
+        var result = await repo.UpdateAsync(
+            _clientId, rowKey,
+            redactedNote:    updatedNote,
+            newRedactionMap: new Dictionary<string, string>(),
+            cptCodes:        null,
+            icdCodes:        null);
+
+        result.Should().NotBeNull();
+        result!.SoapNote.Subjective.Should().Be("Updated subjective.");
+    }
+
+    [SkippableFact]
+    public async Task UpdateAsync_PreservesUnchangedFields_WhenOnlySoapNoteUpdated()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var rowKey = "2025-09-02T10-00-00Z";
+
+        await repo.SaveAsync(BuildRecord(rowKey, therapist: "Dr. Smith", payer: "Medicare", duration: 45));
+
+        var updatedNote = new SoapNote("New S.", "New O.", "New A.", "New P.");
+
+        var result = await repo.UpdateAsync(
+            _clientId, rowKey,
+            redactedNote:    updatedNote,
+            newRedactionMap: new Dictionary<string, string>(),
+            cptCodes:        null,
+            icdCodes:        null);
+
+        result.Should().NotBeNull();
+        result!.TherapistName.Should().Be("Dr. Smith");
+        result.Payer.Should().Be("Medicare");
+        result.SessionDurationMinutes.Should().Be(45);
+    }
+
+    [SkippableFact]
+    public async Task UpdateAsync_UpdatesCptCodes()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var rowKey = "2025-09-03T10-00-00Z";
+
+        await repo.SaveAsync(BuildRecord(rowKey));
+
+        var newCptCodes = new List<CptCode>
+        {
+            new("97530", "Therapeutic Activities", "Functional task training", 2),
+            new("97110", "Therapeutic Exercise",   "Strengthening program",    3)
+        };
+
+        var result = await repo.UpdateAsync(
+            _clientId, rowKey,
+            redactedNote:    null,
+            newRedactionMap: new Dictionary<string, string>(),
+            cptCodes:        newCptCodes,
+            icdCodes:        null);
+
+        result.Should().NotBeNull();
+        result!.SuggestedCptCodes.Should().HaveCount(2);
+        result.SuggestedCptCodes[0].Code.Should().Be("97530");
+        result.SuggestedCptCodes[1].Code.Should().Be("97110");
+    }
+
+    [SkippableFact]
+    public async Task UpdateAsync_UpdatesIcdCodes()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var rowKey = "2025-09-04T10-00-00Z";
+
+        await repo.SaveAsync(BuildRecord(rowKey));
+
+        var newIcdCodes = new List<IcdCode>
+        {
+            new("M79.3", "Panniculitis", "Secondary diagnosis"),
+            new("Z96.641", "Hip replacement status", "Surgical history")
+        };
+
+        var result = await repo.UpdateAsync(
+            _clientId, rowKey,
+            redactedNote:    null,
+            newRedactionMap: new Dictionary<string, string>(),
+            cptCodes:        null,
+            icdCodes:        newIcdCodes);
+
+        result.Should().NotBeNull();
+        result!.SuggestedIcdCodes.Should().HaveCount(2);
+        result.SuggestedIcdCodes[0].Code.Should().Be("M79.3");
+        result.SuggestedIcdCodes[1].Code.Should().Be("Z96.641");
+    }
+
+    [SkippableFact]
+    public async Task UpdateAsync_PersistedDocument_ReflectsChanges_OnSubsequentRead()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var rowKey = "2025-09-05T10-00-00Z";
+
+        await repo.SaveAsync(BuildRecord(rowKey, subjective: "Original."));
+
+        var updatedNote = new SoapNote("Corrected by therapist.", "O.", "A.", "P.");
+        await repo.UpdateAsync(
+            _clientId, rowKey,
+            redactedNote:    updatedNote,
+            newRedactionMap: new Dictionary<string, string>(),
+            cptCodes:        null,
+            icdCodes:        null);
+
+        // Independent read-back confirms the document was persisted
+        var readBack = await repo.GetByClientIdAndDateAsync(_clientId, rowKey);
+        readBack.Should().NotBeNull();
+        readBack!.SoapNote.Subjective.Should().Be("Corrected by therapist.");
+    }
+
+    [SkippableFact]
+    public async Task UpdateAsync_WithRedactionMap_RestoresPiiInResponse()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var rowKey = "2025-09-06T10-00-00Z";
+
+        await repo.SaveAsync(BuildRecord(rowKey));
+
+        // Simulate re-redacted note with placeholders + updated map
+        var redactedNote = new SoapNote(
+            Subjective: "[PII_1] reports reduced pain.",
+            Objective:  "Grip strength measured.",
+            Assessment: "Good progress.",
+            Plan:       "Continue HEP."
+        );
+        var newMap = new Dictionary<string, string> { ["[PII_1]"] = "Jane Smith" };
+
+        var result = await repo.UpdateAsync(
+            _clientId, rowKey,
+            redactedNote:    redactedNote,
+            newRedactionMap: newMap,
+            cptCodes:        null,
+            icdCodes:        null);
+
+        // MapToResponse should decrypt and restore PII before returning
+        result.Should().NotBeNull();
+        result!.SoapNote.Subjective.Should().Be("Jane Smith reports reduced pain.");
+    }
+
+    [SkippableFact]
+    public async Task UpdateAsync_CodesOnly_DoesNotChangeSoapNote()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var rowKey = "2025-09-07T10-00-00Z";
+
+        await repo.SaveAsync(BuildRecord(rowKey, subjective: "Original SOAP."));
+
+        var newCptCodes = new List<CptCode> { new("97150", "Group Therapy", "Peer support group", 1) };
+
+        var result = await repo.UpdateAsync(
+            _clientId, rowKey,
+            redactedNote:    null,  // no SOAP change
+            newRedactionMap: new Dictionary<string, string>(),
+            cptCodes:        newCptCodes,
+            icdCodes:        null);
+
+        result.Should().NotBeNull();
+        result!.SoapNote.Subjective.Should().Be("Original SOAP.");
+        result.SuggestedCptCodes.Should().HaveCount(1);
+        result.SuggestedCptCodes[0].Code.Should().Be("97150");
+    }
 }
