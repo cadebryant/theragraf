@@ -5,13 +5,16 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
+using Theragraf.Functions.Helpers;
 
 public class SessionsUpdate(
     ISessionRepository   repository,
     IPiiRedactionService redaction,
+    IConfiguration       config,
     ILoggerFactory       loggerFactory)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<SessionsUpdate>();
@@ -70,6 +73,23 @@ public class SessionsUpdate(
             return r;
         }
 
+        // Ownership check — the session belongs to the therapist matched by the JWT.
+        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
+        if (identity is not null
+            && !string.Equals(identity, clientId, StringComparison.OrdinalIgnoreCase))
+        {
+            // Fetch the existing session to compare TherapistName, not clientId.
+            // We do this lazily only when the identity is present.
+            var existing = await repository.GetByClientIdAndDateAsync(clientId, sessionDate, cancellationToken);
+            if (existing is not null
+                && !string.Equals(identity, existing.TherapistName, StringComparison.OrdinalIgnoreCase))
+            {
+                var r = req.CreateResponse(HttpStatusCode.Forbidden);
+                await r.WriteStringAsync("You are not authorised to update this session.", cancellationToken);
+                return r;
+            }
+        }
+
         _logger.LogInformation(
             "UpdateSession clientId={ClientId} date={Date} hasSoapUpdate={HasSoap} hasCptUpdate={HasCpt} hasIcdUpdate={HasIcd}",
             clientId, sessionDate,
@@ -77,7 +97,7 @@ public class SessionsUpdate(
             update.SuggestedCptCodes is not null,
             update.SuggestedIcdCodes is not null);
 
-        // Re-run PII redaction on the incoming SOAP note if any fields were changed.
+        // Re-run PII redaction
         SoapNoteUpdate?                     redactedNote    = null;
         IReadOnlyDictionary<string, string> newRedactionMap = new Dictionary<string, string>();
 

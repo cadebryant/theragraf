@@ -1,17 +1,59 @@
-namespace Theragraf.Functions.EntryPoint;
+﻿namespace Theragraf.Functions.EntryPoint;
 
 using System.Net;
 using System.Text.Json;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
+using Theragraf.Functions.Helpers;
 
-public class SessionsGet(ISessionRepository repository, ILoggerFactory loggerFactory)
+public class SessionsGet(
+    ISessionRepository repository,
+    IConfiguration     config,
+    ILoggerFactory     loggerFactory)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<SessionsGet>();
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// GET /api/sessions
+    /// Returns the caseload overview (distinct clients + last session date) for the
+    /// authenticated therapist. Identity is resolved from the JWT claim.
+    /// </summary>
+    [Function("GetCaseload")]
+    public async Task<HttpResponseData> GetCaseload(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sessions")] HttpRequestData req,
+        CancellationToken cancellationToken)
+    {
+        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
+        if (identity is null)
+        {
+            var forbidden = req.CreateResponse(HttpStatusCode.Unauthorized);
+            await forbidden.WriteStringAsync("Authentication is required.", cancellationToken);
+            return forbidden;
+        }
+
+        _logger.LogInformation("GetCaseload therapist={TherapistName}", identity);
+
+        try
+        {
+            var summary = await repository.GetCaseloadAsync(identity, cancellationToken);
+            var ok = req.CreateResponse(HttpStatusCode.OK);
+            ok.Headers.Add("Content-Type", "application/json; charset=utf-8");
+            await ok.WriteStringAsync(JsonSerializer.Serialize(summary, JsonOptions), cancellationToken);
+            return ok;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GetCaseload failed for therapist={TherapistName}", identity);
+            var error = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await error.WriteStringAsync("An unexpected error occurred while retrieving the caseload.", cancellationToken);
+            return error;
+        }
+    }
 
     /// <summary>
     /// GET /api/sessions/{clientId}
@@ -51,6 +93,22 @@ public class SessionsGet(ISessionRepository repository, ILoggerFactory loggerFac
             SortBy:      query["sortBy"]    ?? "sessionDate",
             SortOrder:   query["sortOrder"] ?? "desc"
         );
+
+        // Ownership check — if the JWT is present, the caller must own this client.
+        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
+        if (identity is not null
+            && options.Therapist is not null
+            && !string.Equals(identity, options.Therapist, StringComparison.OrdinalIgnoreCase))
+        {
+            var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
+            await forbidden.WriteStringAsync("You are not authorised to filter by a different therapist.", cancellationToken);
+            return forbidden;
+        }
+
+        // When the caller is authenticated but has not passed an explicit therapist filter,
+        // scope the query to their own sessions only.
+        if (identity is not null && options.Therapist is null)
+            options = options with { Therapist = identity };
 
         _logger.LogInformation(
             "GetSessionsByClient clientId={ClientId} pageSize={PageSize} sortBy={SortBy} sortOrder={SortOrder}",
@@ -120,6 +178,16 @@ public class SessionsGet(ISessionRepository repository, ILoggerFactory loggerFac
             await notFound.WriteStringAsync(
                 $"No session found for client '{clientId}' at '{sessionDate}'.", cancellationToken);
             return notFound;
+        }
+
+        // Ownership check — the session must belong to the authenticated therapist.
+        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
+        if (identity is not null
+            && !string.Equals(identity, session.TherapistName, StringComparison.OrdinalIgnoreCase))
+        {
+            var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
+            await forbidden.WriteStringAsync("You are not authorised to access this session.", cancellationToken);
+            return forbidden;
         }
 
         var response = req.CreateResponse(HttpStatusCode.OK);

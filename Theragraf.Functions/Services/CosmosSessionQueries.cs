@@ -1,4 +1,4 @@
-namespace Theragraf.Functions.Services;
+﻿namespace Theragraf.Functions.Services;
 
 using Theragraf.Core.Models;
 
@@ -77,6 +77,16 @@ internal static class CosmosSessionQueries
         "SELECT c.id, c.clientId, c.therapistName, c.discipline, c.setting, c.payer, " +
         "c.sessionDurationMinutes, c.suggestedCptCodes, c.suggestedIcdCodes " +
         "FROM c WHERE c.therapistName = @therapistName";
+
+    /// <summary>
+    /// Returns one row per distinct client for the given therapist, with the most-recent
+    /// session date and total session count. Ordered by lastSession descending.
+    /// Filter: <c>@therapistName</c>
+    /// </summary>
+    internal const string CaseloadByTherapist =
+        "SELECT c.clientId, MAX(c.id) AS lastSession, COUNT(1) AS totalSessions " +
+        "FROM c WHERE c.therapistName = @therapistName " +
+        "GROUP BY c.clientId";
 
     /// <summary>
     /// Projects only the fields required for stats aggregation — omits redactionMap

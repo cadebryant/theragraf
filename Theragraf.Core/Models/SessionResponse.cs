@@ -1,8 +1,9 @@
-namespace Theragraf.Core.Models;
+﻿namespace Theragraf.Core.Models;
 
 /// <summary>
-/// Typed API response returned by the read endpoints.
-/// All PII fields remain redacted (placeholders) — this is the stored form.
+/// Typed API response returned by the read and write endpoints.
+/// PII placeholders are resolved back to their original values before this record
+/// is constructed, so callers always receive human-readable text.
 /// </summary>
 public record SessionResponse(
     string ClientId,

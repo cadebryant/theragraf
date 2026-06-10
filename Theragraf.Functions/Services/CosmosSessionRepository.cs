@@ -1,4 +1,4 @@
-namespace Theragraf.Functions.Services;
+﻿namespace Theragraf.Functions.Services;
 
 using System.Text;
 using Microsoft.Azure.Cosmos;
@@ -372,6 +372,32 @@ public class CosmosSessionRepository : ISessionRepository
             : [];
     }
 
+
+    // -- Caseload ---------------------------------------------------------------
+
+    public async Task<CaseloadSummary> GetCaseloadAsync(
+        string therapistName, CancellationToken cancellationToken = default)
+    {
+        var query = new QueryDefinition(CosmosSessionQueries.CaseloadByTherapist)
+            .WithParameter("@therapistName", therapistName);
+
+        var caseloadRows = new List<CaseloadRow>();
+        using (var it = _container.GetItemQueryIterator<CaseloadRow>(query))
+        {
+            while (it.HasMoreResults)
+            {
+                var page = await it.ReadNextAsync(cancellationToken);
+                caseloadRows.AddRange(page);
+            }
+        }
+
+        var clients = caseloadRows
+            .OrderByDescending(d => d.LastSession)
+            .Select(d => new ClientSummary(d.ClientId, d.LastSession, d.TotalSessions))
+            .ToList();
+
+        return new CaseloadSummary(therapistName, clients);
+    }
     // ── Stats ─────────────────────────────────────────────────────────────────
 
     public async Task<TherapistStats> GetTherapistStatsAsync(
@@ -552,5 +578,21 @@ public class CosmosSessionRepository : ISessionRepository
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// Lightweight Cosmos projection for the caseload GROUP BY query.
+    /// Property names match the aliases in <see cref="CosmosSessionQueries.CaseloadByTherapist"/>. 
+    /// </summary>
+    private sealed class CaseloadRow
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("clientId")]
+        public string ClientId { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lastSession")]
+        public string? LastSession { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("totalSessions")]
+        public int TotalSessions { get; set; }
     }
 }

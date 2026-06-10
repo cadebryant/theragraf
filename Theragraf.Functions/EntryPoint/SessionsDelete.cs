@@ -3,10 +3,12 @@ namespace Theragraf.Functions.EntryPoint;
 using System.Net;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Services;
+using Theragraf.Functions.Helpers;
 
-public class SessionsDelete(ISessionRepository repository, ILoggerFactory loggerFactory)
+public class SessionsDelete(ISessionRepository repository, IConfiguration config, ILoggerFactory loggerFactory)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<SessionsDelete>();
 
@@ -34,6 +36,20 @@ public class SessionsDelete(ISessionRepository repository, ILoggerFactory logger
         }
 
         _logger.LogInformation("DeleteSession called for clientId={ClientId} date={Date}", clientId, sessionDate);
+
+        // Ownership check — fetch the session and verify the JWT identity matches TherapistName.
+        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
+        if (identity is not null)
+        {
+            var existing = await repository.GetByClientIdAndDateAsync(clientId, sessionDate, cancellationToken);
+            if (existing is not null
+                && !string.Equals(identity, existing.TherapistName, StringComparison.OrdinalIgnoreCase))
+            {
+                var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
+                await forbidden.WriteStringAsync("You are not authorised to delete this session.", cancellationToken);
+                return forbidden;
+            }
+        }
 
         bool deleted;
         try

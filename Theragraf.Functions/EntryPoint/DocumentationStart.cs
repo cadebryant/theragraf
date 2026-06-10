@@ -5,10 +5,12 @@ using System.Text.Json;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.DurableTask.Client;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
+using Theragraf.Functions.Helpers;
 
-public class DocumentationStart(ILoggerFactory loggerFactory)
+public class DocumentationStart(ILoggerFactory loggerFactory, IConfiguration config)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<DocumentationStart>();
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -59,6 +61,18 @@ public class DocumentationStart(ILoggerFactory loggerFactory)
             await badRequest.WriteStringAsync(
                 "SessionDurationMinutes must be between 1 and 480.", cancellationToken);
             return badRequest;
+        }
+
+        // Ownership check — the TherapistName in the request must match the JWT identity.
+        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
+        if (identity is not null
+            && !string.Equals(identity, input.TherapistName, StringComparison.OrdinalIgnoreCase))
+        {
+            var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
+            await forbidden.WriteStringAsync(
+                "TherapistName in the request does not match your authenticated identity.",
+                cancellationToken);
+            return forbidden;
         }
 
         string instanceId;

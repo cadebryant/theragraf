@@ -38,6 +38,13 @@ public interface ISessionRepository
         CancellationToken                  cancellationToken = default);
 
     /// <summary>
+    /// Returns a caseload overview for <paramref name="therapistName"/>: one
+    /// <see cref="ClientSummary"/> per distinct client, ordered by most-recent session
+    /// date descending. This is a cross-partition scan.
+    /// </summary>
+    Task<CaseloadSummary> GetCaseloadAsync(string therapistName, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns aggregated statistics for every session belonging to <paramref name="therapistName"/>
     /// across all clients. This is a cross-partition scan.
     /// </summary>

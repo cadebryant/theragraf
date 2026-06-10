@@ -4,6 +4,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -22,11 +23,16 @@ public class SessionsUpdateTests
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    private static readonly IConfiguration DisabledAuthConfig =
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Auth:Disabled"] = "true" })
+            .Build();
+
     public SessionsUpdateTests()
     {
         _repository = Substitute.For<ISessionRepository>();
         _redaction  = Substitute.For<IPiiRedactionService>();
-        _sut        = new SessionsUpdate(_repository, _redaction, NullLoggerFactory.Instance);
+        _sut        = new SessionsUpdate(_repository, _redaction, DisabledAuthConfig, NullLoggerFactory.Instance);
 
         // Default: redaction is a pass-through with an empty map
         _redaction
@@ -62,10 +68,10 @@ public class SessionsUpdateTests
         return request;
     }
 
-    private static SessionResponse BuildSessionResponse() => new(
+    private static SessionResponse BuildSessionResponse(string therapistName = "Dr. Smith") => new(
         ClientId:               "client-001",
         SessionDate:            "2024-10-10T10-00-00Z",
-        TherapistName:          "Dr. Smith",
+        TherapistName:          therapistName,
         Discipline:             "PT",
         Setting:                "Outpatient",
         Payer:                  "Medicare",
@@ -282,6 +288,63 @@ public class SessionsUpdateTests
 
         await _repository.Received(1).UpdateAsync(
             "client-001", "2024-10-10T10-00-00Z",
+            Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
+            Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    // -- Ownership tests ------------------------------------------------------
+
+    private static readonly IConfiguration AuthEnabledConfig =
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Auth:Disabled"] = "false" })
+            .Build();
+
+    private static HttpRequestData BuildAuthenticatedRequest(string therapistName, object? body = null)
+    {
+        var items = new Dictionary<object, object>();
+        items["ClaimsPrincipal"] = new System.Security.Claims.ClaimsPrincipal(
+            new System.Security.Claims.ClaimsIdentity(
+                new[] { new System.Security.Claims.Claim("preferred_username", therapistName) },
+                "test"));
+
+        var context = Substitute.For<FunctionContext>();
+        context.InstanceServices.Returns(new ServiceCollection().BuildServiceProvider());
+        context.Items.Returns(items);
+
+        var request = Substitute.For<HttpRequestData>(context);
+        var bodyStream = body is null
+            ? new MemoryStream()
+            : new MemoryStream(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(body, JsonOptions)));
+        request.Body.Returns(bodyStream);
+        request.CreateResponse().Returns(_ =>
+        {
+            var response = Substitute.For<HttpResponseData>(context);
+            response.Body.Returns(new MemoryStream());
+            response.Headers.Returns(new HttpHeadersCollection());
+            HttpStatusCode capturedStatus = HttpStatusCode.OK;
+            response.When(r => r.StatusCode = Arg.Any<HttpStatusCode>())
+                    .Do(ci => capturedStatus = ci.Arg<HttpStatusCode>());
+            response.StatusCode.Returns(_ => capturedStatus);
+            return response;
+        });
+        return request;
+    }
+
+    [Fact]
+    public async Task Update_WrongTherapist_Returns403()
+    {
+        var sut = new SessionsUpdate(_repository, _redaction, AuthEnabledConfig, NullLoggerFactory.Instance);
+
+        _repository.GetByClientIdAndDateAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<CancellationToken>())
+            .Returns(BuildSessionResponse(therapistName: "Dr. Adams"));
+
+        var req = BuildAuthenticatedRequest("Dr. Other", new { suggestedCptCodes = new[] { new { code = "97110", description = "Therapeutic exercise", rationale = "r" } } });
+        var response = await sut.Update(req, "client-001", "2024-10-10T10-00-00Z", CancellationToken.None);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await _repository.DidNotReceive().UpdateAsync(
+            Arg.Any<string>(), Arg.Any<string>(),
             Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
             Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
             Arg.Any<CancellationToken>());

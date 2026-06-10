@@ -4,6 +4,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -33,10 +34,15 @@ public class SessionsGetTests
         CreatedAt: new DateTimeOffset(2024, 10, 10, 10, 0, 0, TimeSpan.Zero)
     );
 
+    private static readonly IConfiguration DisabledAuthConfig =
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Auth:Disabled"] = "true" })
+            .Build();
+
     public SessionsGetTests()
     {
         _repository = Substitute.For<ISessionRepository>();
-        _sut = new SessionsGet(_repository, NullLoggerFactory.Instance);
+        _sut = new SessionsGet(_repository, DisabledAuthConfig, NullLoggerFactory.Instance);
     }
 
     private PagedResult<SessionResponse> SinglePage(IEnumerable<SessionResponse> items) =>
@@ -274,5 +280,96 @@ public class SessionsGetTests
         response.Body.Position = 0;
         var body = await new StreamReader(response.Body, Encoding.UTF8).ReadToEndAsync();
         body.Should().Contain("Dr. Adams").And.Contain("97530");
+    }
+
+    // -- Ownership / caseload tests ------------------------------------------
+
+    private static readonly IConfiguration AuthEnabledConfig =
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Auth:Disabled"] = "false" })
+            .Build();
+
+    private static HttpRequestData BuildAuthenticatedRequest(
+        string therapistName,
+        string url = "http://localhost/api/sessions/client-001")
+    {
+        var items = new Dictionary<object, object>();
+        items["ClaimsPrincipal"] = new System.Security.Claims.ClaimsPrincipal(
+            new System.Security.Claims.ClaimsIdentity(
+                new[] { new System.Security.Claims.Claim("preferred_username", therapistName) },
+                "test"));
+
+        var context = Substitute.For<FunctionContext>();
+        context.InstanceServices.Returns(new ServiceCollection().BuildServiceProvider());
+        context.Items.Returns(items);
+
+        var request = Substitute.For<HttpRequestData>(context);
+        request.Url.Returns(new Uri(url));
+        request.Body.Returns(new MemoryStream());
+        request.CreateResponse().Returns(_ =>
+        {
+            var response = Substitute.For<HttpResponseData>(context);
+            response.Body.Returns(new MemoryStream());
+            response.Headers.Returns(new HttpHeadersCollection());
+            HttpStatusCode capturedStatus = HttpStatusCode.OK;
+            response.When(r => r.StatusCode = Arg.Any<HttpStatusCode>())
+                    .Do(ci => capturedStatus = ci.Arg<HttpStatusCode>());
+            response.StatusCode.Returns(_ => capturedStatus);
+            return response;
+        });
+        return request;
+    }
+
+    [Fact]
+    public async Task GetByClientAndDate_WrongTherapist_Returns403()
+    {
+        var sut = new SessionsGet(_repository, AuthEnabledConfig, NullLoggerFactory.Instance);
+        _repository.GetByClientIdAndDateAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<CancellationToken>())
+            .Returns(SampleSession); // TherapistName = "Dr. Adams"
+
+        var req = BuildAuthenticatedRequest("Dr. Other");
+        var response = await sut.GetByClientAndDate(req, "client-001", "2024-10-10T10-00-00Z", CancellationToken.None);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GetByClientAndDate_CorrectTherapist_Returns200()
+    {
+        var sut = new SessionsGet(_repository, AuthEnabledConfig, NullLoggerFactory.Instance);
+        _repository.GetByClientIdAndDateAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<CancellationToken>())
+            .Returns(SampleSession); // TherapistName = "Dr. Adams"
+
+        var req = BuildAuthenticatedRequest("Dr. Adams");
+        var response = await sut.GetByClientAndDate(req, "client-001", "2024-10-10T10-00-00Z", CancellationToken.None);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task GetCaseload_ReturnsCaseloadSummary()
+    {
+        var sut = new SessionsGet(_repository, AuthEnabledConfig, NullLoggerFactory.Instance);
+        _repository.GetCaseloadAsync("Dr. Adams", Arg.Any<CancellationToken>())
+            .Returns(new CaseloadSummary("Dr. Adams",
+                new List<ClientSummary> { new("client-001", "2024-10-10T10-00-00Z", 3) }));
+
+        var req = BuildAuthenticatedRequest("Dr. Adams", "http://localhost/api/sessions");
+        var response = await sut.GetCaseload(req, CancellationToken.None);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        await _repository.Received(1).GetCaseloadAsync("Dr. Adams", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetCaseload_NotAuthenticated_Returns401()
+    {
+        var sut = new SessionsGet(_repository, AuthEnabledConfig, NullLoggerFactory.Instance);
+
+        var req = BuildRequest("http://localhost/api/sessions"); // no claims principal
+        var response = await sut.GetCaseload(req, CancellationToken.None);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        await _repository.DidNotReceive().GetCaseloadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 }
