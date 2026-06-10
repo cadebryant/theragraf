@@ -60,6 +60,9 @@ param keyVaultName string = 'theragraf-kv-${toLower(environmentName)}'
 @description('Name of the existing App Service Plan hosting the Function App.')
 param appServicePlanName string = '${functionAppName}-plan'
 
+@description('Name for the Azure AI Speech account (must be globally unique).')
+param speechAccountName string = 'theragraf-speech-${toLower(environmentName)}'
+
 @description('Optional Entra ID object ID of a developer to grant Cosmos Data Explorer access.')
 param developerPrincipalId string = ''
 
@@ -111,6 +114,18 @@ module language 'modules/language.bicep' = {
   }
 }
 
+// -- Azure AI Speech (app resource group) ------------------------------------
+
+module speech 'modules/speech.bicep' = {
+  name: 'speech'
+  scope: appRg
+  params: {
+    location: location
+    suffix: suffix
+    speechAccountName: speechAccountName
+  }
+}
+
 // -- Function App (app resource group) ----------------------------------------
 
 module functionApp 'modules/functionApp.bicep' = {
@@ -129,6 +144,8 @@ module functionApp 'modules/functionApp.bicep' = {
     cosmosEndpoint: cosmos.outputs.endpoint
     appServicePlanName: appServicePlanName
     keyVaultUri: keyVault.outputs.vaultUri
+    speechRegion: speech.outputs.region
+    speechApiKey: speech.outputs.apiKey
   }
 }
 
@@ -214,3 +231,10 @@ output languageEndpoint string = language.outputs.endpoint
 output appInsightsName string = monitoring.outputs.appInsightsName
 output keyVaultName string = keyVault.outputs.keyVaultName
 output keyVaultUri string = keyVault.outputs.vaultUri
+output speechAccountName string = speech.outputs.accountName
+output speechRegion string = speech.outputs.region
+@description('Copy this value into AzureSpeech__Region in local.settings.json')
+output localSettingsSpeechRegion string = speech.outputs.region
+@description('Copy this value into AzureSpeech__ApiKey in local.settings.json')
+#disable-next-line outputs-should-not-contain-secrets
+output localSettingsSpeechApiKey string = speech.outputs.apiKey

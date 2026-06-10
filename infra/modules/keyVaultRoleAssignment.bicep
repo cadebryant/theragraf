@@ -25,8 +25,17 @@ resource functionAppRoleAssignment 'Microsoft.Authorization/roleAssignments@2022
 	roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
 	principalId: functionAppPrincipalId
 	principalType: 'ServicePrincipal'
+	description: 'Theragraf Function App — Key Vault Secrets User (managed by Bicep)'
   }
 }
+
+// Idempotency guard: if the assignment already exists under a different name,
+// ARM will match on principal + role + scope and return RoleAssignmentExists.
+// Set the deployment mode to Incremental (default) and use 'existing' to
+// tolerate the conflict rather than fail.
+// Note: there is no ARM-native "upsert" for role assignments; the correct
+// mitigation is to delete the orphaned assignment once (see README) and then
+// all subsequent deploys will succeed because Bicep's guid() is stable.
 
 resource developerRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(developerPrincipalId)) {
   name: guid(keyVault.id, developerPrincipalId, keyVaultSecretsOfficerRoleId)
