@@ -129,7 +129,7 @@ public class SessionsUpdateTests
     {
         _repository
             .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<SoapNote?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
+                Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
                 Arg.Any<CancellationToken>())
             .Returns((SessionResponse?)null);
@@ -148,7 +148,7 @@ public class SessionsUpdateTests
     {
         _repository
             .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<SoapNote?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
+                Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
                 Arg.Any<CancellationToken>())
             .Returns(BuildSessionResponse());
@@ -165,7 +165,7 @@ public class SessionsUpdateTests
     {
         _repository
             .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<SoapNote?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
+                Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
                 Arg.Any<CancellationToken>())
             .Returns(BuildSessionResponse());
@@ -182,7 +182,7 @@ public class SessionsUpdateTests
     {
         _repository
             .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<SoapNote?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
+                Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
                 Arg.Any<CancellationToken>())
             .Returns(BuildSessionResponse());
@@ -203,10 +203,10 @@ public class SessionsUpdateTests
             .Returns(("REDACTED\x1FTEXT\x1FHERE\x1FPLAN",
                 (IReadOnlyDictionary<string, string>)new Dictionary<string, string> { ["[NAME_1]"] = "John" }));
 
-        SoapNote? capturedNote = null;
+        SoapNoteUpdate? capturedNote = null;
         _repository
             .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Do<SoapNote?>(n => capturedNote = n),
+                Arg.Do<SoapNoteUpdate?>(n => capturedNote = n),
                 Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
                 Arg.Any<CancellationToken>())
@@ -224,11 +224,37 @@ public class SessionsUpdateTests
     }
 
     [Fact]
+    public async Task Update_PartialSoapNoteUpdate_OnlyRedactsProvidedFields()
+    {
+        // Redaction echoes back whatever it receives (pass-through default set in constructor).
+        SoapNoteUpdate? capturedNote = null;
+        _repository
+            .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Do<SoapNoteUpdate?>(n => capturedNote = n),
+                Arg.Any<IReadOnlyDictionary<string, string>>(),
+                Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(BuildSessionResponse());
+
+        // Only subjective and plan are provided; objective and assessment are omitted.
+        await _sut.Update(
+            BuildRequest(new { soapNote = new { subjective = "Updated subjective.", plan = "Updated plan." } }),
+            "client-001", "2024-10-10T10-00-00Z", CancellationToken.None);
+
+        capturedNote.Should().NotBeNull();
+        capturedNote!.Subjective.Should().Be("Updated subjective.");
+        capturedNote.Plan.Should().Be("Updated plan.");
+        // Omitted fields must be null so the repository can preserve the stored values.
+        capturedNote.Objective.Should().BeNull();
+        capturedNote.Assessment.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Update_RepositoryThrows_Returns500()
     {
         _repository
             .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<SoapNote?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
+                Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
                 Arg.Any<CancellationToken>())
             .ThrowsAsync(new Exception("Cosmos unavailable"));
@@ -245,7 +271,7 @@ public class SessionsUpdateTests
     {
         _repository
             .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<SoapNote?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
+                Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
                 Arg.Any<CancellationToken>())
             .Returns(BuildSessionResponse());
@@ -256,7 +282,7 @@ public class SessionsUpdateTests
 
         await _repository.Received(1).UpdateAsync(
             "client-001", "2024-10-10T10-00-00Z",
-            Arg.Any<SoapNote?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
+            Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
             Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
             Arg.Any<CancellationToken>());
     }

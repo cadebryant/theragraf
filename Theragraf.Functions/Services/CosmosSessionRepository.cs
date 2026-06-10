@@ -199,7 +199,7 @@ public class CosmosSessionRepository : ISessionRepository
     public async Task<SessionResponse?> UpdateAsync(
         string                              clientId,
         string                              rowKey,
-        SoapNote?                           redactedNote,
+        SoapNoteUpdate?                     soapNoteUpdate,
         IReadOnlyDictionary<string, string> newRedactionMap,
         IReadOnlyList<CptCode>?             cptCodes,
         IReadOnlyList<IcdCode>?             icdCodes,
@@ -217,9 +217,17 @@ public class CosmosSessionRepository : ISessionRepository
             return null;
         }
 
-        // Apply SOAP note changes
-        if (redactedNote is not null)
-            doc.SoapNote = redactedNote;
+        // Merge only the SOAP fields that were actually provided (non-null).
+        // Null fields in soapNoteUpdate mean "leave unchanged".
+        if (soapNoteUpdate is not null)
+        {
+            doc.SoapNote = new SoapNote(
+                Subjective: soapNoteUpdate.Subjective ?? doc.SoapNote.Subjective,
+                Objective:  soapNoteUpdate.Objective  ?? doc.SoapNote.Objective,
+                Assessment: soapNoteUpdate.Assessment ?? doc.SoapNote.Assessment,
+                Plan:       soapNoteUpdate.Plan       ?? doc.SoapNote.Plan
+            );
+        }
 
         // Apply code changes
         if (cptCodes is not null)

@@ -22,13 +22,16 @@ public interface ISessionRepository
     /// <summary>
     /// Applies a partial update to an existing session document.
     /// Returns the updated <see cref="SessionResponse"/>, or <see langword="null"/> if not found.
-    /// The <paramref name="redactedNote"/> and <paramref name="newRedactionMap"/> must already
-    /// have PII replaced with placeholders before this method is called.
+    /// <para>
+    /// <paramref name="soapNoteUpdate"/> carries only the fields the caller changed; any null
+    /// field is left unchanged in the stored document. Non-null fields must already have PII
+    /// replaced with placeholders before this method is called.
+    /// </para>
     /// </summary>
     Task<SessionResponse?> UpdateAsync(
         string                             clientId,
         string                             rowKey,
-        SoapNote?                          redactedNote,
+        SoapNoteUpdate?                    soapNoteUpdate,
         IReadOnlyDictionary<string,string> newRedactionMap,
         IReadOnlyList<CptCode>?            cptCodes,
         IReadOnlyList<IcdCode>?            icdCodes,

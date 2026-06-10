@@ -28,7 +28,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
     private CosmosSessionRepository CreateRepository() =>
         new(cosmos.Client, CosmosFixture.DatabaseName, CosmosFixture.ContainerName, new NullRedactionMapEncryption());
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // -- Helpers ---------------------------------------------------------------
 
     private SessionRecord BuildRecord(
         string rowKey,
@@ -64,7 +64,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         };
     }
 
-    // ── Save ──────────────────────────────────────────────────────────────────
+    // -- Save ------------------------------------------------------------------
 
     [SkippableFact]
     public async Task SaveAsync_Persists_NewDocument()
@@ -95,7 +95,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         result!.TherapistName.Should().Be("Dr. Smith-Updated");
     }
 
-    // ── GetByClientIdAndDate ──────────────────────────────────────────────────
+    // -- GetByClientIdAndDate --------------------------------------------------
 
     [SkippableFact]
     public async Task GetByClientIdAndDateAsync_ReturnsNull_WhenNotFound()
@@ -122,7 +122,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         result.SoapNote.Subjective.Should().Be("Patient reports mild pain.");
     }
 
-    // ── GetByClientId (unpaged) ───────────────────────────────────────────────
+    // -- GetByClientId (unpaged) -----------------------------------------------
 
     [SkippableFact]
     public async Task GetByClientIdAsync_ReturnsAllDocuments_ForClient()
@@ -148,7 +148,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         results.Should().BeEmpty();
     }
 
-    // ── GetByClientIdPaged ────────────────────────────────────────────────────
+    // -- GetByClientIdPaged ----------------------------------------------------
 
     [SkippableFact]
     public async Task GetByClientIdPagedAsync_ReturnsFirstPage()
@@ -208,7 +208,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         allItems.Should().HaveCount(total);
     }
 
-    // ── Filter options ────────────────────────────────────────────────────────
+    // -- Filter options --------------------------------------------------------
 
     [SkippableFact]
     public async Task GetByClientIdPagedAsync_FiltersByDiscipline()
@@ -284,7 +284,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         page.Items.Should().HaveCount(2);
     }
 
-    // ── Sort options ──────────────────────────────────────────────────────────
+    // -- Sort options ----------------------------------------------------------
 
     [SkippableFact]
     public async Task GetByClientIdPagedAsync_SortsAscending_BySessionDate()
@@ -321,7 +321,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         ids.Should().BeInDescendingOrder();
     }
 
-    // ── Delete ────────────────────────────────────────────────────────────────
+    // -- Delete ----------------------------------------------------------------
 
     [SkippableFact]
     public async Task DeleteAsync_Removes_ExistingDocument()
@@ -347,7 +347,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         deleted.Should().BeFalse();
     }
 
-    // ── SoapNote PII redaction round-trip ─────────────────────────────────────
+    // -- SoapNote PII redaction round-trip -------------------------------------
 
     [SkippableFact]
     public async Task SaveAsync_And_GetByDate_Restore_PiiPlaceholders()
@@ -393,7 +393,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         result.SoapNote.Objective.Should().Be("Phone: 555-1234");
     }
 
-    // ── Update ────────────────────────────────────────────────────────────────
+    // -- Update ----------------------------------------------------------------
 
     [SkippableFact]
     public async Task UpdateAsync_ReturnsNull_WhenDocumentNotFound()
@@ -402,7 +402,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         var repo   = CreateRepository();
         var result = await repo.UpdateAsync(
             _clientId, "2099-01-01T00-00-00Z",
-            redactedNote:    null,
+            soapNoteUpdate:  null,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        null,
             icdCodes:        null);
@@ -419,7 +419,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
 
         await repo.SaveAsync(BuildRecord(rowKey, subjective: "Original subjective."));
 
-        var updatedNote = new SoapNote(
+        var updatedNote = new SoapNoteUpdate(
             Subjective: "Updated subjective.",
             Objective:  "ROM measured at 90 degrees.",
             Assessment: "Progressing well.",
@@ -428,7 +428,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
 
         var result = await repo.UpdateAsync(
             _clientId, rowKey,
-            redactedNote:    updatedNote,
+            soapNoteUpdate:  updatedNote,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        null,
             icdCodes:        null);
@@ -446,11 +446,11 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
 
         await repo.SaveAsync(BuildRecord(rowKey, therapist: "Dr. Smith", payer: "Medicare", duration: 45));
 
-        var updatedNote = new SoapNote("New S.", "New O.", "New A.", "New P.");
+        var updatedNote = new SoapNoteUpdate("New S.", "New O.", "New A.", "New P.");
 
         var result = await repo.UpdateAsync(
             _clientId, rowKey,
-            redactedNote:    updatedNote,
+            soapNoteUpdate:  updatedNote,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        null,
             icdCodes:        null);
@@ -478,7 +478,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
 
         var result = await repo.UpdateAsync(
             _clientId, rowKey,
-            redactedNote:    null,
+            soapNoteUpdate:  null,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        newCptCodes,
             icdCodes:        null);
@@ -506,7 +506,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
 
         var result = await repo.UpdateAsync(
             _clientId, rowKey,
-            redactedNote:    null,
+            soapNoteUpdate:  null,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        null,
             icdCodes:        newIcdCodes);
@@ -526,10 +526,10 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
 
         await repo.SaveAsync(BuildRecord(rowKey, subjective: "Original."));
 
-        var updatedNote = new SoapNote("Corrected by therapist.", "O.", "A.", "P.");
+        var updatedNote = new SoapNoteUpdate("Corrected by therapist.", "O.", "A.", "P.");
         await repo.UpdateAsync(
             _clientId, rowKey,
-            redactedNote:    updatedNote,
+            soapNoteUpdate:  updatedNote,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        null,
             icdCodes:        null);
@@ -550,7 +550,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         await repo.SaveAsync(BuildRecord(rowKey));
 
         // Simulate re-redacted note with placeholders + updated map
-        var redactedNote = new SoapNote(
+        var redactedNote = new SoapNoteUpdate(
             Subjective: "[PII_1] reports reduced pain.",
             Objective:  "Grip strength measured.",
             Assessment: "Good progress.",
@@ -560,7 +560,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
 
         var result = await repo.UpdateAsync(
             _clientId, rowKey,
-            redactedNote:    redactedNote,
+            soapNoteUpdate:  redactedNote,
             newRedactionMap: newMap,
             cptCodes:        null,
             icdCodes:        null);
@@ -583,7 +583,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
 
         var result = await repo.UpdateAsync(
             _clientId, rowKey,
-            redactedNote:    null,  // no SOAP change
+            soapNoteUpdate:  null,  // no SOAP change
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        newCptCodes,
             icdCodes:        null);
@@ -594,7 +594,42 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         result.SuggestedCptCodes[0].Code.Should().Be("97150");
     }
 
-    // ── GetTherapistStatsAsync ────────────────────────────────────────────────
+    [SkippableFact]
+    public async Task UpdateAsync_PartialSoapNoteUpdate_PreservesOmittedFields()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var rowKey = "2025-09-08T10-00-00Z";
+
+        await repo.SaveAsync(BuildRecord(rowKey,
+            subjective: "Original S.",
+            objective:  "Original O.",
+            assessment: "Original A.",
+            plan:       "Original P."));
+
+        // Only update subjective and plan; leave objective and assessment null (omitted).
+        var partialUpdate = new SoapNoteUpdate(
+            Subjective: "Updated S.",
+            Objective:  null,
+            Assessment: null,
+            Plan:       "Updated P."
+        );
+
+        var result = await repo.UpdateAsync(
+            _clientId, rowKey,
+            soapNoteUpdate:  partialUpdate,
+            newRedactionMap: new Dictionary<string, string>(),
+            cptCodes:        null,
+            icdCodes:        null);
+
+        result.Should().NotBeNull();
+        result!.SoapNote.Subjective.Should().Be("Updated S.",   "provided field must be updated");
+        result.SoapNote.Plan.Should().Be("Updated P.",          "provided field must be updated");
+        result.SoapNote.Objective.Should().Be("Original O.",   "omitted field must be preserved");
+        result.SoapNote.Assessment.Should().Be("Original A.",  "omitted field must be preserved");
+    }
+
+    // -- GetTherapistStatsAsync ------------------------------------------------
 
     [SkippableFact]
     public async Task GetTherapistStatsAsync_ReturnsZeroedStats_WhenNoSessionsExist()
@@ -713,7 +748,7 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         stats.TopCptCodes[0].Count.Should().Be(2);
     }
 
-    // ── GetClientStatsAsync ───────────────────────────────────────────────────
+    // -- GetClientStatsAsync ---------------------------------------------------
 
     [SkippableFact]
     public async Task GetClientStatsAsync_ReturnsZeroedStats_WhenNoSessionsExist()

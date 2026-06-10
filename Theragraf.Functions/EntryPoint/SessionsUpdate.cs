@@ -78,13 +78,13 @@ public class SessionsUpdate(
             update.SuggestedIcdCodes is not null);
 
         // Re-run PII redaction on the incoming SOAP note if any fields were changed.
-        SoapNote?                           redactedNote    = null;
+        SoapNoteUpdate?                     redactedNote    = null;
         IReadOnlyDictionary<string, string> newRedactionMap = new Dictionary<string, string>();
 
         if (update.SoapNote is not null)
         {
-            var (note, map) = await RedactNoteAsync(update.SoapNote, cancellationToken);
-            redactedNote    = note;
+            var (noteUpdate, map) = await RedactNoteAsync(update.SoapNote, cancellationToken);
+            redactedNote    = noteUpdate;
             newRedactionMap = map;
         }
 
@@ -123,36 +123,59 @@ public class SessionsUpdate(
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Joins all non-null SOAP fields into a single string, runs one PII redaction pass,
-    /// then splits the result back into the same fields so placeholder numbering is
-    /// consistent across all sections.
+    /// Runs one PII redaction pass over only the SOAP fields that were actually provided
+    /// (non-null). Null fields are passed straight through as null so the repository can
+    /// distinguish "caller omitted this field" from "caller set this field to empty".
+    /// Placeholder numbering is kept consistent by joining all non-null sections in a
+    /// fixed order with a unique separator before calling the redaction service once.
     /// </summary>
-    private async Task<(SoapNote Note, IReadOnlyDictionary<string, string> Map)> RedactNoteAsync(
+    private async Task<(SoapNoteUpdate NoteUpdate, IReadOnlyDictionary<string, string> Map)> RedactNoteAsync(
         SoapNoteUpdate input, CancellationToken cancellationToken)
     {
-        // Collect fields in a fixed order; null means "no change" but we still need a
-        // placeholder slot so we can split on separator count later.
-        var sections = new[]
+        // Build an ordered list of (fieldValue, isProvided) so we can reconstruct
+        // which slots were null after splitting the redacted output.
+        var slots = new[]
         {
-            input.Subjective ?? string.Empty,
-            input.Objective  ?? string.Empty,
-            input.Assessment ?? string.Empty,
-            input.Plan       ?? string.Empty,
+            (input.Subjective, input.Subjective is not null),
+            (input.Objective,  input.Objective  is not null),
+            (input.Assessment, input.Assessment is not null),
+            (input.Plan,       input.Plan       is not null),
         };
 
-        var joined = string.Join(Separator, sections);
-        var (redactedJoined, map) = await redaction.RedactAsync(joined);
+        // Only the non-null fields participate in the single redaction pass.
+        var provided = slots
+            .Where(s => s.Item2)
+            .Select(s => s.Item1!)
+            .ToArray();
 
+        if (provided.Length == 0)
+        {
+            // Nothing to redact – return the (all-null) input unchanged.
+            return (input, new Dictionary<string, string>());
+        }
+
+        var joined = string.Join(Separator, provided);
+        var (redactedJoined, map) = await redaction.RedactAsync(joined);
         var parts = redactedJoined.Split(Separator);
 
-        // Guard: if redaction somehow collapsed separators, fall back gracefully.
-        var redactedNote = new SoapNote(
-            Subjective: parts.Length > 0 ? parts[0] : sections[0],
-            Objective:  parts.Length > 1 ? parts[1] : sections[1],
-            Assessment: parts.Length > 2 ? parts[2] : sections[2],
-            Plan:       parts.Length > 3 ? parts[3] : sections[3]
+        // Walk the slots in order, distributing redacted parts back only to
+        // the slots that were provided; leave null slots as null.
+        int partIndex = 0;
+        var redactedSlots = new string?[slots.Length];
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (slots[i].Item2)
+                redactedSlots[i] = partIndex < parts.Length ? parts[partIndex++] : slots[i].Item1;
+            // else leave redactedSlots[i] as null
+        }
+
+        var noteUpdate = new SoapNoteUpdate(
+            Subjective: redactedSlots[0],
+            Objective:  redactedSlots[1],
+            Assessment: redactedSlots[2],
+            Plan:       redactedSlots[3]
         );
 
-        return (redactedNote, map);
+        return (noteUpdate, map);
     }
 }
