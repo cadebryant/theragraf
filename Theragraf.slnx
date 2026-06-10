@@ -1,9 +1,63 @@
 <Solution>
+  <Folder Name="/infra/">
+    <File Path="infra/main.bicep" />
+    <File Path="infra/main.json" />
+    <File Path="infra/modules/cognitiveRoleAssignments.bicep" />
+    <File Path="infra/modules/cosmos.bicep" />
+    <File Path="infra/modules/cosmosRoleAssignment.bicep" />
+    <File Path="infra/modules/functionApp.bicep" />
+    <File Path="infra/modules/keyVault.bicep" />
+    <File Path="infra/modules/keyVaultRoleAssignment.bicep" />
+    <File Path="infra/modules/language.bicep" />
+    <File Path="infra/modules/monitoring.bicep" />
+    <File Path="infra/modules/openai.bicep" />
+    <File Path="infra/modules/roleAssignments.bicep" />
+    <File Path="infra/modules/storage.bicep" />
+    <File Path="infra/parameters/dev.bicepparam" />
+    <File Path="infra/parameters/prod.bicepparam" />
+  </Folder>
   <Folder Name="/postman/">
     <File Path="theragraf.postman_collection.json" />
   </Folder>
+  <Folder Name="/Theragraf.Functions/">
+    <File Path="Theragraf.Functions/host.json" />
+    <File Path="Theragraf.Functions/local.settings.template.json" />
+  </Folder>
   <Project Path="Theragraf.Core/Theragraf.Core.csproj" />
   <Project Path="Theragraf.Functions/Theragraf.Functions.csproj" />
+  <Folder Name="/Theragraf.Web/">
+    <File Path="Theragraf.Web/index.html" />
+    <File Path="Theragraf.Web/package.json" />
+    <File Path="Theragraf.Web/vite.config.ts" />
+    <File Path="Theragraf.Web/staticwebapp.config.json" />
+    <File Path="Theragraf.Web/tsconfig.json" />
+    <File Path="Theragraf.Web/tsconfig.app.json" />
+    <File Path="Theragraf.Web/tsconfig.node.json" />
+    <File Path="Theragraf.Web/.env.development" />
+    <File Path="Theragraf.Web/src/App.tsx" />
+    <File Path="Theragraf.Web/src/main.tsx" />
+    <File Path="Theragraf.Web/src/types.ts" />
+    <File Path="Theragraf.Web/src/auth/msalConfig.ts" />
+    <File Path="Theragraf.Web/src/api/client.ts" />
+    <File Path="Theragraf.Web/src/api/sessions.ts" />
+    <File Path="Theragraf.Web/src/api/stats.ts" />
+    <File Path="Theragraf.Web/src/components/AppLayout.tsx" />
+    <File Path="Theragraf.Web/src/components/ProtectedRoute.tsx" />
+    <File Path="Theragraf.Web/src/pages/Dashboard/Dashboard.tsx" />
+    <File Path="Theragraf.Web/src/pages/Dashboard/StatsCards.tsx" />
+    <File Path="Theragraf.Web/src/pages/Dashboard/StatsCharts.tsx" />
+    <File Path="Theragraf.Web/src/pages/Dashboard/CaseloadTable.tsx" />
+    <File Path="Theragraf.Web/src/pages/NewSession/NewSession.tsx" />
+    <File Path="Theragraf.Web/src/pages/NewSession/AudioRecorder.tsx" />
+    <File Path="Theragraf.Web/src/pages/NewSession/SessionMetadataForm.tsx" />
+    <File Path="Theragraf.Web/src/pages/SessionReview/SessionReview.tsx" />
+    <File Path="Theragraf.Web/src/pages/SessionReview/SoapNoteEditor.tsx" />
+    <File Path="Theragraf.Web/src/pages/SessionReview/CodesEditor.tsx" />
+    <File Path="Theragraf.Web/src/pages/SessionReview/PipelineStatus.tsx" />
+    <File Path="Theragraf.Web/src/pages/ClientProfile/ClientProfile.tsx" />
+    <File Path="Theragraf.Web/src/pages/ClientProfile/SessionsTable.tsx" />
+    <File Path="Theragraf.Web/src/pages/SessionDetail/SessionDetail.tsx" />
+  </Folder>
   <Project Path="Theragraf.IntegrationTests/Theragraf.IntegrationTests.csproj" />
   <Project Path="Theragraf.Tests/Theragraf.Tests.csproj" />
 </Solution>
