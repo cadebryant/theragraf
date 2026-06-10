@@ -32,16 +32,17 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
 
     private SessionRecord BuildRecord(
         string rowKey,
-        string therapist   = "Dr. Smith",
-        string discipline  = "PT",
-        string setting     = "Outpatient",
-        string payer       = "Medicare",
-        int    duration    = 45,
-        string subjective  = "Patient reports mild pain.",
-        string objective   = "ROM measured at 90 degrees.",
-        string assessment  = "Progressing well.",
-        string plan        = "Continue current plan.",
-        string? clientId   = null)
+        string therapist                               = "Dr. Smith",
+        string discipline                              = "PT",
+        string setting                                 = "Outpatient",
+        string payer                                   = "Medicare",
+        int    duration                                = 45,
+        string subjective                              = "Patient reports mild pain.",
+        string objective                               = "ROM measured at 90 degrees.",
+        string assessment                              = "Progressing well.",
+        string plan                                    = "Continue current plan.",
+        string? clientId                               = null,
+        Dictionary<string, string>? redactionMap       = null)
     {
         var soap = new SoapNote(subjective, objective, assessment, plan);
         var cptCodes = new List<CptCode> { new("97110", "Therapeutic exercise", "Standard exercise") };
@@ -56,7 +57,9 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
             Setting                = setting,
             Payer                  = payer,
             SessionDurationMinutes = duration,
-            RedactionMapJson       = "{}",
+            RedactionMapJson       = redactionMap is not null
+                                        ? JsonSerializer.Serialize(redactionMap)
+                                        : "{}",
             SoapNoteJson           = JsonSerializer.Serialize(soap),
             CptCodesJson           = JsonSerializer.Serialize(cptCodes),
             IcdCodesJson           = JsonSerializer.Serialize(icdCodes),
@@ -627,6 +630,78 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         result.SoapNote.Plan.Should().Be("Updated P.",          "provided field must be updated");
         result.SoapNote.Objective.Should().Be("Original O.",   "omitted field must be preserved");
         result.SoapNote.Assessment.Should().Be("Original A.",  "omitted field must be preserved");
+    }
+
+    [SkippableFact]
+    public async Task UpdateAsync_CodesOnly_PreservesExistingRedactionMapInResponse()
+    {
+        // A codes-only update must not destroy the existing redaction map.
+        // MapToResponse must still restore PII after the update.
+        cosmos.SkipIfUnavailable();
+        var repo     = CreateRepository();
+        var rowKey   = "2025-09-10T10-00-00Z";
+        var existingMap = new Dictionary<string, string> { ["[PII_1]"] = "John Doe" };
+
+        await repo.SaveAsync(BuildRecord(rowKey,
+            subjective:   "[PII_1] reports mild pain.",
+            redactionMap: existingMap));
+
+        var newCptCodes = new List<CptCode> { new("97150", "Group Therapy", "Peer group", 1) };
+
+        var result = await repo.UpdateAsync(
+            _clientId, rowKey,
+            soapNoteUpdate:  null,
+            newRedactionMap: new Dictionary<string, string>(),
+            cptCodes:        newCptCodes,
+            icdCodes:        null);
+
+        result.Should().NotBeNull();
+        result!.SoapNote.Subjective.Should().Be("John Doe reports mild pain.",
+            "existing redaction map must be preserved so PII is restored");
+        result.SuggestedCptCodes.Should().ContainSingle(c => c.Code == "97150");
+    }
+
+    [SkippableFact]
+    public async Task UpdateAsync_PartialSoapNoteUpdate_RestoresPiiInUnchangedFields()
+    {
+        // When only some SOAP fields are updated, old placeholders in the unchanged
+        // fields must still be resolvable in the returned SessionResponse.
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var rowKey = "2025-09-11T10-00-00Z";
+        var existingMap = new Dictionary<string, string>
+        {
+            ["[PII_1]"] = "Jane Doe",
+            ["[PII_2]"] = "555-9999",
+        };
+
+        await repo.SaveAsync(BuildRecord(rowKey,
+            subjective:   "[PII_1] reports pain.",
+            objective:    "Phone: [PII_2]",
+            redactionMap: existingMap));
+
+        // Only update plan; subjective and objective retain old placeholders.
+        var partialUpdate = new SoapNoteUpdate(
+            Subjective: null,
+            Objective:  null,
+            Assessment: null,
+            Plan:       "Updated plan."
+        );
+        var newMap = new Dictionary<string, string>();
+
+        var result = await repo.UpdateAsync(
+            _clientId, rowKey,
+            soapNoteUpdate:  partialUpdate,
+            newRedactionMap: newMap,
+            cptCodes:        null,
+            icdCodes:        null);
+
+        result.Should().NotBeNull();
+        result!.SoapNote.Subjective.Should().Be("Jane Doe reports pain.",
+            "old placeholder must survive the partial update");
+        result.SoapNote.Objective.Should().Be("Phone: 555-9999",
+            "old placeholder must survive the partial update");
+        result.SoapNote.Plan.Should().Be("Updated plan.");
     }
 
     // -- GetTherapistStatsAsync ------------------------------------------------

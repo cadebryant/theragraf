@@ -235,19 +235,31 @@ public class CosmosSessionRepository : ISessionRepository
         if (icdCodes is not null)
             doc.SuggestedIcdCodes = icdCodes.ToList();
 
-        // Persist the new redaction map (re-encrypt if Key Vault is active)
-        if (_encryption.IsEnabled)
+        // Update the redaction map only when SOAP fields were re-processed.
+        // Codes-only updates leave the stored map untouched so existing PII
+        // placeholders remain resolvable.  For SOAP updates we merge: start from
+        // the existing stored map and overlay the new entries (new values win),
+        // so placeholders for unchanged fields are preserved.
+        if (soapNoteUpdate is not null)
         {
-            var plainJson = System.Text.Json.JsonSerializer.Serialize(newRedactionMap);
-            doc.EncryptedRedactionMap  = _encryption.Encrypt(plainJson);
-            doc.RedactionMapIsEncrypted = true;
-            doc.RedactionMap           = null;
-        }
-        else
-        {
-            doc.RedactionMap            = new Dictionary<string, string>(newRedactionMap);
-            doc.EncryptedRedactionMap   = null;
-            doc.RedactionMapIsEncrypted = false;
+            // Resolve the existing stored map so unchanged-field placeholders survive.
+            var existingMap = MapToRedactionDictionary(doc);
+            foreach (var (k, v) in newRedactionMap)
+                existingMap[k] = v;
+
+            if (_encryption.IsEnabled)
+            {
+                var plainJson = System.Text.Json.JsonSerializer.Serialize(existingMap);
+                doc.EncryptedRedactionMap   = _encryption.Encrypt(plainJson);
+                doc.RedactionMapIsEncrypted = true;
+                doc.RedactionMap            = null;
+            }
+            else
+            {
+                doc.RedactionMap            = existingMap;
+                doc.EncryptedRedactionMap   = null;
+                doc.RedactionMapIsEncrypted = false;
+            }
         }
 
         await _container.UpsertItemAsync(doc, new PartitionKey(clientId), cancellationToken: cancellationToken);
@@ -342,6 +354,22 @@ public class CosmosSessionRepository : ISessionRepository
         foreach (var (placeholder, original) in map)
             text = text.Replace(placeholder, original);
         return text;
+    }
+
+    /// <summary>
+    /// Resolves the stored redaction map from a document into a mutable dictionary,
+    /// decrypting if necessary. Returns an empty dictionary if the map is absent.
+    /// </summary>
+    private Dictionary<string, string> MapToRedactionDictionary(SessionDocument doc)
+    {
+        if (doc.RedactionMapIsEncrypted && !string.IsNullOrEmpty(doc.EncryptedRedactionMap))
+        {
+            var plainJson = _encryption.Decrypt(doc.EncryptedRedactionMap);
+            return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(plainJson) ?? [];
+        }
+        return doc.RedactionMap is not null
+            ? new Dictionary<string, string>(doc.RedactionMap)
+            : [];
     }
 
     // ── Stats ─────────────────────────────────────────────────────────────────
