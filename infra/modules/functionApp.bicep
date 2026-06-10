@@ -21,6 +21,13 @@ param cosmosEndpoint string
 @description('URI of the Azure Key Vault used for redaction-map encryption key storage.')
 param keyVaultUri string
 
+@description('Azure Speech Service region, e.g. eastus.')
+param speechRegion string
+
+@description('Azure Speech Service API key for speech-token exchange.')
+@secure()
+param speechApiKey string
+
 @description('Name of the existing Consumption App Service Plan. Defaults to the plan created alongside the Function App.')
 param appServicePlanName string = '${functionAppName}-plan'
 
@@ -105,6 +112,15 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 		{
 		  name: 'KeyVault__VaultUri'
 		  value: keyVaultUri
+		}
+		// ── Azure Speech (speech-token endpoint) ─────────────────────────────
+		{
+		  name: 'AzureSpeech__Region'
+		  value: speechRegion
+		}
+		{
+		  name: 'AzureSpeech__ApiKey'
+		  value: speechApiKey
 		}
 	  ]
 	}

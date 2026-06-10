@@ -15,6 +15,8 @@
     "CosmosDb__ContainerName": "sessions",
     "Auth__Disabled": "false",
     "AzureAd__TenantId": "<your-entra-tenant-id>",
-    "AzureAd__ClientId": "<theragraf-api-app-registration-client-id>"
+    "AzureAd__ClientId": "<theragraf-api-app-registration-client-id>",
+    "AzureSpeech__Region": "<your-speech-service-region e.g. eastus>",
+    "AzureSpeech__ApiKey": "<your-speech-service-api-key>"
   }
 }
