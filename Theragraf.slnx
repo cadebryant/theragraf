@@ -12,6 +12,7 @@
     <File Path="infra/modules/monitoring.bicep" />
     <File Path="infra/modules/openai.bicep" />
     <File Path="infra/modules/roleAssignments.bicep" />
+    <File Path="infra/modules/staticWebApp.bicep" />
     <File Path="infra/modules/storage.bicep" />
     <File Path="infra/parameters/dev.bicepparam" />
     <File Path="infra/parameters/prod.bicepparam" />

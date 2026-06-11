@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.43.8.12551",
-      "templateHash": "11852201866735604787"
+      "version": "0.44.1.10279",
+      "templateHash": "4689041657013957749"
     }
   },
   "parameters": {
@@ -50,7 +50,7 @@
     },
     "openAiDeploymentName": {
       "type": "string",
-      "defaultValue": "gpt-4o-mini",
+      "defaultValue": "gpt-4o",
       "metadata": {
         "description": "Name of the Azure OpenAI deployment (model deployment, not the account)."
       }
@@ -97,6 +97,13 @@
         "description": "Name for the Cosmos DB account (must be globally unique)."
       }
     },
+    "keyVaultName": {
+      "type": "string",
+      "defaultValue": "[format('theragraf-kv-{0}', toLower(parameters('environmentName')))]",
+      "metadata": {
+        "description": "Name for the Azure Key Vault (must be globally unique, 3-24 chars)."
+      }
+    },
     "appServicePlanName": {
       "type": "string",
       "defaultValue": "[format('{0}-plan', parameters('functionAppName'))]",
@@ -104,11 +111,46 @@
         "description": "Name of the existing App Service Plan hosting the Function App."
       }
     },
+    "speechAccountName": {
+      "type": "string",
+      "defaultValue": "[format('theragraf-speech-{0}', toLower(parameters('environmentName')))]",
+      "metadata": {
+        "description": "Name for the Azure AI Speech account (must be globally unique)."
+      }
+    },
     "developerPrincipalId": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
         "description": "Optional Entra ID object ID of a developer to grant Cosmos Data Explorer access."
+      }
+    },
+    "spaClientId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Client ID of the theragraf-spa Entra ID SPA app registration."
+      }
+    },
+    "staticWebAppName": {
+      "type": "string",
+      "defaultValue": "[format('theragraf-web-{0}', toLower(parameters('environmentName')))]",
+      "metadata": {
+        "description": "Name for the Azure Static Web App (must be globally unique)."
+      }
+    },
+    "staticWebAppLocation": {
+      "type": "string",
+      "defaultValue": "eastus2",
+      "allowedValues": [
+        "centralus",
+        "eastus2",
+        "westus2",
+        "westeurope",
+        "eastasia"
+      ],
+      "metadata": {
+        "description": "Azure region for the Static Web App. Must be one of: centralus, eastus2, westus2, westeurope, eastasia."
       }
     }
   },
@@ -140,8 +182,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "11646164510688481694"
+              "version": "0.44.1.10279",
+              "templateHash": "6775753750048320360"
             }
           },
           "parameters": {
@@ -229,8 +271,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "18316620748624670426"
+              "version": "0.44.1.10279",
+              "templateHash": "14827758473002371213"
             }
           },
           "parameters": {
@@ -317,8 +359,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "10038411995337962592"
+              "version": "0.44.1.10279",
+              "templateHash": "2743331936759061961"
             }
           },
           "parameters": {
@@ -361,8 +403,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "10038411995337962592"
+              "version": "0.44.1.10279",
+              "templateHash": "2743331936759061961"
             }
           },
           "parameters": {
@@ -379,6 +421,89 @@
             "endpoint": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), '2024-10-01').endpoint]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "speech",
+      "resourceGroup": "[parameters('appResourceGroup')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "suffix": {
+            "value": "[variables('suffix')]"
+          },
+          "speechAccountName": {
+            "value": "[parameters('speechAccountName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.44.1.10279",
+              "templateHash": "17981420225608331439"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "suffix": {
+              "type": "string"
+            },
+            "speechAccountName": {
+              "type": "string",
+              "defaultValue": "[format('theragraf-speech-{0}', parameters('suffix'))]",
+              "metadata": {
+                "description": "Name for the Speech resource (must be globally unique)."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.CognitiveServices/accounts",
+              "apiVersion": "2024-10-01",
+              "name": "[parameters('speechAccountName')]",
+              "location": "[parameters('location')]",
+              "kind": "SpeechServices",
+              "sku": {
+                "name": "S0"
+              },
+              "properties": {
+                "publicNetworkAccess": "Enabled",
+                "customSubDomainName": "[parameters('speechAccountName')]"
+              }
+            }
+          ],
+          "outputs": {
+            "accountName": {
+              "type": "string",
+              "value": "[parameters('speechAccountName')]"
+            },
+            "region": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('speechAccountName')), '2024-10-01', 'full').location]"
+            },
+            "endpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('speechAccountName')), '2024-10-01').endpoint]"
+            },
+            "apiKey": {
+              "type": "string",
+              "value": "[listKeys(resourceId('Microsoft.CognitiveServices/accounts', parameters('speechAccountName')), '2024-10-01').key1]"
             }
           }
         }
@@ -427,6 +552,15 @@
           },
           "appServicePlanName": {
             "value": "[parameters('appServicePlanName')]"
+          },
+          "keyVaultUri": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.vaultUri.value]"
+          },
+          "speechRegion": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'speech'), '2025-04-01').outputs.region.value]"
+          },
+          "speechApiKey": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'speech'), '2025-04-01').outputs.apiKey.value]"
           }
         },
         "template": {
@@ -435,8 +569,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "16316141260599217395"
+              "version": "0.44.1.10279",
+              "templateHash": "10545132769120500607"
             }
           },
           "parameters": {
@@ -469,6 +603,24 @@
             },
             "cosmosEndpoint": {
               "type": "string"
+            },
+            "keyVaultUri": {
+              "type": "string",
+              "metadata": {
+                "description": "URI of the Azure Key Vault used for redaction-map encryption key storage."
+              }
+            },
+            "speechRegion": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure Speech Service region, e.g. eastus."
+              }
+            },
+            "speechApiKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Azure Speech Service API key for speech-token exchange."
+              }
             },
             "appServicePlanName": {
               "type": "string",
@@ -546,6 +698,18 @@
                     {
                       "name": "CosmosDb__ContainerName",
                       "value": "sessions"
+                    },
+                    {
+                      "name": "KeyVault__VaultUri",
+                      "value": "[parameters('keyVaultUri')]"
+                    },
+                    {
+                      "name": "AzureSpeech__Region",
+                      "value": "[parameters('speechRegion')]"
+                    },
+                    {
+                      "name": "AzureSpeech__ApiKey",
+                      "value": "[parameters('speechApiKey')]"
                     }
                   ]
                 }
@@ -560,15 +724,21 @@
             "defaultHostname": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '2023-12-01').defaultHostName]"
+            },
+            "resourceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
             }
           }
         }
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'cosmos')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'keyVault')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('cognitiveResourceGroup')), 'Microsoft.Resources/deployments', 'language')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'monitoring')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('cognitiveResourceGroup')), 'Microsoft.Resources/deployments', 'openai')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'speech')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'storage')]"
       ]
     },
@@ -596,8 +766,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "13954579176025392771"
+              "version": "0.44.1.10279",
+              "templateHash": "15818819676482367434"
             }
           },
           "parameters": {
@@ -745,6 +915,84 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
+      "name": "keyVault",
+      "resourceGroup": "[parameters('appResourceGroup')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "suffix": {
+            "value": "[variables('suffix')]"
+          },
+          "keyVaultName": {
+            "value": "[parameters('keyVaultName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.44.1.10279",
+              "templateHash": "13946381250849244256"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "suffix": {
+              "type": "string"
+            },
+            "keyVaultName": {
+              "type": "string",
+              "defaultValue": "[format('theragraf-kv-{0}', parameters('suffix'))]",
+              "metadata": {
+                "description": "Name for the Key Vault. Must be 3-24 chars, globally unique."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[parameters('keyVaultName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "enableRbacAuthorization": true,
+                "enableSoftDelete": true,
+                "softDeleteRetentionInDays": 90,
+                "enablePurgeProtection": true
+              }
+            }
+          ],
+          "outputs": {
+            "keyVaultName": {
+              "type": "string",
+              "value": "[parameters('keyVaultName')]"
+            },
+            "vaultUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), '2023-07-01').vaultUri]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
       "name": "roleAssignments",
       "resourceGroup": "[parameters('appResourceGroup')]",
       "properties": {
@@ -766,8 +1014,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "13679318802348693770"
+              "version": "0.44.1.10279",
+              "templateHash": "9711576125647546300"
             }
           },
           "parameters": {
@@ -840,8 +1088,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "6002227671842441011"
+              "version": "0.44.1.10279",
+              "templateHash": "17713264127732857001"
             }
           },
           "parameters": {
@@ -918,8 +1166,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "15434406763003238056"
+              "version": "0.44.1.10279",
+              "templateHash": "17233509662727868794"
             }
           },
           "parameters": {
@@ -969,6 +1217,193 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'cosmos')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'functionApp')]"
       ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "keyVaultRoleAssignment",
+      "resourceGroup": "[parameters('appResourceGroup')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "keyVaultName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.keyVaultName.value]"
+          },
+          "functionAppPrincipalId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'functionApp'), '2025-04-01').outputs.principalId.value]"
+          },
+          "developerPrincipalId": {
+            "value": "[parameters('developerPrincipalId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.44.1.10279",
+              "templateHash": "3541716662539079000"
+            }
+          },
+          "parameters": {
+            "keyVaultName": {
+              "type": "string"
+            },
+            "functionAppPrincipalId": {
+              "type": "string"
+            },
+            "developerPrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional Entra ID object ID of a developer to grant Key Vault Secrets Officer for secret management."
+              }
+            }
+          },
+          "variables": {
+            "keyVaultSecretsUserRoleId": "4633458b-17de-408a-b874-0445c86b69e6",
+            "keyVaultSecretsOfficerRoleId": "b86a8fe4-44ce-4948-aee5-eccb2c155cd7"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), parameters('functionAppPrincipalId'), variables('keyVaultSecretsUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultSecretsUserRoleId'))]",
+                "principalId": "[parameters('functionAppPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "description": "Theragraf Function App — Key Vault Secrets User (managed by Bicep)"
+              }
+            },
+            {
+              "condition": "[not(empty(parameters('developerPrincipalId')))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), parameters('developerPrincipalId'), variables('keyVaultSecretsOfficerRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultSecretsOfficerRoleId'))]",
+                "principalId": "[parameters('developerPrincipalId')]",
+                "principalType": "User"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'functionApp')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'keyVault')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "staticWebApp",
+      "resourceGroup": "[parameters('appResourceGroup')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('staticWebAppLocation')]"
+          },
+          "suffix": {
+            "value": "[variables('suffix')]"
+          },
+          "staticWebAppName": {
+            "value": "[parameters('staticWebAppName')]"
+          },
+          "functionAppResourceId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'functionApp'), '2025-04-01').outputs.resourceId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.44.1.10279",
+              "templateHash": "15310618281436460946"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "suffix": {
+              "type": "string"
+            },
+            "staticWebAppName": {
+              "type": "string",
+              "defaultValue": "[format('theragraf-web-{0}', parameters('suffix'))]",
+              "metadata": {
+                "description": "Name for the Static Web App (must be globally unique)."
+              }
+            },
+            "functionAppResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Function App to link as the API backend."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/staticSites",
+              "apiVersion": "2023-12-01",
+              "name": "[parameters('staticWebAppName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard",
+                "tier": "Standard"
+              },
+              "properties": {
+                "buildProperties": {
+                  "skipGithubActionWorkflowGeneration": true
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Web/staticSites/linkedBackends",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', parameters('staticWebAppName'), 'theragraf-functions-backend')]",
+              "properties": {
+                "backendResourceId": "[parameters('functionAppResourceId')]",
+                "region": "[parameters('location')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/staticSites', parameters('staticWebAppName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "staticWebAppName": {
+              "type": "string",
+              "value": "[parameters('staticWebAppName')]"
+            },
+            "defaultHostname": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/staticSites', parameters('staticWebAppName')), '2023-12-01').defaultHostname]"
+            },
+            "deploymentToken": {
+              "type": "string",
+              "value": "[listSecrets(resourceId('Microsoft.Web/staticSites', parameters('staticWebAppName')), '2023-12-01').properties.apiKey]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'functionApp')]"
+      ]
     }
   ],
   "outputs": {
@@ -1003,6 +1438,58 @@
     "appInsightsName": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.appInsightsName.value]"
+    },
+    "keyVaultName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.keyVaultName.value]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.vaultUri.value]"
+    },
+    "speechAccountName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'speech'), '2025-04-01').outputs.accountName.value]"
+    },
+    "speechRegion": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'speech'), '2025-04-01').outputs.region.value]"
+    },
+    "localSettingsSpeechRegion": {
+      "type": "string",
+      "metadata": {
+        "description": "Copy this value into AzureSpeech__Region in local.settings.json"
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'speech'), '2025-04-01').outputs.region.value]"
+    },
+    "localSettingsSpeechApiKey": {
+      "type": "string",
+      "metadata": {
+        "description": "Copy this value into AzureSpeech__ApiKey in local.settings.json"
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'speech'), '2025-04-01').outputs.apiKey.value]"
+    },
+    "spaClientId": {
+      "type": "string",
+      "metadata": {
+        "description": "SPA app registration client ID � use as VITE_AZURE_AD_CLIENT_ID in .env.development"
+      },
+      "value": "[parameters('spaClientId')]"
+    },
+    "staticWebAppName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'staticWebApp'), '2025-04-01').outputs.staticWebAppName.value]"
+    },
+    "staticWebAppHostname": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'staticWebApp'), '2025-04-01').outputs.defaultHostname.value]"
+    },
+    "swaDeploymentToken": {
+      "type": "string",
+      "metadata": {
+        "description": "Add this as the SWA_DEPLOYMENT_TOKEN GitHub secret"
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'staticWebApp'), '2025-04-01').outputs.deploymentToken.value]"
     }
   }
 }

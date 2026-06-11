@@ -74,3 +74,16 @@ jobs:
             --template-file infra/main.bicep \
             --parameters "infra/parameters/${ENV}.bicepparam" \
             --name "theragraf-infra-${ENV}-${{ github.run_number }}"
+
+      - name: Show key outputs
+        run: |
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          DEPLOY_NAME="theragraf-infra-${ENV}-${{ github.run_number }}"
+          echo "=== Deployment outputs ==="
+          az deployment sub show \
+            --name "$DEPLOY_NAME" \
+            --query "{functionApp:properties.outputs.functionAppHostname.value, swaHostname:properties.outputs.staticWebAppHostname.value, swaDeploymentToken:properties.outputs.swaDeploymentToken.value}" \
+            --output json
+          echo ""
+          echo "ACTION REQUIRED: copy swaDeploymentToken above and add it as the"
+          echo "SWA_DEPLOYMENT_TOKEN secret in your GitHub repository settings."

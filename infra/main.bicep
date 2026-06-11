@@ -69,6 +69,13 @@ param developerPrincipalId string = ''
 @description('Client ID of the theragraf-spa Entra ID SPA app registration.')
 param spaClientId string = ''
 
+@description('Name for the Azure Static Web App (must be globally unique).')
+param staticWebAppName string = 'theragraf-web-${toLower(environmentName)}'
+
+@description('Azure region for the Static Web App. Must be one of: centralus, eastus2, westus2, westeurope, eastasia.')
+@allowed(['centralus', 'eastus2', 'westus2', 'westeurope', 'eastasia'])
+param staticWebAppLocation string = 'eastus2'
+
 // -- Shared naming suffix ------------------------------------------------------
 
 var suffix = toLower(environmentName)
@@ -222,6 +229,19 @@ module keyVaultRoleAssignment 'modules/keyVaultRoleAssignment.bicep' = {
   }
 }
 
+// -- Static Web App (app resource group) --------------------------------------
+
+module staticWebApp 'modules/staticWebApp.bicep' = {
+  name: 'staticWebApp'
+  scope: appRg
+  params: {
+    location: staticWebAppLocation
+    suffix: suffix
+    staticWebAppName: staticWebAppName
+    functionAppResourceId: functionApp.outputs.resourceId
+  }
+}
+
 // -- Outputs -------------------------------------------------------------------
 
 output functionAppName string = functionAppName
@@ -244,3 +264,9 @@ output localSettingsSpeechApiKey string = speech.outputs.apiKey
 
 @description('SPA app registration client ID — use as VITE_AZURE_AD_CLIENT_ID in .env.development')
 output spaClientId string = spaClientId
+
+output staticWebAppName string = staticWebApp.outputs.staticWebAppName
+output staticWebAppHostname string = staticWebApp.outputs.defaultHostname
+@description('Add this as the SWA_DEPLOYMENT_TOKEN GitHub secret')
+#disable-next-line outputs-should-not-contain-secrets
+output swaDeploymentToken string = staticWebApp.outputs.deploymentToken

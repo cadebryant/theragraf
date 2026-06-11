@@ -14,3 +14,6 @@ param apiClientId            = 'd84a7ccd-aaa1-4adf-8211-7c03fa3d319a'
 param cosmosAccountName      = 'theragraf-cosmos'
 param keyVaultName           = 'theragraf-kv-prod'
 param spaClientId            = 'ba58ec08-f9c8-4232-8a01-8e90c5e4de2a'
+
+param staticWebAppName        = 'theragraf-web-prod'
+param staticWebAppLocation    = 'eastus2'

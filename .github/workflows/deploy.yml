@@ -21,6 +21,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ── .NET — build, test, and deploy Function App ───────────────────────
+
       - name: Set up .NET ${{ env.DOTNET_VERSION }}
         uses: actions/setup-dotnet@v4
         with:
@@ -36,18 +38,12 @@ jobs:
         run: dotnet test --configuration Release --no-build --verbosity normal
 
       - name: Publish Functions app
-        run: |
-          dotnet publish ${{ env.PROJECT_PATH }} \
-            --configuration Release \
-            --no-build \
-            --output ${{ env.PUBLISH_DIR }}
+        run: dotnet publish ${{ env.PROJECT_PATH }} --configuration Release --no-build --output ${{ env.PUBLISH_DIR }}
 
       - name: Create deployment ZIP
-        run: |
-          cd ${{ env.PUBLISH_DIR }}
-          zip -r ${{ github.workspace }}/publish.zip .
+        run: cd ${{ env.PUBLISH_DIR }} && zip -r ${{ github.workspace }}/publish.zip .
 
-      - name: Deploy to Azure Functions
+      - name: Azure login
         env:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -59,11 +55,39 @@ jobs:
             --password "$AZURE_CLIENT_SECRET" \
             --tenant "$AZURE_TENANT_ID" \
             --output none
-
           az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 
+      - name: Deploy to Azure Functions
+        run: |
           az functionapp deployment source config-zip \
             --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
             --name "${{ env.AZURE_FUNCTIONAPP_NAME }}" \
             --src "${{ github.workspace }}/publish.zip"
+
+      # ── React / Vite — build and deploy Static Web App ───────────────────
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: Theragraf.Web/package-lock.json
+
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: Theragraf.Web
+
+      - name: Build web app
+        run: npm run build
+        working-directory: Theragraf.Web
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.SWA_DEPLOYMENT_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: Theragraf.Web
+          output_location: dist
+          skip_api_build: true
 
