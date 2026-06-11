@@ -1,5 +1,5 @@
 /*
-  main.bicep — Theragraf root orchestrator
+  main.bicep ï¿½ Theragraf root orchestrator
   Deploys all modules in dependency order and wires outputs between them.
 
   Resources in theragraf-rg    : storage, monitoring, functionApp, roleAssignments
@@ -76,6 +76,9 @@ param staticWebAppName string = 'theragraf-web-${toLower(environmentName)}'
 @allowed(['centralus', 'eastus2', 'westus2', 'westeurope', 'eastasia'])
 param staticWebAppLocation string = 'eastus2'
 
+@description('Therapist name used for demo/seed records. Leave blank to disable demo mode in production.')
+param demoTherapistName string = ''
+
 // -- Shared naming suffix ------------------------------------------------------
 
 var suffix = toLower(environmentName)
@@ -106,7 +109,7 @@ module storage 'modules/storage.bicep' = {
   }
 }
 
-// -- Modules (cognitive resource group — read-only existing) -------------------
+// -- Modules (cognitive resource group ï¿½ read-only existing) -------------------
 
 module openai 'modules/openai.bicep' = {
   name: 'openai'
@@ -156,6 +159,7 @@ module functionApp 'modules/functionApp.bicep' = {
     keyVaultUri: keyVault.outputs.vaultUri
     speechRegion: speech.outputs.region
     speechApiKey: speech.outputs.apiKey
+    demoTherapistName: demoTherapistName
   }
 }
 
@@ -182,7 +186,7 @@ module keyVault 'modules/keyVault.bicep' = {
   }
 }
 
-// -- Role assignments — storage (app resource group) ---------------------------
+// -- Role assignments ï¿½ storage (app resource group) ---------------------------
 
 module roleAssignments 'modules/roleAssignments.bicep' = {
   name: 'roleAssignments'
@@ -193,7 +197,7 @@ module roleAssignments 'modules/roleAssignments.bicep' = {
   }
 }
 
-// -- Role assignments — cognitive services (cognitive resource group) -----------
+// -- Role assignments ï¿½ cognitive services (cognitive resource group) -----------
 
 module cognitiveRoleAssignments 'modules/cognitiveRoleAssignments.bicep' = {
   name: 'cognitiveRoleAssignments'
@@ -205,7 +209,7 @@ module cognitiveRoleAssignments 'modules/cognitiveRoleAssignments.bicep' = {
   }
 }
 
-// -- Role assignments — Cosmos DB (app resource group) ------------------------
+// -- Role assignments ï¿½ Cosmos DB (app resource group) ------------------------
 
 module cosmosRoleAssignment 'modules/cosmosRoleAssignment.bicep' = {
   name: 'cosmosRoleAssignment'
@@ -217,7 +221,7 @@ module cosmosRoleAssignment 'modules/cosmosRoleAssignment.bicep' = {
   }
 }
 
-// -- Role assignments — Key Vault (app resource group) -------------------------
+// -- Role assignments ï¿½ Key Vault (app resource group) -------------------------
 
 module keyVaultRoleAssignment 'modules/keyVaultRoleAssignment.bicep' = {
   name: 'keyVaultRoleAssignment'
@@ -262,7 +266,7 @@ output localSettingsSpeechRegion string = speech.outputs.region
 #disable-next-line outputs-should-not-contain-secrets
 output localSettingsSpeechApiKey string = speech.outputs.apiKey
 
-@description('SPA app registration client ID — use as VITE_AZURE_AD_CLIENT_ID in .env.development')
+@description('SPA app registration client ID ï¿½ use as VITE_AZURE_AD_CLIENT_ID in .env.development')
 output spaClientId string = spaClientId
 
 output staticWebAppName string = staticWebApp.outputs.staticWebAppName

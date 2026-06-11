@@ -31,6 +31,9 @@ param speechApiKey string
 @description('Name of the existing Consumption App Service Plan. Defaults to the plan created alongside the Function App.')
 param appServicePlanName string = '${functionAppName}-plan'
 
+@description('Therapist name used for demo/seed records. Leave blank to disable demo mode.')
+param demoTherapistName string = ''
+
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' existing = {
   name: appServicePlanName
 }
@@ -121,6 +124,11 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 		{
 		  name: 'AzureSpeech__ApiKey'
 		  value: speechApiKey
+		}
+		// ── Demo mode ────────────────────────────────────────────────────────
+		{
+		  name: 'Demo__TherapistName'
+		  value: demoTherapistName
 		}
 	  ]
 	}

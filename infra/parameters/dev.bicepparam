@@ -19,3 +19,4 @@ param spaClientId            = 'ba58ec08-f9c8-4232-8a01-8e90c5e4de2a'
 
 param staticWebAppName        = 'theragraf-web-dev'
 param staticWebAppLocation    = 'eastus2'
+param demoTherapistName       = 'Demo Therapist'
