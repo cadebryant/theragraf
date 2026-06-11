@@ -31,9 +31,14 @@ public class SessionsGet(
         var identity = ClaimsHelper.GetTherapistIdentity(req, config);
         if (identity is null)
         {
-            var forbidden = req.CreateResponse(HttpStatusCode.Unauthorized);
-            await forbidden.WriteStringAsync("Authentication is required.", cancellationToken);
-            return forbidden;
+            if (config.GetValue<bool>("Auth:Disabled"))
+                identity = config["Auth:DevIdentity"] ?? "dev-therapist@localhost";
+            else
+            {
+                var unauthorized = req.CreateResponse(HttpStatusCode.Unauthorized);
+                await unauthorized.WriteStringAsync("Authentication is required.", cancellationToken);
+                return unauthorized;
+            }
         }
 
         _logger.LogInformation("GetCaseload therapist={TherapistName}", identity);
