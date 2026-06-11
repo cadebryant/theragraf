@@ -18,7 +18,7 @@ internal static class ClaimsHelper
     internal static string? GetTherapistIdentity(HttpRequestData req, IConfiguration config)
     {
         if (config.GetValue<bool>("Auth:Disabled"))
-            return null;
+            return config["Auth:DevIdentity"] ?? "dev-therapist@localhost";
 
         if (req.FunctionContext.Items.TryGetValue("ClaimsPrincipal", out var raw)
             && raw is ClaimsPrincipal principal)

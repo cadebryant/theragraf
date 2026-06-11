@@ -66,6 +66,9 @@ param speechAccountName string = 'theragraf-speech-${toLower(environmentName)}'
 @description('Optional Entra ID object ID of a developer to grant Cosmos Data Explorer access.')
 param developerPrincipalId string = ''
 
+@description('Client ID of the theragraf-spa Entra ID SPA app registration.')
+param spaClientId string = ''
+
 // -- Shared naming suffix ------------------------------------------------------
 
 var suffix = toLower(environmentName)
@@ -238,3 +241,6 @@ output localSettingsSpeechRegion string = speech.outputs.region
 @description('Copy this value into AzureSpeech__ApiKey in local.settings.json')
 #disable-next-line outputs-should-not-contain-secrets
 output localSettingsSpeechApiKey string = speech.outputs.apiKey
+
+@description('SPA app registration client ID — use as VITE_AZURE_AD_CLIENT_ID in .env.development')
+output spaClientId string = spaClientId

@@ -1,0 +1,9 @@
+# Build artifacts and dependency caches — do not sync
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.vite/
+**/.vite/
+Theragraf.Web/node_modules/
+Theragraf.Web/dist/
