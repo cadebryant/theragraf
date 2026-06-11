@@ -38,12 +38,14 @@ public class SessionsDelete(ISessionRepository repository, IConfiguration config
         _logger.LogInformation("DeleteSession called for clientId={ClientId} date={Date}", clientId, sessionDate);
 
         // Ownership check — fetch the session and verify the JWT identity matches TherapistName.
+        // Demo records (TherapistName == Demo:TherapistName) are deletable by anyone.
         var identity = ClaimsHelper.GetTherapistIdentity(req, config);
         if (identity is not null)
         {
             var existing = await repository.GetByClientIdAndDateAsync(clientId, sessionDate, cancellationToken);
             if (existing is not null
-                && !string.Equals(identity, existing.TherapistName, StringComparison.OrdinalIgnoreCase))
+                && !string.Equals(identity, existing.TherapistName, StringComparison.OrdinalIgnoreCase)
+                && !ClaimsHelper.IsDemoRecord(existing.TherapistName, config))
             {
                 var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
                 await forbidden.WriteStringAsync("You are not authorised to delete this session.", cancellationToken);

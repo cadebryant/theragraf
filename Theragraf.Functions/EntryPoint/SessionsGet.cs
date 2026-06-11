@@ -100,10 +100,13 @@ public class SessionsGet(
         );
 
         // Ownership check — if the JWT is present, the caller must own this client.
+        // Demo records (TherapistName == Demo:TherapistName) are readable by anyone.
         var identity = ClaimsHelper.GetTherapistIdentity(req, config);
+        var requestedTherapist = options.Therapist;
         if (identity is not null
-            && options.Therapist is not null
-            && !string.Equals(identity, options.Therapist, StringComparison.OrdinalIgnoreCase))
+            && requestedTherapist is not null
+            && !string.Equals(identity, requestedTherapist, StringComparison.OrdinalIgnoreCase)
+            && !ClaimsHelper.IsDemoRecord(requestedTherapist, config))
         {
             var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
             await forbidden.WriteStringAsync("You are not authorised to filter by a different therapist.", cancellationToken);
@@ -186,9 +189,11 @@ public class SessionsGet(
         }
 
         // Ownership check — the session must belong to the authenticated therapist.
+        // Demo records (TherapistName == Demo:TherapistName) are readable by anyone.
         var identity = ClaimsHelper.GetTherapistIdentity(req, config);
         if (identity is not null
-            && !string.Equals(identity, session.TherapistName, StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(identity, session.TherapistName, StringComparison.OrdinalIgnoreCase)
+            && !ClaimsHelper.IsDemoRecord(session.TherapistName, config))
         {
             var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
             await forbidden.WriteStringAsync("You are not authorised to access this session.", cancellationToken);

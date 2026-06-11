@@ -74,6 +74,7 @@ public class SessionsUpdate(
         }
 
         // Ownership check — the session belongs to the therapist matched by the JWT.
+        // Demo records (TherapistName == Demo:TherapistName) are editable by anyone.
         var identity = ClaimsHelper.GetTherapistIdentity(req, config);
         if (identity is not null
             && !string.Equals(identity, clientId, StringComparison.OrdinalIgnoreCase))
@@ -82,7 +83,8 @@ public class SessionsUpdate(
             // We do this lazily only when the identity is present.
             var existing = await repository.GetByClientIdAndDateAsync(clientId, sessionDate, cancellationToken);
             if (existing is not null
-                && !string.Equals(identity, existing.TherapistName, StringComparison.OrdinalIgnoreCase))
+                && !string.Equals(identity, existing.TherapistName, StringComparison.OrdinalIgnoreCase)
+                && !ClaimsHelper.IsDemoRecord(existing.TherapistName, config))
             {
                 var r = req.CreateResponse(HttpStatusCode.Forbidden);
                 await r.WriteStringAsync("You are not authorised to update this session.", cancellationToken);

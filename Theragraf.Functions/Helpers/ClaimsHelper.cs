@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 /// <summary>
 /// Extracts the therapist identity from the validated <see cref="ClaimsPrincipal"/>
 /// stored by <see cref="Middleware.JwtAuthMiddleware"/> in <c>FunctionContext.Items</c>.
+/// Also provides demo-mode helpers for shared seed data.
 /// </summary>
 internal static class ClaimsHelper
 {
@@ -30,5 +31,18 @@ internal static class ClaimsHelper
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Returns <see langword="true"/> when <paramref name="therapistName"/> matches the
+    /// configured demo therapist name (<c>Demo:TherapistName</c>). When this is true,
+    /// ownership checks should be skipped so all users can browse shared demo records.
+    /// Returns <see langword="false"/> when <c>Demo:TherapistName</c> is not configured.
+    /// </summary>
+    internal static bool IsDemoRecord(string? therapistName, IConfiguration config)
+    {
+        var demoName = config["Demo:TherapistName"];
+        return !string.IsNullOrWhiteSpace(demoName)
+            && string.Equals(therapistName, demoName, StringComparison.OrdinalIgnoreCase);
     }
 }
