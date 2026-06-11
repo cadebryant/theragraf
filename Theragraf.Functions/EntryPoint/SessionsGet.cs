@@ -46,6 +46,22 @@ public class SessionsGet(
         try
         {
             var summary = await repository.GetCaseloadAsync(identity, cancellationToken);
+
+            // In demo mode, merge the demo caseload so any visitor sees populated clients.
+            var demoTherapist = config["Demo:TherapistName"];
+            if (!string.IsNullOrWhiteSpace(demoTherapist) &&
+                !string.Equals(identity, demoTherapist, StringComparison.OrdinalIgnoreCase))
+            {
+                var demoSummary = await repository.GetCaseloadAsync(demoTherapist, cancellationToken);
+                var merged = summary.Clients
+                    .Concat(demoSummary.Clients)
+                    .GroupBy(c => c.ClientId)
+                    .Select(g => g.OrderByDescending(c => c.LastSessionDate).First())
+                    .OrderByDescending(c => c.LastSessionDate)
+                    .ToList();
+                summary = new Core.Models.CaseloadSummary(summary.TherapistName, merged);
+            }
+
             var ok = req.CreateResponse(HttpStatusCode.OK);
             ok.Headers.Add("Content-Type", "application/json; charset=utf-8");
             await ok.WriteStringAsync(JsonSerializer.Serialize(summary, JsonOptions), cancellationToken);

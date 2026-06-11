@@ -2,7 +2,6 @@ namespace Theragraf.IntegrationTests.Infrastructure;
 
 using Microsoft.Azure.Cosmos;
 using System.Diagnostics;
-using System.Net;
 using System.Net.NetworkInformation;
 
 /// <summary>
@@ -21,27 +20,34 @@ public sealed class CosmosFixture : IAsyncLifetime
 {
     // The canonical well-known master key for the Azure Cosmos DB Emulator (88 chars, ends with KA==).
     // See: https://learn.microsoft.com/en-us/azure/cosmos-db/emulator
-    private const string EmulatorEndpoint        = "https://localhost:8081/";
-    private const string EmulatorKey             = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
-    private const int    EmulatorPort             = 8081;
-    private const int    StartupTimeoutSecs       = 120;
+    private const string EmulatorEndpoint = "https://localhost:8081/";
+    private const string EmulatorKey = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
+    private const int EmulatorPort = 8081;
+    private const int StartupTimeoutSecs = 120;  // max for the HTTP readiness probe
+    private const int SdkTimeoutSecs = 20;   // per-request Cosmos SDK timeout
+    private const int TotalTimeoutSecs = StartupTimeoutSecs + SdkTimeoutSecs + 10; // hard deadline
 
     private static readonly string[] _candidatePaths =
     [
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),        @"Azure Cosmos DB Emulator\CosmosDB.Emulator.exe"),
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),     @"Azure Cosmos DB Emulator\CosmosDB.Emulator.exe"),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),         @"Azure Cosmos DB Emulator\CosmosDB.Emulator.exe"),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),      @"Azure Cosmos DB Emulator\CosmosDB.Emulator.exe"),
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\Azure Cosmos DB Emulator\CosmosDB.Emulator.exe"),
     ];
 
-    public const string DatabaseName  = "theragraf-integration-tests";
+    public const string DatabaseName = "theragraf-integration-tests";
     public const string ContainerName = "sessions";
 
-    public bool         IsAvailable { get; private set; }
-    public CosmosClient Client      { get; private set; } = null!;
-    public Container    Container   { get; private set; } = null!;
+    public bool IsAvailable { get; private set; }
+    public CosmosClient Client { get; private set; } = null!;
+    public Container Container { get; private set; } = null!;
 
     public async Task InitializeAsync()
     {
+        // Hard outer deadline — prevents the test runner from freezing entirely
+        // if the emulator port is open but the data plane is in a bad state.
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TotalTimeoutSecs));
+        var ct = cts.Token;
+
         if (!IsPortListening(EmulatorPort))
         {
             if (!TryLaunchEmulator())
@@ -54,7 +60,7 @@ public sealed class CosmosFixture : IAsyncLifetime
         // Always do an HTTP readiness probe — the port can be listening while
         // the Cosmos data plane API is still initialising, which causes the SDK
         // to receive a malformed response and throw a Base-64 parse error.
-        if (!await WaitForReadyAsync(EmulatorPort, TimeSpan.FromSeconds(StartupTimeoutSecs)))
+        if (!await WaitForReadyAsync(EmulatorPort, TimeSpan.FromSeconds(StartupTimeoutSecs), ct))
         {
             Console.WriteLine($"[CosmosFixture] Emulator did not become ready within {StartupTimeoutSecs}s.");
             IsAvailable = false;
@@ -77,22 +83,36 @@ public sealed class CosmosFixture : IAsyncLifetime
                     {
                         ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
                     }),
-                    ConnectionMode  = ConnectionMode.Gateway,
+                    ConnectionMode = ConnectionMode.Gateway,
                     // Prevent the SDK from attempting regional endpoint discovery,
                     // which causes a Base-64 parse failure against the local emulator.
-                    LimitToEndpoint = true
+                    LimitToEndpoint = true,
+                    // Belt-and-suspenders: cap each individual SDK request so a stalled
+                    // emulator data plane cannot block the test runner indefinitely.
+                    RequestTimeout = TimeSpan.FromSeconds(SdkTimeoutSecs)
                 });
 
-            var db = await Client.CreateDatabaseIfNotExistsAsync(DatabaseName);
+            var db = await Client.CreateDatabaseIfNotExistsAsync(
+                DatabaseName,
+                cancellationToken: ct);
+
             var containerResponse = await db.Database.CreateContainerIfNotExistsAsync(
                 new ContainerProperties
                 {
-                    Id               = ContainerName,
+                    Id = ContainerName,
                     PartitionKeyPath = "/clientId"
-                });
+                },
+                cancellationToken: ct);
 
-            Container   = containerResponse.Container;
+            Container = containerResponse.Container;
             IsAvailable = true;
+        }
+        catch (OperationCanceledException)
+        {
+            IsAvailable = false;
+            Console.WriteLine($"[CosmosFixture] Initialization timed out after {TotalTimeoutSecs}s. " +
+                              "The emulator port was open but the data plane did not respond. " +
+                              "Try restarting the Cosmos DB Emulator.");
         }
         catch (Exception ex)
         {
@@ -111,7 +131,8 @@ public sealed class CosmosFixture : IAsyncLifetime
         // Delete the test database entirely on teardown so each run starts clean.
         try
         {
-            await Client.GetDatabase(DatabaseName).DeleteAsync();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(SdkTimeoutSecs));
+            await Client.GetDatabase(DatabaseName).DeleteAsync(cancellationToken: cts.Token);
         }
         catch { /* best effort */ }
 
@@ -142,7 +163,7 @@ public sealed class CosmosFixture : IAsyncLifetime
         return true;
     }
 
-    private static async Task<bool> WaitForReadyAsync(int port, TimeSpan timeout)
+    private static async Task<bool> WaitForReadyAsync(int port, TimeSpan timeout, CancellationToken ct = default)
     {
         Console.WriteLine($"[CosmosFixture] Waiting up to {timeout.TotalSeconds}s for emulator on port {port}...");
 
@@ -154,22 +175,35 @@ public sealed class CosmosFixture : IAsyncLifetime
         using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(3) };
 
         var sw = Stopwatch.StartNew();
-        while (sw.Elapsed < timeout)
+        while (sw.Elapsed < timeout && !ct.IsCancellationRequested)
         {
             try
             {
                 // The emulator returns 200 or 401 on the root path once it's ready.
                 // Any proper HTTP response means the API is up.
-                var response = await http.GetAsync($"https://localhost:{port}/");
+                var response = await http.GetAsync($"https://localhost:{port}/", ct);
                 Console.WriteLine($"[CosmosFixture] Emulator ready after {sw.Elapsed.TotalSeconds:F1}s (HTTP {(int)response.StatusCode}).");
                 return true;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                break;
             }
             catch
             {
                 // Not ready yet — keep polling.
             }
-            await Task.Delay(2000);
+
+            try
+            {
+                await Task.Delay(2000, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
+
         Console.WriteLine($"[CosmosFixture] Emulator did not become ready within {timeout.TotalSeconds}s.");
         return false;
     }

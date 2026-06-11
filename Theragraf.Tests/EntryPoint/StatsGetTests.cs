@@ -2,6 +2,7 @@ using System.Net;
 using FluentAssertions;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -20,7 +21,11 @@ public class StatsGetTests
     public StatsGetTests()
     {
         _repository = Substitute.For<ISessionRepository>();
-        _sut        = new StatsGet(_repository, NullLoggerFactory.Instance);
+        var config  = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Demo:TherapistName"] = ""
+        }).Build();
+        _sut = new StatsGet(_repository, config, NullLoggerFactory.Instance);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
