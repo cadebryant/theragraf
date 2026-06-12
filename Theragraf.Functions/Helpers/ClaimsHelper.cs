@@ -24,8 +24,10 @@ internal static class ClaimsHelper
         if (req.FunctionContext.Items.TryGetValue("ClaimsPrincipal", out var raw)
             && raw is ClaimsPrincipal principal)
         {
-            // Prefer preferred_username (UPN), fall back to name claim.
+            // Prefer preferred_username (UPN/email), fall back to email claim, then display name.
             return principal.FindFirst("preferred_username")?.Value
+                ?? principal.FindFirst("email")?.Value
+                ?? principal.FindFirst(ClaimTypes.Email)?.Value
                 ?? principal.FindFirst(ClaimTypes.Name)?.Value
                 ?? principal.FindFirst("name")?.Value;
         }
