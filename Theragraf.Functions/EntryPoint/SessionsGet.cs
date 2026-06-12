@@ -16,7 +16,7 @@ public class SessionsGet(
     ILoggerFactory     loggerFactory)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<SessionsGet>();
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = JsonConfig.Web;
 
     /// <summary>
     /// GET /api/sessions

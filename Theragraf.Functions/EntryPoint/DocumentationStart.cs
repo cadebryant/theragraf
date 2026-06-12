@@ -13,7 +13,7 @@ using Theragraf.Functions.Helpers;
 public class DocumentationStart(ILoggerFactory loggerFactory, IConfiguration config)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<DocumentationStart>();
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = JsonConfig.Web;
 
     [Function("DocumentationStart")]
     public async Task<HttpResponseData> Run(

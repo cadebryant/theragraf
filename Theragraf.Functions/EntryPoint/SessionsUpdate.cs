@@ -18,7 +18,7 @@ public class SessionsUpdate(
     ILoggerFactory       loggerFactory)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<SessionsUpdate>();
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = JsonConfig.Web;
 
     // Field separator used when joining SOAP sections into a single redaction pass.
     // ASCII Unit Separator (0x1F) is safe against collision with clinical text.

@@ -8,11 +8,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
+using Theragraf.Functions.Helpers;
 
 public class StatsGet(ISessionRepository repository, IConfiguration config, ILoggerFactory loggerFactory)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<StatsGet>();
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = JsonConfig.Web;
 
     [Function("GetStatsByTherapist")]
     public async Task<HttpResponseData> GetByTherapist(

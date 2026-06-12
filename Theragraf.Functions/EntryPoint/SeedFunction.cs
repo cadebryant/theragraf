@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
+using Theragraf.Functions.Helpers;
 
 /// <summary>
 /// Demo data management endpoints.
@@ -21,7 +22,7 @@ public class SeedFunction(
     ILoggerFactory     loggerFactory)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<SeedFunction>();
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = JsonConfig.Web;
 
     // ── CPT code pool ─────────────────────────────────────────────────────────
 
