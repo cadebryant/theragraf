@@ -10,12 +10,14 @@ import {
   MessageBar,
   MessageBarBody,
 } from '@fluentui/react-components';
-import { Save24Regular, ArrowLeft24Regular } from '@fluentui/react-icons';
+import { Save24Regular, ArrowLeft24Regular, ArrowDownload24Regular } from '@fluentui/react-icons';
 import { getOrchestrationStatus, updateSession } from '@/api/sessions';
 import type { CptCode, IcdCode, SoapNote } from '@/types';
 import PipelineStatus from './PipelineStatus';
 import SoapNoteEditor from './SoapNoteEditor';
 import { CptCodesEditor, IcdCodesEditor } from './CodesEditor';
+import { exportSessionPdf } from '@/utils/exportPdf';
+import { exportSession837p } from '@/utils/export837p';
 
 const useStyles = makeStyles({
   page: {
@@ -180,6 +182,44 @@ export default function SessionReview() {
           )}
 
           <div className={styles.actions}>
+            <Button
+              appearance="subtle"
+              icon={<ArrowDownload24Regular />}
+              onClick={() => {
+                if (!state || !soapNote) return;
+                exportSessionPdf({
+                  clientId: state.clientId,
+                  sessionDate: state.sessionDateKey,
+                  therapistName: '',
+                  discipline: '',
+                  setting: '',
+                  payer: '',
+                  soapNote,
+                  cptCodes,
+                  icdCodes,
+                });
+              }}
+            >
+              Export PDF
+            </Button>
+            <Button
+              appearance="subtle"
+              icon={<ArrowDownload24Regular />}
+              onClick={() => {
+                if (!state || !soapNote) return;
+                exportSession837p({
+                  clientId: state.clientId,
+                  sessionDate: state.sessionDateKey,
+                  therapistName: '',
+                  discipline: '',
+                  payer: '',
+                  cptCodes,
+                  icdCodes,
+                });
+              }}
+            >
+              Export 837P
+            </Button>
             <Button
               appearance="secondary"
               icon={<ArrowLeft24Regular />}

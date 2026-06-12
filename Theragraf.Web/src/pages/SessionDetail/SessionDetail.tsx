@@ -16,11 +16,14 @@ import {
   Edit24Regular,
   Save24Regular,
   Dismiss24Regular,
+  ArrowDownload24Regular,
 } from '@fluentui/react-icons';
 import { getSessionByClientAndDate, updateSession } from '@/api/sessions';
 import type { CptCode, IcdCode, SoapNote } from '@/types';
 import SoapNoteEditor from '@/pages/SessionReview/SoapNoteEditor';
 import { CptCodesEditor, IcdCodesEditor } from '@/pages/SessionReview/CodesEditor';
+import { exportSessionPdf } from '@/utils/exportPdf';
+import { exportSession837p } from '@/utils/export837p';
 
 const useStyles = makeStyles({
   page: {
@@ -86,6 +89,36 @@ export default function SessionDetail() {
     },
   });
 
+  function handleExportPdf() {
+    if (!session) return;
+    exportSessionPdf({
+      clientId: session.clientId,
+      sessionDate: session.sessionDate,
+      therapistName: session.therapistName,
+      discipline: session.discipline,
+      setting: session.setting,
+      payer: session.payer,
+      sessionDurationMinutes: session.sessionDurationMinutes,
+      soapNote: session.soapNote,
+      cptCodes: session.suggestedCptCodes,
+      icdCodes: session.suggestedIcdCodes,
+    });
+  }
+
+  function handleExport837p() {
+    if (!session) return;
+    exportSession837p({
+      clientId: session.clientId,
+      sessionDate: session.sessionDate,
+      therapistName: session.therapistName,
+      discipline: session.discipline,
+      payer: session.payer,
+      sessionDurationMinutes: session.sessionDurationMinutes,
+      cptCodes: session.suggestedCptCodes,
+      icdCodes: session.suggestedIcdCodes,
+    });
+  }
+
   function startEdit() {
     if (!session) return;
     setSoapNote(session.soapNote);
@@ -136,9 +169,17 @@ export default function SessionDetail() {
           </Text>
         </div>
         {!editing ? (
-          <Button appearance="secondary" icon={<Edit24Regular />} onClick={startEdit}>
-            Edit
-          </Button>
+          <>
+            <Button appearance="subtle" icon={<ArrowDownload24Regular />} onClick={handleExportPdf}>
+              Export PDF
+            </Button>
+            <Button appearance="subtle" icon={<ArrowDownload24Regular />} onClick={handleExport837p}>
+              Export 837P
+            </Button>
+            <Button appearance="secondary" icon={<Edit24Regular />} onClick={startEdit}>
+              Edit
+            </Button>
+          </>
         ) : (
           <>
             <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={cancelEdit}>
