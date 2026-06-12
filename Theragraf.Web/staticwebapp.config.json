@@ -5,6 +5,10 @@
   },
   "routes": [
     {
+      "route": "/api/seed",
+      "allowedRoles": ["no-one"]
+    },
+    {
       "route": "/api/*",
       "allowedRoles": ["anonymous"]
     }

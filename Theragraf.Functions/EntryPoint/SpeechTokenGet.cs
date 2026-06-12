@@ -26,6 +26,17 @@ public class SpeechTokenGet(IConfiguration config, ILoggerFactory loggerFactory)
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "speech-token")] HttpRequestData req,
         CancellationToken cancellationToken)
     {
+        // Require a valid JWT — prevents unauthenticated callers from burning Speech quota.
+        // Bypassed automatically in local dev when Auth:Disabled=true (no principal is set,
+        // but the auth-disabled config flag signals intentional local bypass).
+        var authDisabled = config.GetValue<bool>("Auth:Disabled");
+        if (!authDisabled && !req.FunctionContext.Items.ContainsKey("ClaimsPrincipal"))
+        {
+            var unauth = req.CreateResponse(HttpStatusCode.Unauthorized);
+            await unauth.WriteStringAsync("Authentication required.", cancellationToken);
+            return unauth;
+        }
+
         var region = config["AzureSpeech:Region"];
         var apiKey  = config["AzureSpeech:ApiKey"];
 
