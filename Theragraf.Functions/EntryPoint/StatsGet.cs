@@ -32,15 +32,22 @@ public class StatsGet(ISessionRepository repository, IConfiguration config, ILog
 
         try
         {
-            var stats = await repository.GetTherapistStatsAsync(therapistName, cancellationToken);
-
+            // Fire the caller's stats and the demo stats in parallel when demo mode is
+            // active, halving the Cosmos round-trips compared to two sequential awaits.
             var demoTherapist = config["Demo:TherapistName"];
-            if (!string.IsNullOrWhiteSpace(demoTherapist) &&
-                !string.Equals(therapistName, demoTherapist, StringComparison.OrdinalIgnoreCase))
-            {
-                var demoStats = await repository.GetTherapistStatsAsync(demoTherapist, cancellationToken);
-                stats = MergeStats(stats, demoStats);
-            }
+            var fetchDemo = !string.IsNullOrWhiteSpace(demoTherapist) &&
+                            !string.Equals(therapistName, demoTherapist, StringComparison.OrdinalIgnoreCase);
+
+            var statsTask = repository.GetTherapistStatsAsync(therapistName, cancellationToken);
+            var demoTask  = fetchDemo
+                ? repository.GetTherapistStatsAsync(demoTherapist!, cancellationToken)
+                : Task.FromResult(new TherapistStats(string.Empty, 0, 0, 0, 0,
+                    new Dictionary<string, int>(), new Dictionary<string, int>(),
+                    new Dictionary<string, int>(), [], []));
+
+            await Task.WhenAll(statsTask, demoTask);
+
+            var stats = fetchDemo ? MergeStats(statsTask.Result, demoTask.Result) : statsTask.Result;
 
             var ok = req.CreateResponse(HttpStatusCode.OK);
             ok.Headers.Add("Content-Type", "application/json; charset=utf-8");

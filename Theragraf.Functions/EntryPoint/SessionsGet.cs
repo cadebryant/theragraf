@@ -45,16 +45,24 @@ public class SessionsGet(
 
         try
         {
-            var summary = await repository.GetCaseloadAsync(identity, cancellationToken);
-
-            // In demo mode, merge the demo caseload so any visitor sees populated clients.
+            // Fire the caller's caseload and the demo caseload in parallel when demo mode
+            // is active, halving the Cosmos round-trips compared to two sequential awaits.
             var demoTherapist = config["Demo:TherapistName"];
-            if (!string.IsNullOrWhiteSpace(demoTherapist) &&
-                !string.Equals(identity, demoTherapist, StringComparison.OrdinalIgnoreCase))
+            var fetchDemo = !string.IsNullOrWhiteSpace(demoTherapist) &&
+                            !string.Equals(identity, demoTherapist, StringComparison.OrdinalIgnoreCase);
+
+            var summaryTask = repository.GetCaseloadAsync(identity, cancellationToken);
+            var demoTask    = fetchDemo
+                ? repository.GetCaseloadAsync(demoTherapist!, cancellationToken)
+                : Task.FromResult<Core.Models.CaseloadSummary>(new Core.Models.CaseloadSummary(string.Empty, []));
+
+            await Task.WhenAll(summaryTask, demoTask);
+
+            var summary = summaryTask.Result;
+            if (fetchDemo)
             {
-                var demoSummary = await repository.GetCaseloadAsync(demoTherapist, cancellationToken);
                 var merged = summary.Clients
-                    .Concat(demoSummary.Clients)
+                    .Concat(demoTask.Result.Clients)
                     .GroupBy(c => c.ClientId)
                     .Select(g => g.OrderByDescending(c => c.LastSessionDate).First())
                     .OrderByDescending(c => c.LastSessionDate)
