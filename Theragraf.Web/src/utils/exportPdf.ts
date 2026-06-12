@@ -28,7 +28,6 @@ function printWrapped(
   x: number,
   y: number,
   maxWidth: number,
-  lineHeight: number,
 ): number {
   const lines = doc.splitTextToSize(text || '—', maxWidth) as string[];
   doc.text(lines, x, y);
@@ -102,7 +101,7 @@ export function exportSessionPdf(data: ExportData): void {
     // Body text
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    const linesUsed = printWrapped(doc, body, margin, y, contentWidth, lineH);
+    const linesUsed = printWrapped(doc, body, margin, y, contentWidth);
     y += linesUsed * lineH + lineH * 0.8;
 
     // Page break guard
