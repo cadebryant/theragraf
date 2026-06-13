@@ -161,7 +161,6 @@ module functionApp 'modules/functionApp.bicep' = {
     appServicePlanName: appServicePlanName
     keyVaultUri: keyVault.outputs.vaultUri
     speechRegion: speech.outputs.region
-    speechApiKey: speech.outputs.apiKey
     demoTherapistName: demoTherapistName
   }
 }
@@ -186,6 +185,17 @@ module keyVault 'modules/keyVault.bicep' = {
     location: location
     suffix: suffix
     keyVaultName: keyVaultName
+  }
+}
+
+// -- Key Vault secrets (app resource group) ----------------------------------
+
+module keyVaultSecrets 'modules/keyVaultSecrets.bicep' = {
+  name: 'keyVaultSecrets'
+  scope: appRg
+  params: {
+    keyVaultName: keyVault.outputs.keyVaultName
+    speechApiKey: speech.outputs.apiKey
   }
 }
 

@@ -1,0 +1,4 @@
+# TheraGraf — clinical documentation assistant
+# This application requires authentication and must not be indexed by search engines.
+User-agent: *
+Disallow: /

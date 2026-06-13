@@ -24,10 +24,6 @@ param keyVaultUri string
 @description('Azure Speech Service region, e.g. eastus.')
 param speechRegion string
 
-@description('Azure Speech Service API key for speech-token exchange.')
-@secure()
-param speechApiKey string
-
 @description('Name of the existing Consumption App Service Plan. Defaults to the plan created alongside the Function App.')
 param appServicePlanName string = '${functionAppName}-plan'
 
@@ -51,6 +47,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 	siteConfig: {
 	  netFrameworkVersion: 'v10.0'
 	  functionAppScaleLimit: 200
+	  minTlsVersion: '1.2'
 	  appSettings: [
 		// ── Functions runtime ────────────────────────────────────────────────
 		{
@@ -123,7 +120,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 		}
 		{
 		  name: 'AzureSpeech__ApiKey'
-		  value: speechApiKey
+		  value: '@Microsoft.KeyVault(SecretUri=secrets/speech-api-key/)'
 		}
 		// ── Demo mode ────────────────────────────────────────────────────────
 		{

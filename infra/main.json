@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "2319023562753001301"
+      "templateHash": "7436076213682411830"
     }
   },
   "parameters": {
@@ -578,9 +578,6 @@
           "speechRegion": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'speech'), '2025-04-01').outputs.region.value]"
           },
-          "speechApiKey": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'speech'), '2025-04-01').outputs.apiKey.value]"
-          },
           "demoTherapistName": {
             "value": "[parameters('demoTherapistName')]"
           }
@@ -592,7 +589,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "4536589402011663753"
+              "templateHash": "10391392199535024404"
             }
           },
           "parameters": {
@@ -638,12 +635,6 @@
                 "description": "Azure Speech Service region, e.g. eastus."
               }
             },
-            "speechApiKey": {
-              "type": "securestring",
-              "metadata": {
-                "description": "Azure Speech Service API key for speech-token exchange."
-              }
-            },
             "appServicePlanName": {
               "type": "string",
               "defaultValue": "[format('{0}-plan', parameters('functionAppName'))]",
@@ -675,6 +666,7 @@
                 "siteConfig": {
                   "netFrameworkVersion": "v10.0",
                   "functionAppScaleLimit": 200,
+                  "minTlsVersion": "1.2",
                   "appSettings": [
                     {
                       "name": "FUNCTIONS_EXTENSION_VERSION",
@@ -738,7 +730,7 @@
                     },
                     {
                       "name": "AzureSpeech__ApiKey",
-                      "value": "[parameters('speechApiKey')]"
+                      "value": "@Microsoft.KeyVault(SecretUri=secrets/speech-api-key/)"
                     },
                     {
                       "name": "Demo__TherapistName",
@@ -800,7 +792,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "15818819676482367434"
+              "templateHash": "12167140614852911568"
             }
           },
           "parameters": {
@@ -838,7 +830,13 @@
                 "enableAutomaticFailover": false,
                 "enableMultipleWriteLocations": false,
                 "publicNetworkAccess": "Enabled",
-                "disableLocalAuth": true
+                "disableLocalAuth": true,
+                "backupPolicy": {
+                  "type": "Continuous",
+                  "continuousModeProperties": {
+                    "tier": "Continuous7Days"
+                  }
+                }
               }
             },
             {
@@ -1022,6 +1020,65 @@
           }
         }
       }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "keyVaultSecrets",
+      "resourceGroup": "[parameters('appResourceGroup')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "keyVaultName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.keyVaultName.value]"
+          },
+          "speechApiKey": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'speech'), '2025-04-01').outputs.apiKey.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.44.1.10279",
+              "templateHash": "10078589961242682393"
+            }
+          },
+          "parameters": {
+            "keyVaultName": {
+              "type": "string"
+            },
+            "speechApiKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Azure Speech Service key1 — stored as a Key Vault secret."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('keyVaultName'), 'speech-api-key')]",
+              "properties": {
+                "value": "[parameters('speechApiKey')]",
+                "attributes": {
+                  "enabled": true
+                }
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'keyVault')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'speech')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",

@@ -30,6 +30,16 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
 	enableMultipleWriteLocations: false
 	publicNetworkAccess: 'Enabled'
 	disableLocalAuth: true  // key-based access disabled; Managed Identity only
+	// Continuous backup (tier 7 = 7-day point-in-time restore).
+	// Supports restore to any second within the retention window — satisfies
+	// HIPAA contingency plan requirements for RTO/RPO on PHI data stores.
+	// Upgrade to Continuous30Days for 30-day restore window when budget allows.
+	backupPolicy: {
+	  type: 'Continuous'
+	  continuousModeProperties: {
+		tier: 'Continuous7Days'
+	  }
+	}
   }
 }
 
