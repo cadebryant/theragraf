@@ -166,6 +166,7 @@ export default function AudioRecorder({ onTranscriptReady }: Props) {
       transcriber.sessionStopped = () => {
         setRecording(false);
         stopTimer();
+        window.dispatchEvent(new CustomEvent('theragraf:recording-stop'));
       };
 
       await new Promise<void>((resolve, reject) =>
@@ -175,6 +176,7 @@ export default function AudioRecorder({ onTranscriptReady }: Props) {
       setRecording(true);
       setElapsed(0);
       timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+      window.dispatchEvent(new CustomEvent('theragraf:recording-start'));
     } catch (err) {
       setError(`Could not start recording: ${(err as Error).message}`);
     } finally {
@@ -191,6 +193,7 @@ export default function AudioRecorder({ onTranscriptReady }: Props) {
     ).then(() => {
       setRecording(false);
       stopTimer();
+      window.dispatchEvent(new CustomEvent('theragraf:recording-stop'));
 
       // Build the raw transcript string
       const finalSegments = [...segments];

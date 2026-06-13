@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useMsal } from '@azure/msal-react';
 import {
@@ -7,12 +8,19 @@ import {
   Text,
   Avatar,
   Tooltip,
+  Dialog,
+  DialogSurface,
+  DialogTitle,
+  DialogBody,
+  DialogContent,
+  DialogActions,
 } from '@fluentui/react-components';
 import {
   Add24Regular,
   Grid24Regular,
   SignOut24Regular,
 } from '@fluentui/react-icons';
+import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 
 const useStyles = makeStyles({
   shell: {
@@ -72,6 +80,18 @@ export default function AppLayout() {
   const { instance, accounts } = useMsal();
   const account = accounts[0];
 
+  const [showIdleWarning, setShowIdleWarning] = useState(false);
+
+  const { resetTimer } = useIdleTimeout({
+    onWarning: useCallback(() => setShowIdleWarning(true), []),
+    onReset:   useCallback(() => setShowIdleWarning(false), []),
+  });
+
+  function handleStaySignedIn() {
+    setShowIdleWarning(false);
+    resetTimer();
+  }
+
   function handleSignOut() {
     void instance.logoutRedirect({ account });
   }
@@ -126,6 +146,26 @@ export default function AppLayout() {
       <main className={styles.main}>
         <Outlet />
       </main>
+
+      <Dialog open={showIdleWarning} modalType="alert">
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Session Expiring Soon</DialogTitle>
+            <DialogContent>
+              You have been inactive for 14 minutes. For security, you will be signed out in{' '}
+              <strong>60 seconds</strong>. Do you want to stay signed in?
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="primary" onClick={handleStaySignedIn}>
+                Stay Signed In
+              </Button>
+              <Button appearance="secondary" onClick={handleSignOut}>
+                Sign Out Now
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 }
