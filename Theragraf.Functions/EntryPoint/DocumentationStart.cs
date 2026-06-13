@@ -9,8 +9,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 using Theragraf.Functions.Helpers;
+using Theragraf.Functions.Logging;
 
-public class DocumentationStart(ILoggerFactory loggerFactory, IConfiguration config)
+public class DocumentationStart(ILoggerFactory loggerFactory, IConfiguration config, IAuditLogger auditLogger)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<DocumentationStart>();
     private static readonly JsonSerializerOptions JsonOptions = JsonConfig.Web;
@@ -68,6 +69,8 @@ public class DocumentationStart(ILoggerFactory loggerFactory, IConfiguration con
         if (identity is not null
             && !string.Equals(identity, input.TherapistName, StringComparison.OrdinalIgnoreCase))
         {
+            auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "Session",
+                resourceId: input.ClientId, detail: "TherapistName mismatch"));
             var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
             await forbidden.WriteStringAsync(
                 "TherapistName in the request does not match your authenticated identity.",
@@ -84,6 +87,8 @@ public class DocumentationStart(ILoggerFactory loggerFactory, IConfiguration con
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to schedule orchestration for client {ClientId}", input.ClientId);
+            auditLogger.Log(AuditEvent.Failure(input.TherapistName, AuditAction.Write, "Session",
+                resourceId: input.ClientId, detail: ex.Message));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
             await error.WriteStringAsync("An unexpected error occurred while starting the documentation pipeline.", cancellationToken);
             return error;
@@ -91,6 +96,8 @@ public class DocumentationStart(ILoggerFactory loggerFactory, IConfiguration con
 
         _logger.LogInformation("Started orchestration {InstanceId} for client {ClientId}",
             instanceId, input.ClientId);
+        auditLogger.Log(AuditEvent.Success(input.TherapistName, AuditAction.Write, "Session",
+            resourceId: input.ClientId, correlationId: instanceId, detail: "Orchestration started"));
 
         var management = GetManagementPayload(instanceId, req, durableClient);
 

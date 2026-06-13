@@ -5,6 +5,7 @@ using NSubstitute;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
 using Theragraf.Functions.Activities;
+using Theragraf.Functions.Logging;
 
 namespace Theragraf.Tests.Activities;
 
@@ -36,7 +37,7 @@ public class PersistActivityTests
     public PersistActivityTests()
     {
         _repository = Substitute.For<ISessionRepository>();
-        _sut = new PersistActivity(_repository, NullLoggerFactory.Instance);
+        _sut = new PersistActivity(_repository, NullLoggerFactory.Instance, new NullAuditLogger());
     }
 
     [Fact]

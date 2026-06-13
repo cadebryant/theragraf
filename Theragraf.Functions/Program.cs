@@ -15,6 +15,7 @@ using OpenAI;
 using System.ClientModel;
 using Theragraf.Core.Services;
 using Theragraf.Functions.Agents;
+using Theragraf.Functions.Logging;
 using Theragraf.Functions.Middleware;
 using Theragraf.Functions.Services;
 
@@ -27,6 +28,7 @@ var host = new HostBuilder()
     {
         services.AddApplicationInsightsTelemetryWorkerService();
         services.ConfigureFunctionsApplicationInsights();
+        services.AddSingleton<IAuditLogger, ApplicationInsightsAuditLogger>();
 
         var config = context.Configuration;
 

@@ -17,3 +17,7 @@ param spaClientId            = 'ba58ec08-f9c8-4232-8a01-8e90c5e4de2a'
 
 param staticWebAppName        = 'theragraf-web-prod'
 param staticWebAppLocation    = 'eastus2'
+
+// Set to the Entra ID object ID of the admin who should be able to query the audit log.
+// Run: az ad signed-in-user show --query id -o tsv
+param adminPrincipalId        = '420e4c50-7bdc-4ad9-818d-a69fe25629d3'

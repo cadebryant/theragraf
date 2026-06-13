@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Theragraf.Core.Models;
 using Theragraf.Functions.EntryPoint;
+using Theragraf.Functions.Logging;
 
 namespace Theragraf.Tests.EntryPoint;
 
@@ -30,12 +31,12 @@ public class DocumentationStartTests
     public DocumentationStartTests()
     {
         _durableClient = Substitute.For<DurableTaskClient>("test");
-        _sut = new TestableDocumentationStart(NullLoggerFactory.Instance, DisabledAuthConfig);
+        _sut = new TestableDocumentationStart(NullLoggerFactory.Instance, DisabledAuthConfig, new NullAuditLogger());
     }
 
     // Subclass that bypasses the static extension method for unit testing
-    private sealed class TestableDocumentationStart(ILoggerFactory lf, IConfiguration cfg)
-        : DocumentationStart(lf, cfg)
+    private sealed class TestableDocumentationStart(ILoggerFactory lf, IConfiguration cfg, IAuditLogger auditLogger)
+        : DocumentationStart(lf, cfg, auditLogger)
     {
         protected override HttpManagementPayload GetManagementPayload(string instanceId, HttpRequestData req, DurableTaskClient durableClient)
         {
@@ -232,7 +233,7 @@ public class DocumentationStartTests
     [Fact]
     public async Task Run_TherapistNameMismatch_Returns403()
     {
-        var sut = new TestableDocumentationStart(NullLoggerFactory.Instance, AuthEnabledConfig);
+        var sut = new TestableDocumentationStart(NullLoggerFactory.Instance, AuthEnabledConfig, new NullAuditLogger());
         var input = new { RawTranscript = "Transcript text.", TherapistName = "Dr. Adams", ClientId = "client-001", SessionDate = DateTimeOffset.UtcNow };
 
         var req = BuildAuthenticatedRequest("Dr. Other", input); // JWT = Dr. Other, body = Dr. Adams
@@ -246,7 +247,7 @@ public class DocumentationStartTests
     [Fact]
     public async Task Run_TherapistNameMatches_Returns202()
     {
-        var sut = new TestableDocumentationStart(NullLoggerFactory.Instance, AuthEnabledConfig);
+        var sut = new TestableDocumentationStart(NullLoggerFactory.Instance, AuthEnabledConfig, new NullAuditLogger());
         var input = new { RawTranscript = "Transcript text.", TherapistName = "Dr. Adams", ClientId = "client-001", SessionDate = DateTimeOffset.UtcNow, SessionDurationMinutes = 45 };
 
         var req = BuildAuthenticatedRequest("Dr. Adams", input);

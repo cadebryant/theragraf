@@ -19,6 +19,7 @@ on:
 
 env:
   AZURE_LOCATION: 'eastus'
+  AZURE_RESOURCE_GROUP: 'theragraf-rg'
 
 jobs:
   deploy-infra:

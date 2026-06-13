@@ -66,6 +66,9 @@ param speechAccountName string = 'theragraf-speech-${toLower(environmentName)}'
 @description('Optional Entra ID object ID of a developer to grant Cosmos Data Explorer access.')
 param developerPrincipalId string = ''
 
+@description('Optional Entra ID object ID of an admin to grant Log Analytics Reader access for audit log queries. Leave blank to skip.')
+param adminPrincipalId string = ''
+
 @description('Client ID of the theragraf-spa Entra ID SPA app registration.')
 param spaClientId string = ''
 
@@ -233,6 +236,17 @@ module keyVaultRoleAssignment 'modules/keyVaultRoleAssignment.bicep' = {
   }
 }
 
+
+// -- Role assignments -- Log Analytics / audit log (app resource group) ---------
+
+module monitoringRoleAssignment 'modules/monitoringRoleAssignment.bicep' = if (!empty(adminPrincipalId)) {
+  name: 'monitoringRoleAssignment'
+  scope: appRg
+  params: {
+    logAnalyticsWorkspaceName: monitoring.outputs.logAnalyticsWorkspaceName
+    adminPrincipalId: adminPrincipalId
+  }
+}
 // -- Static Web App (app resource group) --------------------------------------
 
 module staticWebApp 'modules/staticWebApp.bicep' = {

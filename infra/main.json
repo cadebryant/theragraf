@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "4689041657013957749"
+      "templateHash": "2319023562753001301"
     }
   },
   "parameters": {
@@ -125,6 +125,13 @@
         "description": "Optional Entra ID object ID of a developer to grant Cosmos Data Explorer access."
       }
     },
+    "adminPrincipalId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional Entra ID object ID of an admin to grant Log Analytics Reader access for audit log queries. Leave blank to skip."
+      }
+    },
     "spaClientId": {
       "type": "string",
       "defaultValue": "",
@@ -151,6 +158,13 @@
       ],
       "metadata": {
         "description": "Azure region for the Static Web App. Must be one of: centralus, eastus2, westus2, westeurope, eastasia."
+      }
+    },
+    "demoTherapistName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Therapist name used for demo/seed records. Leave blank to disable demo mode in production."
       }
     }
   },
@@ -183,7 +197,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "6775753750048320360"
+              "templateHash": "10233458070917981708"
             }
           },
           "parameters": {
@@ -208,7 +222,8 @@
                 "sku": {
                   "name": "PerGB2018"
                 },
-                "retentionInDays": 30,
+                "retentionInDays": 730,
+                "totalRetentionInDays": 2190,
                 "publicNetworkAccessForIngestion": "Enabled",
                 "publicNetworkAccessForQuery": "Enabled"
               }
@@ -222,7 +237,7 @@
               "properties": {
                 "Application_Type": "web",
                 "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
-                "RetentionInDays": 30,
+                "RetentionInDays": 730,
                 "publicNetworkAccessForIngestion": "Enabled",
                 "publicNetworkAccessForQuery": "Enabled"
               },
@@ -239,6 +254,10 @@
             "appInsightsConnectionString": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"
+            },
+            "logAnalyticsWorkspaceName": {
+              "type": "string",
+              "value": "[variables('logAnalyticsName')]"
             }
           }
         }
@@ -561,6 +580,9 @@
           },
           "speechApiKey": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'speech'), '2025-04-01').outputs.apiKey.value]"
+          },
+          "demoTherapistName": {
+            "value": "[parameters('demoTherapistName')]"
           }
         },
         "template": {
@@ -570,7 +592,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "10545132769120500607"
+              "templateHash": "4536589402011663753"
             }
           },
           "parameters": {
@@ -627,6 +649,13 @@
               "defaultValue": "[format('{0}-plan', parameters('functionAppName'))]",
               "metadata": {
                 "description": "Name of the existing Consumption App Service Plan. Defaults to the plan created alongside the Function App."
+              }
+            },
+            "demoTherapistName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Therapist name used for demo/seed records. Leave blank to disable demo mode."
               }
             }
           },
@@ -710,6 +739,10 @@
                     {
                       "name": "AzureSpeech__ApiKey",
                       "value": "[parameters('speechApiKey')]"
+                    },
+                    {
+                      "name": "Demo__TherapistName",
+                      "value": "[parameters('demoTherapistName')]"
                     }
                   ]
                 }
@@ -1299,6 +1332,69 @@
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'functionApp')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'keyVault')]"
+      ]
+    },
+    {
+      "condition": "[not(empty(parameters('adminPrincipalId')))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "monitoringRoleAssignment",
+      "resourceGroup": "[parameters('appResourceGroup')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "logAnalyticsWorkspaceName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.logAnalyticsWorkspaceName.value]"
+          },
+          "adminPrincipalId": {
+            "value": "[parameters('adminPrincipalId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.44.1.10279",
+              "templateHash": "15839229928148924629"
+            }
+          },
+          "parameters": {
+            "logAnalyticsWorkspaceName": {
+              "type": "string"
+            },
+            "adminPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Entra ID object ID of the admin principal to grant Log Analytics Reader access."
+              }
+            }
+          },
+          "variables": {
+            "logAnalyticsReaderRoleId": "73c42c96-874c-492b-b04d-ab87d138a893"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName')), parameters('adminPrincipalId'), variables('logAnalyticsReaderRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('logAnalyticsReaderRoleId'))]",
+                "principalId": "[parameters('adminPrincipalId')]",
+                "principalType": "User",
+                "description": "Theragraf audit log query access — managed by Bicep"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('appResourceGroup')), 'Microsoft.Resources/deployments', 'monitoring')]"
       ]
     },
     {

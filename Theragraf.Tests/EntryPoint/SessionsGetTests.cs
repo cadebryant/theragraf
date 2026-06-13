@@ -11,6 +11,7 @@ using NSubstitute;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
 using Theragraf.Functions.EntryPoint;
+using Theragraf.Functions.Logging;
 
 namespace Theragraf.Tests.EntryPoint;
 
@@ -42,7 +43,7 @@ public class SessionsGetTests
     public SessionsGetTests()
     {
         _repository = Substitute.For<ISessionRepository>();
-        _sut = new SessionsGet(_repository, DisabledAuthConfig, NullLoggerFactory.Instance);
+        _sut = new SessionsGet(_repository, DisabledAuthConfig, NullLoggerFactory.Instance, new NullAuditLogger());
     }
 
     private PagedResult<SessionResponse> SinglePage(IEnumerable<SessionResponse> items) =>
@@ -323,7 +324,7 @@ public class SessionsGetTests
     [Fact]
     public async Task GetByClientAndDate_WrongTherapist_Returns403()
     {
-        var sut = new SessionsGet(_repository, AuthEnabledConfig, NullLoggerFactory.Instance);
+        var sut = new SessionsGet(_repository, AuthEnabledConfig, NullLoggerFactory.Instance, new NullAuditLogger());
         _repository.GetByClientIdAndDateAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<CancellationToken>())
             .Returns(SampleSession); // TherapistName = "Dr. Adams"
 
@@ -336,7 +337,7 @@ public class SessionsGetTests
     [Fact]
     public async Task GetByClientAndDate_CorrectTherapist_Returns200()
     {
-        var sut = new SessionsGet(_repository, AuthEnabledConfig, NullLoggerFactory.Instance);
+        var sut = new SessionsGet(_repository, AuthEnabledConfig, NullLoggerFactory.Instance, new NullAuditLogger());
         _repository.GetByClientIdAndDateAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<CancellationToken>())
             .Returns(SampleSession); // TherapistName = "Dr. Adams"
 
@@ -349,7 +350,7 @@ public class SessionsGetTests
     [Fact]
     public async Task GetCaseload_ReturnsCaseloadSummary()
     {
-        var sut = new SessionsGet(_repository, AuthEnabledConfig, NullLoggerFactory.Instance);
+        var sut = new SessionsGet(_repository, AuthEnabledConfig, NullLoggerFactory.Instance, new NullAuditLogger());
         _repository.GetCaseloadAsync("Dr. Adams", Arg.Any<CancellationToken>())
             .Returns(new CaseloadSummary("Dr. Adams",
                 new List<ClientSummary> { new("client-001", "2024-10-10T10-00-00Z", 3) }));
@@ -364,7 +365,7 @@ public class SessionsGetTests
     [Fact]
     public async Task GetCaseload_NotAuthenticated_Returns401()
     {
-        var sut = new SessionsGet(_repository, AuthEnabledConfig, NullLoggerFactory.Instance);
+        var sut = new SessionsGet(_repository, AuthEnabledConfig, NullLoggerFactory.Instance, new NullAuditLogger());
 
         var req = BuildRequest("http://localhost/api/sessions"); // no claims principal
         var response = await sut.GetCaseload(req, CancellationToken.None);

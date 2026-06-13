@@ -15,7 +15,7 @@ public record PersistActivityInput(
     IReadOnlyDictionary<string, string> RedactionMap
 );
 
-public class PersistActivity(ISessionRepository repository, ILoggerFactory loggerFactory)
+public class PersistActivity(ISessionRepository repository, ILoggerFactory loggerFactory, IAuditLogger auditLogger)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<PersistActivity>();
 
@@ -47,11 +47,15 @@ public class PersistActivity(ISessionRepository repository, ILoggerFactory logge
 
             _logger.LogInformation("PersistActivity completed for client={ClientId}",
                 LogSanitizer.ClientId(input.OriginalInput.ClientId));
+            auditLogger.Log(AuditEvent.Success(input.OriginalInput.TherapistName, AuditAction.Write, "Session",
+                resourceId: $"{input.OriginalInput.ClientId}/{record.RowKey}", detail: "Session persisted"));
         }
         catch (Exception ex) when (ex is not PersistenceException)
         {
             _logger.LogError(ex, "PersistActivity failed for client={ClientId}",
                 LogSanitizer.ClientId(input.OriginalInput.ClientId));
+            auditLogger.Log(AuditEvent.Failure(input.OriginalInput.TherapistName, AuditAction.Write, "Session",
+                resourceId: input.OriginalInput.ClientId, detail: ex.Message));
             throw new PersistenceException(ex.Message, ex);
         }
     }

@@ -12,6 +12,7 @@ using NSubstitute.ExceptionExtensions;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
 using Theragraf.Functions.EntryPoint;
+using Theragraf.Functions.Logging;
 
 namespace Theragraf.Tests.EntryPoint;
 
@@ -32,7 +33,7 @@ public class SessionsUpdateTests
     {
         _repository = Substitute.For<ISessionRepository>();
         _redaction  = Substitute.For<IPiiRedactionService>();
-        _sut        = new SessionsUpdate(_repository, _redaction, DisabledAuthConfig, NullLoggerFactory.Instance);
+        _sut        = new SessionsUpdate(_repository, _redaction, DisabledAuthConfig, NullLoggerFactory.Instance, new NullAuditLogger());
 
         // Default: redaction is a pass-through with an empty map
         _redaction
@@ -334,7 +335,7 @@ public class SessionsUpdateTests
     [Fact]
     public async Task Update_WrongTherapist_Returns403()
     {
-        var sut = new SessionsUpdate(_repository, _redaction, AuthEnabledConfig, NullLoggerFactory.Instance);
+        var sut = new SessionsUpdate(_repository, _redaction, AuthEnabledConfig, NullLoggerFactory.Instance, new NullAuditLogger());
 
         _repository.GetByClientIdAndDateAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<CancellationToken>())
             .Returns(BuildSessionResponse(therapistName: "Dr. Adams"));

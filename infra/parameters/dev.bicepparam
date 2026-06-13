@@ -14,6 +14,7 @@ param apiClientId            = 'd84a7ccd-aaa1-4adf-8211-7c03fa3d319a'
 param cosmosAccountName      = 'theragraf-cosmos-dev'
 param appServicePlanName     = 'EastUSPlan'
 param developerPrincipalId   = '420e4c50-7bdc-4ad9-818d-a69fe25629d3'
+param adminPrincipalId       = '420e4c50-7bdc-4ad9-818d-a69fe25629d3'
 param keyVaultName           = 'theragraf-kv-dev'
 param spaClientId            = 'ba58ec08-f9c8-4232-8a01-8e90c5e4de2a'
 

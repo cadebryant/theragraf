@@ -10,12 +10,14 @@ using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
 using Theragraf.Functions.Helpers;
+using Theragraf.Functions.Logging;
 
 public class SessionsUpdate(
     ISessionRepository   repository,
     IPiiRedactionService redaction,
     IConfiguration       config,
-    ILoggerFactory       loggerFactory)
+    ILoggerFactory       loggerFactory,
+    IAuditLogger         auditLogger)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<SessionsUpdate>();
     private static readonly JsonSerializerOptions JsonOptions = JsonConfig.Web;
@@ -86,6 +88,8 @@ public class SessionsUpdate(
                 && !string.Equals(identity, existing.TherapistName, StringComparison.OrdinalIgnoreCase)
                 && !ClaimsHelper.IsDemoRecord(existing.TherapistName, config))
             {
+                auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "Session",
+                    resourceId: $"{clientId}/{sessionDate}", detail: "Ownership check failed"));
                 var r = req.CreateResponse(HttpStatusCode.Forbidden);
                 await r.WriteStringAsync("You are not authorised to update this session.", cancellationToken);
                 return r;
@@ -123,6 +127,8 @@ public class SessionsUpdate(
         catch (Exception ex)
         {
             _logger.LogError(ex, "UpdateSession failed for clientId={ClientId}", clientId);
+            auditLogger.Log(AuditEvent.Failure(identity ?? "anonymous", AuditAction.Write, "Session",
+                resourceId: $"{clientId}/{sessionDate}", detail: ex.Message));
             var r = req.CreateResponse(HttpStatusCode.InternalServerError);
             await r.WriteStringAsync("An unexpected error occurred while updating the session.", cancellationToken);
             return r;
@@ -139,6 +145,8 @@ public class SessionsUpdate(
         var ok = req.CreateResponse(HttpStatusCode.OK);
         ok.Headers.Add("Content-Type", "application/json; charset=utf-8");
         await ok.WriteStringAsync(JsonSerializer.Serialize(result, JsonOptions), cancellationToken);
+        auditLogger.Log(AuditEvent.Success(identity ?? "anonymous", AuditAction.Write, "Session",
+            resourceId: $"{clientId}/{sessionDate}"));
         return ok;
     }
 

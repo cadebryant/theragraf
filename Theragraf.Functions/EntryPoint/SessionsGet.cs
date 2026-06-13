@@ -9,11 +9,13 @@ using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
 using Theragraf.Functions.Helpers;
+using Theragraf.Functions.Logging;
 
 public class SessionsGet(
     ISessionRepository repository,
     IConfiguration     config,
-    ILoggerFactory     loggerFactory)
+    ILoggerFactory     loggerFactory,
+    IAuditLogger       auditLogger)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<SessionsGet>();
     private static readonly JsonSerializerOptions JsonOptions = JsonConfig.Web;
@@ -73,11 +75,13 @@ public class SessionsGet(
             var ok = req.CreateResponse(HttpStatusCode.OK);
             ok.Headers.Add("Content-Type", "application/json; charset=utf-8");
             await ok.WriteStringAsync(JsonSerializer.Serialize(summary, JsonOptions), cancellationToken);
+            auditLogger.Log(AuditEvent.Success(identity, AuditAction.Read, "Caseload"));
             return ok;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "GetCaseload failed for therapist={TherapistName}", identity);
+            auditLogger.Log(AuditEvent.Failure(identity, AuditAction.Read, "Caseload", detail: ex.Message));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
             await error.WriteStringAsync("An unexpected error occurred while retrieving the caseload.", cancellationToken);
             return error;
@@ -132,6 +136,8 @@ public class SessionsGet(
             && !string.Equals(identity, requestedTherapist, StringComparison.OrdinalIgnoreCase)
             && !ClaimsHelper.IsDemoRecord(requestedTherapist, config))
         {
+            auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "SessionList",
+                resourceId: clientId, detail: "Therapist filter mismatch"));
             var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
             await forbidden.WriteStringAsync("You are not authorised to filter by a different therapist.", cancellationToken);
             return forbidden;
@@ -154,6 +160,8 @@ public class SessionsGet(
         catch (Exception ex)
         {
             _logger.LogError(ex, "GetSessionsByClient failed for clientId={ClientId}", clientId);
+            auditLogger.Log(AuditEvent.Failure(identity ?? "anonymous", AuditAction.Read, "SessionList",
+                resourceId: clientId, detail: ex.Message));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
             await error.WriteStringAsync("An unexpected error occurred while retrieving sessions.", cancellationToken);
             return error;
@@ -162,6 +170,8 @@ public class SessionsGet(
         var response = req.CreateResponse(HttpStatusCode.OK);
         response.Headers.Add("Content-Type", "application/json; charset=utf-8");
         await response.WriteStringAsync(JsonSerializer.Serialize(result, JsonOptions), cancellationToken);
+        auditLogger.Log(AuditEvent.Success(identity ?? "anonymous", AuditAction.Read, "SessionList",
+            resourceId: clientId));
         return response;
     }
 
@@ -219,6 +229,8 @@ public class SessionsGet(
             && !string.Equals(identity, session.TherapistName, StringComparison.OrdinalIgnoreCase)
             && !ClaimsHelper.IsDemoRecord(session.TherapistName, config))
         {
+            auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "Session",
+                resourceId: $"{clientId}/{sessionDate}", detail: "Ownership check failed"));
             var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
             await forbidden.WriteStringAsync("You are not authorised to access this session.", cancellationToken);
             return forbidden;
@@ -227,6 +239,8 @@ public class SessionsGet(
         var response = req.CreateResponse(HttpStatusCode.OK);
         response.Headers.Add("Content-Type", "application/json; charset=utf-8");
         await response.WriteStringAsync(JsonSerializer.Serialize(session, JsonOptions), cancellationToken);
+        auditLogger.Log(AuditEvent.Success(identity ?? "anonymous", AuditAction.Read, "Session",
+            resourceId: $"{clientId}/{sessionDate}"));
         return response;
     }
 }

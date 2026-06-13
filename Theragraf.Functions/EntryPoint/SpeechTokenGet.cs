@@ -7,6 +7,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Theragraf.Functions.Logging;
 
 /// <summary>
 /// GET /api/speech-token
@@ -16,7 +17,7 @@ using Microsoft.Extensions.Logging;
 /// The browser uses this token directly with the Azure Speech SDK so the API key
 /// never leaves the server.
 /// </summary>
-public class SpeechTokenGet(IConfiguration config, ILoggerFactory loggerFactory)
+public class SpeechTokenGet(IConfiguration config, ILoggerFactory loggerFactory, IAuditLogger auditLogger)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<SpeechTokenGet>();
     private static readonly HttpClient HttpClient = new();
@@ -62,6 +63,11 @@ public class SpeechTokenGet(IConfiguration config, ILoggerFactory loggerFactory)
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to obtain Azure Speech token from {Url}", tokenUrl);
+            var identity = req.FunctionContext.Items.TryGetValue("ClaimsPrincipal", out var p)
+                ? (p as System.Security.Claims.ClaimsPrincipal)?.Identity?.Name ?? "authenticated"
+                : "anonymous";
+            auditLogger.Log(AuditEvent.Failure(identity, AuditAction.SpeechTokenIssued, "SpeechToken",
+                detail: ex.Message));
             var error = req.CreateResponse(HttpStatusCode.BadGateway);
             await error.WriteStringAsync("Failed to obtain speech token.", cancellationToken);
             return error;
@@ -77,6 +83,10 @@ public class SpeechTokenGet(IConfiguration config, ILoggerFactory loggerFactory)
             JsonSerializer.Serialize(new { token, region }),
             cancellationToken);
 
+        var actor = req.FunctionContext.Items.TryGetValue("ClaimsPrincipal", out var principal)
+            ? (principal as System.Security.Claims.ClaimsPrincipal)?.Identity?.Name ?? "authenticated"
+            : "anonymous";
+        auditLogger.Log(AuditEvent.Success(actor, AuditAction.SpeechTokenIssued, "SpeechToken"));
         return ok;
     }
 }

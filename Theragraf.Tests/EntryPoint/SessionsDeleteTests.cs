@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Theragraf.Core.Services;
 using Theragraf.Functions.EntryPoint;
+using Theragraf.Functions.Logging;
 
 namespace Theragraf.Tests.EntryPoint;
 
@@ -24,7 +25,7 @@ public class SessionsDeleteTests
     public SessionsDeleteTests()
     {
         _repository = Substitute.For<ISessionRepository>();
-        _sut = new SessionsDelete(_repository, DisabledAuthConfig, NullLoggerFactory.Instance);
+        _sut = new SessionsDelete(_repository, DisabledAuthConfig, NullLoggerFactory.Instance, new NullAuditLogger());
     }
 
     private static HttpRequestData BuildRequest()
@@ -153,7 +154,7 @@ public class SessionsDeleteTests
     [Fact]
     public async Task Delete_WrongTherapist_Returns403()
     {
-        var sut = new SessionsDelete(_repository, AuthEnabledConfig, NullLoggerFactory.Instance);
+        var sut = new SessionsDelete(_repository, AuthEnabledConfig, NullLoggerFactory.Instance, new NullAuditLogger());
         _repository.GetByClientIdAndDateAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<CancellationToken>())
             .Returns(BuildSession("Dr. Adams"));
 
@@ -167,7 +168,7 @@ public class SessionsDeleteTests
     [Fact]
     public async Task Delete_CorrectTherapist_Returns204()
     {
-        var sut = new SessionsDelete(_repository, AuthEnabledConfig, NullLoggerFactory.Instance);
+        var sut = new SessionsDelete(_repository, AuthEnabledConfig, NullLoggerFactory.Instance, new NullAuditLogger());
         _repository.GetByClientIdAndDateAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<CancellationToken>())
             .Returns(BuildSession("Dr. Adams"));
         _repository.DeleteAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<CancellationToken>()).Returns(true);
