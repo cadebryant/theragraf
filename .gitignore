@@ -492,3 +492,4 @@ _publish.zip
 # NuGet / Cosmos SDK native runtime binaries (publish artifacts, not source)
 runtimes/
 /ReviewAuditLogQuery.txt
+/TheraGraf System Overview.pdf
