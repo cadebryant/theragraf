@@ -15,10 +15,9 @@
   ],
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "SAMEORIGIN",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
-    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.cognitiveservices.azure.com https://*.azure.com https://login.microsoftonline.com https://*.microsoftonline.com https://*.speechsdk.microsoft.com wss://*.speechsdk.microsoft.com; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' https://login.microsoftonline.com https://*.microsoftonline.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.cognitiveservices.azure.com https://*.azure.com https://login.microsoftonline.com https://*.microsoftonline.com https://*.speechsdk.microsoft.com wss://*.speechsdk.microsoft.com; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' https://login.microsoftonline.com https://*.microsoftonline.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'",
     "Permissions-Policy": "microphone=(self), camera=(), geolocation=(), payment=()"
   }
 }
