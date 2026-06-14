@@ -169,9 +169,25 @@ export default function AudioRecorder({ onTranscriptReady }: Props) {
         window.dispatchEvent(new CustomEvent('theragraf:recording-stop'));
       };
 
-      await new Promise<void>((resolve, reject) =>
-        transcriber.startTranscribingAsync(resolve, reject),
-      );
+      await new Promise<void>((resolve, reject) => {
+        // Wire the canceled event before starting so SDK-level errors (network,
+        // auth, WebSocket failure) reject the promise instead of hanging forever.
+        transcriber.canceled = (_s, e) => {
+          if (e.reason === SpeechSDK.CancellationReason.Error) {
+            reject(new Error(`Speech SDK error ${e.errorCode}: ${e.errorDetails}`));
+          }
+        };
+
+        const timeout = setTimeout(
+          () => reject(new Error('Timed out waiting for microphone — check mic permissions and Speech service configuration.')),
+          15_000,
+        );
+
+        transcriber.startTranscribingAsync(
+          () => { clearTimeout(timeout); resolve(); },
+          (err) => { clearTimeout(timeout); reject(err instanceof Error ? err : new Error(String(err))); },
+        );
+      });
 
       setRecording(true);
       setElapsed(0);
