@@ -120,7 +120,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 		}
 		{
 		  name: 'AzureSpeech__ApiKey'
-		  value: '@Microsoft.KeyVault(SecretUri=secrets/speech-api-key/)'
+		  value: '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/speech-api-key/)'
 		}
 		// ── Demo mode ────────────────────────────────────────────────────────
 		{

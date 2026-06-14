@@ -9,8 +9,9 @@ using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
 using Theragraf.Functions.Helpers;
+using Theragraf.Functions.Logging;
 
-public class StatsGet(ISessionRepository repository, IConfiguration config, ILoggerFactory loggerFactory)
+public class StatsGet(ISessionRepository repository, IConfiguration config, ILoggerFactory loggerFactory, IAuditLogger auditLogger)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<StatsGet>();
     private static readonly JsonSerializerOptions JsonOptions = JsonConfig.Web;
@@ -26,6 +27,20 @@ public class StatsGet(ISessionRepository repository, IConfiguration config, ILog
             var bad = req.CreateResponse(HttpStatusCode.BadRequest);
             await bad.WriteStringAsync("therapistName is required.", cancellationToken);
             return bad;
+        }
+
+        // Ownership check — callers may only query their own therapist stats.
+        // Demo therapist stats are visible to all authenticated users.
+        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
+        if (identity is not null
+            && !string.Equals(identity, therapistName, StringComparison.OrdinalIgnoreCase)
+            && !ClaimsHelper.IsDemoRecord(therapistName, config))
+        {
+            auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "TherapistStats",
+                resourceId: therapistName, detail: "Ownership check failed"));
+            var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
+            await forbidden.WriteStringAsync("You are not authorised to view another therapist's statistics.", cancellationToken);
+            return forbidden;
         }
 
         _logger.LogInformation("GetStatsByTherapist therapistName={TherapistName}", therapistName);
@@ -52,11 +67,15 @@ public class StatsGet(ISessionRepository repository, IConfiguration config, ILog
             var ok = req.CreateResponse(HttpStatusCode.OK);
             ok.Headers.Add("Content-Type", "application/json; charset=utf-8");
             await ok.WriteStringAsync(JsonSerializer.Serialize(stats, JsonOptions), cancellationToken);
+            auditLogger.Log(AuditEvent.Success(identity ?? therapistName, AuditAction.Read, "TherapistStats",
+                resourceId: therapistName));
             return ok;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "GetStatsByTherapist failed for therapistName={TherapistName}", therapistName);
+            auditLogger.Log(AuditEvent.Failure(identity ?? therapistName, AuditAction.Read, "TherapistStats",
+                resourceId: therapistName, detail: ex.Message));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
             await error.WriteStringAsync("An unexpected error occurred while retrieving therapist stats.", cancellationToken);
             return error;
@@ -76,19 +95,45 @@ public class StatsGet(ISessionRepository repository, IConfiguration config, ILog
             return bad;
         }
 
+        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
+
         _logger.LogInformation("GetStatsByClient clientId={ClientId}", clientId);
 
         try
         {
             var stats = await repository.GetClientStatsAsync(clientId, cancellationToken);
-            var ok    = req.CreateResponse(HttpStatusCode.OK);
+
+            // Ownership check — the authenticated therapist must have at least one recorded
+            // session for this client, OR the client's sessions belong only to the demo therapist
+            // (which is readable by anyone). Prevents one therapist querying another's patient data.
+            if (identity is not null && stats.SessionsByTherapist.Count > 0)
+            {
+                var callerOwnsClient = stats.SessionsByTherapist.ContainsKey(identity);
+                var onlyDemoSessions = stats.SessionsByTherapist.Keys
+                    .All(t => ClaimsHelper.IsDemoRecord(t, config));
+
+                if (!callerOwnsClient && !onlyDemoSessions)
+                {
+                    auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "ClientStats",
+                        resourceId: clientId, detail: "Ownership check failed"));
+                    var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
+                    await forbidden.WriteStringAsync("You are not authorised to view statistics for this client.", cancellationToken);
+                    return forbidden;
+                }
+            }
+
+            var ok = req.CreateResponse(HttpStatusCode.OK);
             ok.Headers.Add("Content-Type", "application/json; charset=utf-8");
             await ok.WriteStringAsync(JsonSerializer.Serialize(stats, JsonOptions), cancellationToken);
+            auditLogger.Log(AuditEvent.Success(identity ?? "anonymous", AuditAction.Read, "ClientStats",
+                resourceId: clientId));
             return ok;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "GetStatsByClient failed for clientId={ClientId}", clientId);
+            auditLogger.Log(AuditEvent.Failure(identity ?? "anonymous", AuditAction.Read, "ClientStats",
+                resourceId: clientId, detail: ex.Message));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
             await error.WriteStringAsync("An unexpected error occurred while retrieving client stats.", cancellationToken);
             return error;

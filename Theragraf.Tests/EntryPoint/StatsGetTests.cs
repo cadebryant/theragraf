@@ -10,6 +10,7 @@ using NSubstitute.ExceptionExtensions;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
 using Theragraf.Functions.EntryPoint;
+using Theragraf.Functions.Logging;
 
 namespace Theragraf.Tests.EntryPoint;
 
@@ -25,7 +26,7 @@ public class StatsGetTests
         {
             ["Demo:TherapistName"] = ""
         }).Build();
-        _sut = new StatsGet(_repository, config, NullLoggerFactory.Instance);
+        _sut = new StatsGet(_repository, config, NullLoggerFactory.Instance, Substitute.For<IAuditLogger>());
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
