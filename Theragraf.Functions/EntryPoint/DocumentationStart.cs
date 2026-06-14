@@ -119,6 +119,7 @@ public class DocumentationStart(ILoggerFactory loggerFactory, IConfiguration con
         await accepted.WriteStringAsync(JsonSerializer.Serialize(new
         {
             instanceId,
+            clientId              = namespacedClientId,
             statusQueryGetUri    = management.StatusQueryGetUri,
             sendEventPostUri     = management.SendEventPostUri,
             terminatePostUri     = management.TerminatePostUri,

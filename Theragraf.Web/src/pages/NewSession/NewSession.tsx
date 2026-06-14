@@ -110,7 +110,9 @@ export default function NewSession() {
       navigate('/sessions/review', {
         state: {
           instanceId: response.instanceId,
-          clientId: metadata.clientId.trim(),
+          // Use the namespaced clientId returned by the server — it may differ from
+          // what the user typed if server-side namespacing was applied.
+          clientId: response.clientId,
           sessionDateKey: toSessionDateKey(sessionDateIso),
         },
       });

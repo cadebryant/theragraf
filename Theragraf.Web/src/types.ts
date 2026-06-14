@@ -151,6 +151,8 @@ export interface ClientStats {
 
 export interface OrchestrationStartResponse {
   instanceId: string;
+  /** The namespaced clientId the server stored the session under. Always use this for subsequent API calls. */
+  clientId: string;
   statusQueryGetUri: string;
   sendEventPostUri: string;
   terminatePostUri: string;
