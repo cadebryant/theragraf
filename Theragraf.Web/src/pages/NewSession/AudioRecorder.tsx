@@ -185,7 +185,7 @@ export default function AudioRecorder({ onTranscriptReady }: Props) {
 
         transcriber.startTranscribingAsync(
           () => { clearTimeout(timeout); resolve(); },
-          (err) => { clearTimeout(timeout); reject(err instanceof Error ? err : new Error(String(err))); },
+          (err) => { clearTimeout(timeout); reject(new Error(String(err))); },
         );
       });
 
