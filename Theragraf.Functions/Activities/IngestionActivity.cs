@@ -29,7 +29,8 @@ public class IngestionActivity(IPiiRedactionService piiRedactionService, ILogger
                 RedactionMap: redactionMap,
                 TherapistName: input.TherapistName,
                 ClientId: input.ClientId,
-                SessionDate: input.SessionDate
+                SessionDate: input.SessionDate,
+                Discipline: input.Discipline
             );
         }
         catch (Exception ex) when (ex is not IngestionException)

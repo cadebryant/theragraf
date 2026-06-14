@@ -11,7 +11,11 @@ public class SoapAgent(Kernel kernel, ILoggerFactory loggerFactory)
     public async Task<SoapNote> GenerateSoapNoteAsync(ObservationResult input)
     {
         var raw = await InvokePluginAsync("SoapAgent", "SoapAgent",
-            new KernelArguments { ["input"] = input.RedactedTranscript });
+            new KernelArguments
+            {
+                ["input"] = input.RedactedTranscript,
+                ["discipline"] = input.Discipline.ToString()
+            });
         return JsonSerializer.Deserialize<SoapNote>(StripMarkdownCodeFence(raw))!;
     }
 }

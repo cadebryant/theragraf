@@ -4,5 +4,6 @@ public enum TherapyDiscipline
 {
     OccupationalTherapy,
     PhysicalTherapy,
+    SpeechLanguagePathology,
     Psychotherapy
 }

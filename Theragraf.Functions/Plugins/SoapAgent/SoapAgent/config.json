@@ -12,6 +12,11 @@
       "name": "input",
       "description": "The redacted therapy session transcript.",
       "is_required": true
+    },
+    {
+      "name": "discipline",
+      "description": "The therapy discipline (e.g. OccupationalTherapy, PhysicalTherapy, SpeechLanguagePathology, Psychotherapy).",
+      "is_required": true
     }
   ]
 }
