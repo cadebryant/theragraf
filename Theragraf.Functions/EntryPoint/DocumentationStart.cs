@@ -78,6 +78,17 @@ public class DocumentationStart(ILoggerFactory loggerFactory, IConfiguration con
             return forbidden;
         }
 
+        // Namespace the clientId with an 8-char hex prefix derived from the therapist's
+        // email so two different therapists who enter the same patient identifier do not
+        // share a Cosmos partition or bleed into each other's statistics.
+        // Demo records bypass namespacing so they remain shared across all users.
+        // Auth-disabled local dev (identity == null) also bypasses to keep local records simple.
+        var namespacedClientId = (identity is not null && !ClaimsHelper.IsDemoRecord(input.TherapistName, config))
+            ? ClientIdHelper.Namespace(identity, input.ClientId)
+            : input.ClientId;
+
+        input = input with { ClientId = namespacedClientId };
+
         string instanceId;
         try
         {

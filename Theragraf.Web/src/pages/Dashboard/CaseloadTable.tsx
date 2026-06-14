@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { stripClientIdPrefix } from '@/utils/clientId';
 import {
   makeStyles,
   tokens,
@@ -84,7 +85,7 @@ export default function CaseloadTable({ caseload }: Props) {
             {sorted.map((client) => (
               <TableRow key={client.clientId}>
                 <TableCell>
-                  <Text weight="semibold">{client.clientId}</Text>
+                  <Text weight="semibold">{stripClientIdPrefix(client.clientId)}</Text>
                 </TableCell>
                 <TableCell>
                   {client.lastSessionDate

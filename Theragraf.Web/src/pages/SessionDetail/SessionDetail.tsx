@@ -23,6 +23,7 @@ import type { CptCode, IcdCode, SoapNote } from '@/types';
 import SoapNoteEditor from '@/pages/SessionReview/SoapNoteEditor';
 import { CptCodesEditor, IcdCodesEditor } from '@/pages/SessionReview/CodesEditor';
 import { exportSessionPdf } from '@/utils/exportPdf';
+import { stripClientIdPrefix } from '@/utils/clientId';
 import { exportSession837p } from '@/utils/export837p';
 
 const useStyles = makeStyles({
@@ -162,7 +163,7 @@ export default function SessionDetail() {
         />
         <div className={styles.title}>
           <Text block style={{ fontSize: tokens.fontSizeBase600, fontWeight: tokens.fontWeightSemibold }}>
-            {clientId}
+            {stripClientIdPrefix(clientId!)}
           </Text>
           <Text block style={{ fontSize: tokens.fontSizeBase300, color: tokens.colorNeutralForeground3 }}>
             {rowKeyToDateStr(sessionDate!)}

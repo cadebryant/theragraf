@@ -13,6 +13,7 @@ import {
 } from '@fluentui/react-components';
 import { DocumentBulletList24Regular } from '@fluentui/react-icons';
 import SessionMetadataForm, { type SessionMetadata } from './SessionMetadataForm';
+import { stripClientIdPrefix } from '@/utils/clientId';
 import AudioRecorder from './AudioRecorder';
 import { startDocumentation, toSessionDateKey } from '@/api/sessions';
 import type { TranscriptInput } from '@/types';
@@ -58,7 +59,7 @@ export default function NewSession() {
   const { accounts } = useMsal();
 
   const [metadata, setMetadata] = useState<SessionMetadata>({
-    clientId: (location.state as { clientId?: string } | null)?.clientId ?? '',
+    clientId: stripClientIdPrefix((location.state as { clientId?: string } | null)?.clientId ?? ''),
     discipline: 'OccupationalTherapy',
     setting: 'Outpatient',
     payer: 'Medicare',

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Theragraf.Core.Models;
 using Theragraf.Functions.EntryPoint;
+using Theragraf.Functions.Helpers;
 using Theragraf.Functions.Logging;
 
 namespace Theragraf.Tests.EntryPoint;
@@ -115,6 +116,7 @@ public class DocumentationStartTests
 
         await _sut.Run(BuildRequest(ValidInput()), _durableClient, CancellationToken.None);
 
+        // Auth:Disabled=true — no namespacing applied; clientId passes through unchanged.
         await _durableClient.Received(1).ScheduleNewOrchestrationInstanceAsync(
             Arg.Is<TaskName>(n => n.Name == "DocumentationOrchestrator"),
             Arg.Is<TranscriptInput>(t => t.ClientId == "client-001"),
@@ -254,5 +256,79 @@ public class DocumentationStartTests
         var response = await sut.Run(req, _durableClient, CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+    }
+
+    // -- ClientId namespacing tests -------------------------------------------
+
+    [Fact]
+    public async Task Run_AuthenticatedUser_ClientIdIsNamespacedBeforeScheduling()
+    {
+        // Arrange — auth enabled, matching identity
+        var therapistEmail = "dr.adams@hospital.org";
+        var sut = new TestableDocumentationStart(NullLoggerFactory.Instance, AuthEnabledConfig, new NullAuditLogger());
+        _durableClient.ScheduleNewOrchestrationInstanceAsync(
+            Arg.Any<TaskName>(), Arg.Any<object>(), Arg.Any<CancellationToken>())
+            .Returns("instance-ns");
+
+        var input = new { RawTranscript = "Transcript.", TherapistName = therapistEmail, ClientId = "client-001", SessionDate = DateTimeOffset.UtcNow };
+        var req = BuildAuthenticatedRequest(therapistEmail, input);
+
+        await sut.Run(req, _durableClient, CancellationToken.None);
+
+        var expectedId = ClientIdHelper.Namespace(therapistEmail, "client-001");
+        await _durableClient.Received(1).ScheduleNewOrchestrationInstanceAsync(
+            Arg.Any<TaskName>(),
+            Arg.Is<TranscriptInput>(t => t.ClientId == expectedId),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Run_DemoTherapist_ClientIdIsNotNamespaced()
+    {
+        // Demo therapist records must remain unnamespaced so all users can see them.
+        var demoConfig = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Auth:Disabled"] = "false",
+                ["Demo:TherapistName"] = "Demo Therapist",
+            }).Build();
+
+        var sut = new TestableDocumentationStart(NullLoggerFactory.Instance, demoConfig, new NullAuditLogger());
+        _durableClient.ScheduleNewOrchestrationInstanceAsync(
+            Arg.Any<TaskName>(), Arg.Any<object>(), Arg.Any<CancellationToken>())
+            .Returns("instance-demo");
+
+        var input = new { RawTranscript = "Transcript.", TherapistName = "Demo Therapist", ClientId = "client-alice-morgan", SessionDate = DateTimeOffset.UtcNow };
+        var req = BuildAuthenticatedRequest("Demo Therapist", input);
+
+        await sut.Run(req, _durableClient, CancellationToken.None);
+
+        // ClientId must pass through unchanged — no prefix applied.
+        await _durableClient.Received(1).ScheduleNewOrchestrationInstanceAsync(
+            Arg.Any<TaskName>(),
+            Arg.Is<TranscriptInput>(t => t.ClientId == "client-alice-morgan"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Run_AlreadyNamespacedClientId_IsNotDoubleNamespaced()
+    {
+        // Idempotency: if the frontend somehow sends an already-namespaced id, it must not be double-prefixed.
+        var therapistEmail = "dr.adams@hospital.org";
+        var sut = new TestableDocumentationStart(NullLoggerFactory.Instance, AuthEnabledConfig, new NullAuditLogger());
+        _durableClient.ScheduleNewOrchestrationInstanceAsync(
+            Arg.Any<TaskName>(), Arg.Any<object>(), Arg.Any<CancellationToken>())
+            .Returns("instance-idem");
+
+        var alreadyNamespaced = ClientIdHelper.Namespace(therapistEmail, "client-001");
+        var input = new { RawTranscript = "Transcript.", TherapistName = therapistEmail, ClientId = alreadyNamespaced, SessionDate = DateTimeOffset.UtcNow };
+        var req = BuildAuthenticatedRequest(therapistEmail, input);
+
+        await sut.Run(req, _durableClient, CancellationToken.None);
+
+        await _durableClient.Received(1).ScheduleNewOrchestrationInstanceAsync(
+            Arg.Any<TaskName>(),
+            Arg.Is<TranscriptInput>(t => t.ClientId == alreadyNamespaced),
+            Arg.Any<CancellationToken>());
     }
 }

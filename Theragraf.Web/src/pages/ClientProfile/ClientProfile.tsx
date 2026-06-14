@@ -13,6 +13,7 @@ import {
 import { Add24Regular, ArrowLeft24Regular } from '@fluentui/react-icons';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getClientStats } from '@/api/stats';
+import { stripClientIdPrefix } from '@/utils/clientId';
 import SessionsTable from './SessionsTable';
 
 const useStyles = makeStyles({
@@ -97,7 +98,7 @@ export default function ClientProfile() {
           onClick={() => navigate('/')}
         />
         <Text className={styles.title}>
-          Client: <strong>{clientId}</strong>
+          Client: <strong>{stripClientIdPrefix(clientId)}</strong>
         </Text>
         <Button
           appearance="primary"
