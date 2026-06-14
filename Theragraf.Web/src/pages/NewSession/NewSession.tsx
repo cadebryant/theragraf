@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMsal } from '@azure/msal-react';
+import type { AccountInfo } from '@azure/msal-browser';
 import {
   makeStyles,
   tokens,
@@ -50,6 +51,32 @@ function defaultDatetimeLocal() {
   const now = new Date();
   now.setSeconds(0, 0);
   return now.toISOString().slice(0, 16);
+}
+
+/**
+ * Extracts individual word tokens from the client ID and the therapist's display
+ * name / username so the speech recogniser can bias toward those specific words.
+ * e.g. clientId="Cade-02" + name="Uche Obi" → ["Cade", "Uche", "Obi"]
+ */
+function buildPhraseHints(clientId: string, account: AccountInfo | undefined): string[] {
+  const tokens = new Set<string>();
+
+  // Split client ID on common separators and add each word-like token
+  clientId
+    .split(/[-_\s.]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 1 && /[a-zA-Z]/.test(t))
+    .forEach((t) => tokens.add(t));
+
+  // Add individual name tokens from the therapist's account
+  const nameSource = account?.name ?? account?.username ?? '';
+  nameSource
+    .split(/[\s@.,]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 1 && /[a-zA-Z]/.test(t))
+    .forEach((t) => tokens.add(t));
+
+  return Array.from(tokens);
 }
 
 export default function NewSession() {
@@ -130,7 +157,7 @@ export default function NewSession() {
 
       <SessionMetadataForm value={metadata} onChange={setMetadata} />
 
-      <AudioRecorder onTranscriptReady={handleTranscriptReady} />
+      <AudioRecorder onTranscriptReady={handleTranscriptReady} phraseHints={buildPhraseHints(metadata.clientId, accounts[0])} />
 
       {rawTranscript && (
         <>

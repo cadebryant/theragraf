@@ -86,6 +86,8 @@ const useStyles = makeStyles({
 
 interface Props {
   onTranscriptReady: (rawTranscript: string, durationSeconds: number) => void;
+  /** Words the speech recogniser should bias toward, e.g. client and therapist names. */
+  phraseHints?: string[];
 }
 
 function formatTime(seconds: number) {
@@ -102,7 +104,7 @@ function labelFor(speakerId: string, speakerOrder: string[]): string {
   return `Speaker ${idx + 1}`;
 }
 
-export default function AudioRecorder({ onTranscriptReady }: Props) {
+export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props) {
   const styles = useStyles();
   const [recording, setRecording] = useState(false);
   const [segments, setSegments] = useState<DiarizedSegment[]>([]);
@@ -141,6 +143,11 @@ export default function AudioRecorder({ onTranscriptReady }: Props) {
       const transcriber = new SpeechSDK.ConversationTranscriber(speechConfig, audioConfig);
       transcriberRef.current = transcriber;
       speakerOrderRef.current = [];
+
+      if (phraseHints && phraseHints.length > 0) {
+        const phraseList = SpeechSDK.PhraseListGrammar.fromRecognizer(transcriber);
+        phraseHints.forEach((hint) => phraseList.addPhrase(hint));
+      }
 
       transcriber.transcribing = (_s, e) => {
         setInterimText(e.result.text);
