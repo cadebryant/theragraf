@@ -109,7 +109,7 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
     <Dialog open={open} modalType="modal">
       <DialogSurface style={{ maxWidth: '560px' }}>
         <DialogBody>
-          <DialogTitle>Welcome to TheraGraf 👋</DialogTitle>
+          <DialogTitle>Welcome to TheraGraf</DialogTitle>
           <DialogContent>
             <div className={styles.content}>
               <Text className={styles.intro}>

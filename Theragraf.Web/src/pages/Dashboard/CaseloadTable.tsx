@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { stripClientIdPrefix } from '@/utils/clientId';
+import { getNoteStatus } from '@/utils/noteStatus';
 import {
   makeStyles,
   tokens,
@@ -12,8 +13,9 @@ import {
   Button,
   Badge,
   Text,
+  Tooltip,
 } from '@fluentui/react-components';
-import { Add24Regular, ArrowRight24Regular } from '@fluentui/react-icons';
+import { Add24Regular, ArrowRight24Regular, Warning16Regular } from '@fluentui/react-icons';
 import type { CaseloadSummary } from '@/types';
 
 const useStyles = makeStyles({
@@ -38,6 +40,11 @@ const useStyles = makeStyles({
   },
   actionsCell: {
     display: 'flex',
+    gap: tokens.spacingHorizontalS,
+  },
+  lastSessionCell: {
+    display: 'flex',
+    alignItems: 'center',
     gap: tokens.spacingHorizontalS,
   },
 });
@@ -88,14 +95,37 @@ export default function CaseloadTable({ caseload }: Props) {
                   <Text weight="semibold">{stripClientIdPrefix(client.clientId)}</Text>
                 </TableCell>
                 <TableCell>
-                  {client.lastSessionDate
-                    ? new Date(
-                        client.lastSessionDate.replace(
-                          /T(\d{2})-(\d{2})-(\d{2})Z/,
-                          'T$1:$2:$3Z',
-                        ),
-                      ).toLocaleDateString()
-                    : '—'}
+                  <div className={styles.lastSessionCell}>
+                    <span>
+                      {client.lastSessionDate
+                        ? new Date(
+                            client.lastSessionDate.replace(
+                              /T(\d{2})-(\d{2})-(\d{2})Z/,
+                              'T$1:$2:$3Z',
+                            ),
+                          ).toLocaleDateString()
+                        : '—'}
+                    </span>
+                    {(() => {
+                      const status = getNoteStatus(client.lastSessionDate);
+                      if (!status) return null;
+                      return (
+                        <Tooltip
+                          content={status === 'urgent' ? 'Note not documented in 7+ days' : 'Note not documented in 2+ days'}
+                          relationship="label"
+                        >
+                          <Badge
+                            appearance="filled"
+                            color={status === 'urgent' ? 'danger' : 'warning'}
+                            icon={<Warning16Regular />}
+                            shape="rounded"
+                          >
+                            Overdue
+                          </Badge>
+                        </Tooltip>
+                      );
+                    })()}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <Badge appearance="filled" color="brand">
