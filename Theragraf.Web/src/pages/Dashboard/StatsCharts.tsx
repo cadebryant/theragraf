@@ -96,7 +96,7 @@ export default function StatsCharts({ stats }: Props) {
       <Card className={styles.card}>
         <Text className={styles.title}>Sessions by Discipline</Text>
         <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={disciplineData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+          <BarChart data={disciplineData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }} barCategoryGap="20%">
             <XAxis dataKey="name" tick={false} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
             <Tooltip />
@@ -108,9 +108,11 @@ export default function StatsCharts({ stats }: Props) {
                 color: COLORS[i % COLORS.length],
               }))}
             />
-            {disciplineData.map((d, i) => (
-              <Bar key={d.name} dataKey="value" data={[d]} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} name={d.name} />
-            ))}
+            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+              {disciplineData.map((d, i) => (
+                <Cell key={d.name} fill={COLORS[i % COLORS.length]} />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </Card>
@@ -146,7 +148,7 @@ export default function StatsCharts({ stats }: Props) {
       <Card className={styles.card}>
         <Text className={styles.title}>Sessions by Setting</Text>
         <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={settingData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+          <BarChart data={settingData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }} barCategoryGap="20%">
             <XAxis dataKey="name" tick={false} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
             <Tooltip />
@@ -158,9 +160,11 @@ export default function StatsCharts({ stats }: Props) {
                 color: COLORS[i % COLORS.length],
               }))}
             />
-            {settingData.map((d, i) => (
-              <Bar key={d.name} dataKey="value" data={[d]} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} name={d.name} />
-            ))}
+            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+              {settingData.map((d, i) => (
+                <Cell key={d.name} fill={COLORS[i % COLORS.length]} />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </Card>

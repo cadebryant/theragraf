@@ -4,6 +4,7 @@ import {
   People24Regular,
   Money24Regular,
   Clock24Regular,
+  Warning24Regular,
 } from '@fluentui/react-icons';
 import type { TherapistStats } from '@/types';
 
@@ -25,10 +26,21 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalS,
     color: tokens.colorBrandForeground1,
   },
+  iconRowWarning: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+    color: tokens.colorStatusWarningForeground3,
+  },
   value: {
     fontSize: tokens.fontSizeBase600,
     fontWeight: tokens.fontWeightSemibold,
     color: tokens.colorNeutralForeground1,
+  },
+  valueWarning: {
+    fontSize: tokens.fontSizeBase600,
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorStatusWarningForeground3,
   },
   label: {
     fontSize: tokens.fontSizeBase200,
@@ -40,9 +52,10 @@ const useStyles = makeStyles({
 
 interface Props {
   stats: TherapistStats;
+  overdueCount?: number;
 }
 
-export default function StatsCards({ stats }: Props) {
+export default function StatsCards({ stats, overdueCount = 0 }: Props) {
   const styles = useStyles();
 
   const items = [
@@ -65,6 +78,16 @@ export default function StatsCards({ stats }: Props) {
           <Text className={styles.label}>{item.label}</Text>
         </Card>
       ))}
+
+      <Card className={styles.card}>
+        <div className={overdueCount > 0 ? styles.iconRowWarning : styles.iconRow}>
+          <Warning24Regular />
+        </div>
+        <Text className={overdueCount > 0 ? styles.valueWarning : styles.value}>
+          {overdueCount}
+        </Text>
+        <Text className={styles.label}>Overdue Notes</Text>
+      </Card>
     </div>
   );
 }

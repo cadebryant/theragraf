@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { makeStyles, tokens, Spinner, Text, Divider } from '@fluentui/react-components';
 import { getTherapistStats } from '@/api/stats';
 import { getCaseload } from '@/api/sessions';
+import { getNoteStatus } from '@/utils/noteStatus';
 import StatsCards from './StatsCards';
 import StatsCharts from './StatsCharts';
 import CaseloadTable from './CaseloadTable';
@@ -52,6 +53,10 @@ export default function Dashboard() {
   const nothingYet = statsQuery.isLoading && caseloadQuery.isLoading;
   const error = statsQuery.error ?? caseloadQuery.error;
 
+  const overdueCount = caseloadQuery.data
+    ? caseloadQuery.data.clients.filter((c) => getNoteStatus(c.lastSessionDate) !== null).length
+    : 0;
+
   if (nothingYet) {
     return (
       <div className={styles.center}>
@@ -74,7 +79,7 @@ export default function Dashboard() {
 
       {statsQuery.isLoading
         ? <Spinner label="Loading stats…" size="small" />
-        : statsQuery.data && <StatsCards stats={statsQuery.data} />}
+        : statsQuery.data && <StatsCards stats={statsQuery.data} overdueCount={overdueCount} />}
 
       <Divider />
 
