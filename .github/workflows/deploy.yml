@@ -85,15 +85,13 @@ jobs:
       - name: Include Static Web Apps config
         run: cp "${{ github.workspace }}/Theragraf.Web/staticwebapp.config.json" "${{ github.workspace }}/Theragraf.Web/dist/staticwebapp.config.json"
 
-      - name: Install Static Web Apps CLI extension
-        run: az extension add --name staticwebapp --upgrade
+      - name: Install Static Web Apps CLI
+        run: npm install -g @azure/static-web-apps-cli
 
       - name: Deploy to Azure Static Web Apps
         env:
           SWA_DEPLOYMENT_TOKEN: ${{ secrets.SWA_DEPLOYMENT_TOKEN }}
         run: |
-          az staticwebapp upload \
-            --name "${{ env.AZURE_STATIC_WEBAPP_NAME }}" \
-            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
-            --source "${{ github.workspace }}/Theragraf.Web/dist" \
-            --deployment-token "$SWA_DEPLOYMENT_TOKEN"
+          swa deploy "${{ github.workspace }}/Theragraf.Web/dist" \
+            --deployment-token "$SWA_DEPLOYMENT_TOKEN" \
+            --env production
