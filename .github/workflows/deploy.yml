@@ -12,6 +12,7 @@ env:
   PUBLISH_DIR: '${{ github.workspace }}/publish'
   AZURE_FUNCTIONAPP_NAME: 'theragraf-functions'
   AZURE_RESOURCE_GROUP: 'theragraf-rg'
+  AZURE_STATIC_WEBAPP_NAME: 'theragraf-web-prod'
 
 jobs:
   build-test-deploy:
@@ -81,13 +82,18 @@ jobs:
         run: npm run build
         working-directory: Theragraf.Web
 
-      - name: Deploy to Azure Static Web Apps
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.SWA_DEPLOYMENT_TOKEN }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          action: upload
-          app_location: Theragraf.Web
-          output_location: dist
-          skip_api_build: true
+      - name: Include Static Web Apps config
+        run: cp "${{ github.workspace }}/Theragraf.Web/staticwebapp.config.json" "${{ github.workspace }}/Theragraf.Web/dist/staticwebapp.config.json"
 
+      - name: Install Static Web Apps CLI extension
+        run: az extension add --name staticwebapp --upgrade
+
+      - name: Deploy to Azure Static Web Apps
+        env:
+          SWA_DEPLOYMENT_TOKEN: ${{ secrets.SWA_DEPLOYMENT_TOKEN }}
+        run: |
+          az staticwebapp upload \
+            --name "${{ env.AZURE_STATIC_WEBAPP_NAME }}" \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --source "${{ github.workspace }}/Theragraf.Web/dist" \
+            --deployment-token "$SWA_DEPLOYMENT_TOKEN"
