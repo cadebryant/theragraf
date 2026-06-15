@@ -21,6 +21,8 @@ import {
   SignOut24Regular,
 } from '@fluentui/react-icons';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
+import { useFirstVisit } from '@/hooks/useFirstVisit';
+import GettingStartedModal from '@/components/GettingStartedModal';
 
 const useStyles = makeStyles({
   shell: {
@@ -81,6 +83,7 @@ export default function AppLayout() {
   const account = accounts[0];
 
   const [showIdleWarning, setShowIdleWarning] = useState(false);
+  const { open: showGettingStarted, dismiss: dismissGettingStarted } = useFirstVisit();
 
   const { resetTimer } = useIdleTimeout({
     onWarning: useCallback(() => setShowIdleWarning(true), []),
@@ -146,6 +149,8 @@ export default function AppLayout() {
       <main className={styles.main}>
         <Outlet />
       </main>
+
+      <GettingStartedModal open={showGettingStarted} onDismiss={(alwaysShow) => dismissGettingStarted(alwaysShow)} />
 
       <Dialog open={showIdleWarning} modalType="alert">
         <DialogSurface>
