@@ -37,8 +37,48 @@ interface Props {
   stats: TherapistStats;
 }
 
+/** Maps legacy abbreviations and alternate spellings to the canonical enum name. */
+const CANONICAL: Record<string, string> = {
+  OT:                  'OccupationalTherapy',
+  PT:                  'PhysicalTherapy',
+  SLP:                 'SpeechLanguagePathology',
+  Psych:               'Psychotherapy',
+  SNF:                 'SkilledNursingFacility',
+  HH:                  'HomeHealth',
+  EI:                  'EarlyIntervention',
+};
+
+/** Splits a PascalCase or camelCase string into space-separated words. */
+function splitPascalCase(s: string): string {
+  return s
+    .replace(/([A-Z][a-z]+)/g, ' $1')
+    .replace(/([A-Z]{2,})(?=[A-Z][a-z]|\d|\b)/g, ' $1')
+    .trim();
+}
+
+/**
+ * Returns a human-friendly display label for a raw stat key.
+ * Normalises legacy abbreviations first, then splits PascalCase words.
+ * e.g.  "OT" → "Occupational Therapy"
+ *        "HomeHealth" → "Home Health"
+ *        "SkilledNursingFacility" → "Skilled Nursing Facility"
+ */
+function friendlyLabel(raw: string): string {
+  const canonical = CANONICAL[raw] ?? raw;
+  return splitPascalCase(canonical);
+}
+
+/**
+ * Builds chart data from a stats dictionary, normalising keys to their
+ * canonical friendly labels and merging any duplicates that result.
+ */
 function toChartData(record: Record<string, number>) {
-  return Object.entries(record)
+  const merged: Record<string, number> = {};
+  for (const [raw, count] of Object.entries(record)) {
+    const label = friendlyLabel(raw);
+    merged[label] = (merged[label] ?? 0) + count;
+  }
+  return Object.entries(merged)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
 }
@@ -47,20 +87,30 @@ export default function StatsCharts({ stats }: Props) {
   const styles = useStyles();
 
   const disciplineData = toChartData(stats.sessionsByDiscipline);
-  const payerData = toChartData(stats.sessionsByPayer);
-  const settingData = toChartData(stats.sessionsBySetting);
+  const payerData      = toChartData(stats.sessionsByPayer);
+  const settingData    = toChartData(stats.sessionsBySetting);
 
   return (
     <div className={styles.grid}>
       {/* Sessions by Discipline */}
       <Card className={styles.card}>
         <Text className={styles.title}>Sessions by Discipline</Text>
-        <ResponsiveContainer width="100%" height={200}>
+        <ResponsiveContainer width="100%" height={220}>
           <BarChart data={disciplineData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+            <XAxis dataKey="name" tick={false} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
             <Tooltip />
-            <Bar dataKey="value" fill="#0078d4" radius={[4, 4, 0, 0]} />
+            <Legend
+              formatter={(value) => <span style={{ fontSize: 11 }}>{value}</span>}
+              payload={disciplineData.map((d, i) => ({
+                value: d.name,
+                type: 'square' as const,
+                color: COLORS[i % COLORS.length],
+              }))}
+            />
+            {disciplineData.map((d, i) => (
+              <Bar key={d.name} dataKey="value" data={[d]} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} name={d.name} />
+            ))}
           </BarChart>
         </ResponsiveContainer>
       </Card>
@@ -68,7 +118,7 @@ export default function StatsCharts({ stats }: Props) {
       {/* Sessions by Payer */}
       <Card className={styles.card}>
         <Text className={styles.title}>Sessions by Payer</Text>
-        <ResponsiveContainer width="100%" height={200}>
+        <ResponsiveContainer width="100%" height={220}>
           <PieChart>
             <Pie
               data={payerData}
@@ -76,17 +126,18 @@ export default function StatsCharts({ stats }: Props) {
               nameKey="name"
               cx="50%"
               cy="50%"
-              outerRadius={75}
-              label={({ name, percent }) =>
-                percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : ''
-              }
+              outerRadius={70}
+              label={false}
               labelLine={false}
             >
               {payerData.map((_entry, index) => (
                 <Cell key={index} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip />
+            <Tooltip formatter={(value, name) => [value, name]} />
+            <Legend
+              formatter={(value) => <span style={{ fontSize: 11 }}>{value}</span>}
+            />
           </PieChart>
         </ResponsiveContainer>
       </Card>
@@ -94,12 +145,22 @@ export default function StatsCharts({ stats }: Props) {
       {/* Sessions by Setting */}
       <Card className={styles.card}>
         <Text className={styles.title}>Sessions by Setting</Text>
-        <ResponsiveContainer width="100%" height={200}>
+        <ResponsiveContainer width="100%" height={220}>
           <BarChart data={settingData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+            <XAxis dataKey="name" tick={false} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
             <Tooltip />
-            <Bar dataKey="value" fill="#2b88d8" radius={[4, 4, 0, 0]} />
+            <Legend
+              formatter={(value) => <span style={{ fontSize: 11 }}>{value}</span>}
+              payload={settingData.map((d, i) => ({
+                value: d.name,
+                type: 'square' as const,
+                color: COLORS[i % COLORS.length],
+              }))}
+            />
+            {settingData.map((d, i) => (
+              <Bar key={d.name} dataKey="value" data={[d]} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} name={d.name} />
+            ))}
           </BarChart>
         </ResponsiveContainer>
       </Card>
@@ -131,3 +192,4 @@ export default function StatsCharts({ stats }: Props) {
     </div>
   );
 }
+
