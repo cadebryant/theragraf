@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "description": "Suggests 3–5 measurable SMART treatment goals based on a therapy SOAP note.",
+  "execution_settings": {
+    "default": {
+      "max_tokens": 800,
+      "temperature": 0.3
+    }
+  },
+  "input_variables": [
+    {
+      "name": "subjective",
+      "description": "The Subjective section of the SOAP note.",
+      "is_required": true
+    },
+    {
+      "name": "objective",
+      "description": "The Objective section of the SOAP note.",
+      "is_required": true
+    },
+    {
+      "name": "assessment",
+      "description": "The Assessment section of the SOAP note.",
+      "is_required": true
+    },
+    {
+      "name": "plan",
+      "description": "The Plan section of the SOAP note.",
+      "is_required": true
+    },
+    {
+      "name": "discipline",
+      "description": "The therapy discipline (e.g. OccupationalTherapy, PhysicalTherapy, SpeechLanguagePathology, Psychotherapy).",
+      "is_required": true
+    }
+  ]
+}
