@@ -44,10 +44,11 @@ function rowKeyToDate(key: string): Date {
  */
 function disciplineToTaxonomy(discipline: string): string {
   switch (discipline) {
-    case 'OccupationalTherapy': return '225X00000X';
-    case 'PhysicalTherapy':     return '225100000X';
-    case 'Psychotherapy':       return '101YA0400X';
-    default:                    return '225X00000X';
+    case 'OccupationalTherapy':      return '225X00000X';
+    case 'PhysicalTherapy':          return '225100000X';
+    case 'SpeechLanguagePathology':  return '235Z00000X';
+    case 'Psychotherapy':            return '101YA0400X';
+    default:                         return '225X00000X';
   }
 }
 

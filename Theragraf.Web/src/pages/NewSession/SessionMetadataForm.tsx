@@ -75,6 +75,7 @@ export default function SessionMetadataForm({ value, onChange }: Props) {
           >
             <option value="OccupationalTherapy">Occupational Therapy</option>
             <option value="PhysicalTherapy">Physical Therapy</option>
+            <option value="SpeechLanguagePathology">Speech-Language Pathology</option>
             <option value="Psychotherapy">Psychotherapy</option>
           </Select>
         </Field>

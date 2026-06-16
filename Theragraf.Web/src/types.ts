@@ -3,6 +3,7 @@
 export type TherapyDiscipline =
   | 'OccupationalTherapy'
   | 'PhysicalTherapy'
+  | 'SpeechLanguagePathology'
   | 'Psychotherapy';
 
 export type NoteFormat = 'Soap' | 'Dap';
