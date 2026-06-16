@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMsal } from '@azure/msal-react';
 import { useQuery } from '@tanstack/react-query';
@@ -100,12 +100,17 @@ export default function NewSession() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Pre-fetch demographics so they can be forwarded in the pipeline for better ICD-10 coding.
-  // Only triggered once a clientId has been entered.
+  // Debounced so the query only fires after the user stops typing, not on every keystroke.
   const trimmedClientId = metadata.clientId.trim();
+  const [debouncedClientId, setDebouncedClientId] = useState(trimmedClientId);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedClientId(trimmedClientId), 400);
+    return () => clearTimeout(timer);
+  }, [trimmedClientId]);
   const demographicsQuery = useQuery({
-    queryKey: ['clientDemographics', trimmedClientId],
-    queryFn: () => getClientDemographics(trimmedClientId),
-    enabled: trimmedClientId.length > 0,
+    queryKey: ['clientDemographics', debouncedClientId],
+    queryFn: () => getClientDemographics(debouncedClientId),
+    enabled: debouncedClientId.length > 0,
     staleTime: 5 * 60 * 1000, // 5 min — stable intake data
   });
 
