@@ -82,7 +82,27 @@ public class BillingAgent(Kernel kernel, ICmsUnitCalculator unitCalculator, ILog
                 "96130 (psychological testing, first hour), " +
                 "96131 (psychological testing, each additional hour), " +
                 "96132 (neuropsychological testing, first hour), " +
-                "96133 (neuropsychological testing, each additional hour)"
+                "96133 (neuropsychological testing, each additional hour)",
+
+            [TherapyDiscipline.SpeechLanguagePathology] =
+                // Evaluations (untimed)
+                "92521 (evaluation of speech fluency), " +
+                "92522 (evaluation of speech sound production), " +
+                "92523 (evaluation of speech sound production with language comprehension and expression), " +
+                "92524 (behavioral and qualitative analysis of voice and resonance), " +
+                "92610 (evaluation of oral and pharyngeal swallowing function), " +
+                "92611 (motion fluoroscopic evaluation of swallowing), " +
+                "92612 (flexible fiberoptic endoscopic evaluation of swallowing), " +
+                "96105 (assessment of aphasia, per hour), " +
+                "96125 (standardized cognitive performance testing, per hour), " +
+                // Treatment — speech/language/voice (timed, billed per 15-min unit)
+                "92507 (treatment of speech, language, voice, communication, and/or auditory processing — individual), " +
+                "92526 (treatment of swallowing dysfunction and/or oral function for feeding), " +
+                // Group / AAC
+                "92508 (treatment of speech, language, voice, communication — group, two or more individuals), " +
+                "92597 (evaluation for use and fitting of voice prosthetic device), " +
+                "92605 (evaluation for prescription of non-speech-generating AAC device), " +
+                "92606 (therapeutic service for use of non-speech-generating AAC device)"
         };
 
     public async Task<IReadOnlyList<CptCode>> SuggestCptCodesAsync(

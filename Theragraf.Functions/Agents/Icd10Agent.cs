@@ -134,7 +134,58 @@ public class Icd10Agent(Kernel kernel, ILoggerFactory loggerFactory)
                 "F51.01 (primary insomnia), " +
                 "Z63.0 (problems in relationship with spouse or partner), " +
                 "Z60.0 (problems of adjustment to life-cycle transitions), " +
-                "Z65.8 (other specified problems related to psychosocial circumstances)"
+                "Z65.8 (other specified problems related to psychosocial circumstances)",
+
+            [TherapyDiscipline.SpeechLanguagePathology] =
+                // Language disorders
+                "F80.0 (phonological disorder), " +
+                "F80.1 (expressive language disorder), " +
+                "F80.2 (mixed receptive-expressive language disorder), " +
+                "F80.4 (speech and language development delay due to hearing loss), " +
+                "F80.81 (childhood onset fluency disorder / stuttering), " +
+                "F80.82 (social pragmatic communication disorder), " +
+                "F80.89 (other developmental disorders of speech and language), " +
+                "F80.9 (developmental disorder of speech and language, unspecified), " +
+                // Aphasia / acquired language
+                "R47.01 (aphasia), " +
+                "R47.02 (dysphasia), " +
+                "I69.320 (aphasia following cerebral infarction), " +
+                "I69.321 (dysphasia following cerebral infarction), " +
+                // Voice / resonance
+                "R49.0 (dysphonia), " +
+                "R49.1 (aphonia), " +
+                "R49.21 (hypernasality), " +
+                "R49.22 (hyponasality), " +
+                "J38.3 (other diseases of vocal cords — vocal nodules/polyps), " +
+                // Articulation / fluency / motor speech
+                "R47.1 (dysarthria and anarthria), " +
+                "R47.81 (slurred speech), " +
+                "F98.5 (adult onset fluency disorder), " +
+                // Dysphagia / feeding
+                "R13.10 (dysphagia, unspecified), " +
+                "R13.11 (dysphagia, oral phase), " +
+                "R13.12 (dysphagia, oropharyngeal phase), " +
+                "R13.13 (dysphagia, pharyngeal phase), " +
+                "R13.14 (dysphagia, pharyngoesophageal phase), " +
+                "R13.19 (other dysphagia), " +
+                // Neurological
+                "G35 (multiple sclerosis), " +
+                "G20 (Parkinson's disease), " +
+                "I69.391 (other sequelae of cerebral infarction — communication deficits), " +
+                "G80.0 (spastic quadriplegic cerebral palsy), " +
+                "G80.1 (spastic diplegic cerebral palsy), " +
+                // Cognitive-communication
+                "F06.8 (other specified mental disorders due to known physiological condition), " +
+                "R41.3 (other amnesia / memory impairment), " +
+                "R41.840 (attention and concentration deficit), " +
+                // Hearing
+                "H90.3 (sensorineural hearing loss, bilateral), " +
+                "H90.5 (unspecified sensorineural hearing loss), " +
+                "H91.90 (unspecified hearing loss, unspecified ear), " +
+                // Developmental
+                "F84.0 (autistic disorder — communication component), " +
+                "F84.5 (Asperger syndrome — communication component), " +
+                "F81.0 (specific reading disorder / dyslexia)"
         };
 
     public async Task<IReadOnlyList<IcdCode>> SuggestIcdCodesAsync(

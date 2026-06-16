@@ -37,6 +37,13 @@ public sealed class CmsUnitCalculator : ICmsUnitCalculator
         "90791", "97792",
         // Unlisted
         "97039",
+        // SLP evaluations (untimed)
+        "92521", "92522", "92523", "92524",  // speech/voice/language evaluations
+        "92610", "92611", "92612",           // swallowing evaluations
+        "96105", "96125",                    // aphasia / cognitive-communication assessment
+        "92597", "92605",                    // AAC evaluation/fitting
+        // SLP group (untimed)
+        "92508",
     };
 
     /// <inheritdoc />
