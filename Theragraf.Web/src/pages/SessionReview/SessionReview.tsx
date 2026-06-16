@@ -50,6 +50,11 @@ interface ReviewState {
   instanceId: string;
   clientId: string;
   sessionDateKey: string;
+  therapistName?: string;
+  discipline?: string;
+  setting?: string;
+  payer?: string;
+  sessionDurationMinutes?: number | null;
 }
 
 export default function SessionReview() {
@@ -192,10 +197,11 @@ export default function SessionReview() {
                 exportSessionPdf({
                   clientId: state.clientId,
                   sessionDate: state.sessionDateKey,
-                  therapistName: '',
-                  discipline: '',
-                  setting: '',
-                  payer: '',
+                  therapistName: state.therapistName ?? '',
+                  discipline: state.discipline ?? '',
+                  setting: state.setting ?? '',
+                  payer: state.payer ?? '',
+                  sessionDurationMinutes: state.sessionDurationMinutes,
                   soapNote,
                   cptCodes,
                   icdCodes,
@@ -212,9 +218,10 @@ export default function SessionReview() {
                 exportSession837p({
                   clientId: state.clientId,
                   sessionDate: state.sessionDateKey,
-                  therapistName: '',
-                  discipline: '',
-                  payer: '',
+                  therapistName: state.therapistName ?? '',
+                  discipline: state.discipline ?? '',
+                  payer: state.payer ?? '',
+                  sessionDurationMinutes: state.sessionDurationMinutes,
                   cptCodes,
                   icdCodes,
                 });

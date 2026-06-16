@@ -22,7 +22,7 @@ using Theragraf.Functions.Logging;
 public class StatusGet(ILoggerFactory loggerFactory, IConfiguration config, IAuditLogger auditLogger)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<StatusGet>();
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonConfig.Web)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };

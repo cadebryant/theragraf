@@ -169,6 +169,12 @@ export default function NewSession() {
           // what the user typed if server-side namespacing was applied.
           clientId: response.clientId,
           sessionDateKey: toSessionDateKey(sessionDateIso),
+          // Carry metadata so the review page can populate PDF/837P exports.
+          therapistName,
+          discipline: metadata.discipline,
+          setting: metadata.setting,
+          payer: metadata.payer,
+          sessionDurationMinutes: metadata.sessionDurationMinutes ?? null,
         },
       });
     } catch (err) {
