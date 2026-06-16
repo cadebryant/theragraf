@@ -40,9 +40,10 @@ export interface SessionMetadata {
 interface Props {
   value: SessionMetadata;
   onChange: (value: SessionMetadata) => void;
+  onClientIdBlur?: () => void;
 }
 
-export default function SessionMetadataForm({ value, onChange }: Props) {
+export default function SessionMetadataForm({ value, onChange, onClientIdBlur }: Props) {
   const styles = useStyles();
 
   function update<K extends keyof SessionMetadata>(key: K, val: SessionMetadata[K]) {
@@ -57,6 +58,7 @@ export default function SessionMetadataForm({ value, onChange }: Props) {
           <Input
             value={value.clientId}
             onChange={(_e, d) => update('clientId', d.value)}
+            onBlur={onClientIdBlur}
             placeholder="e.g. patient-001"
           />
         </Field>

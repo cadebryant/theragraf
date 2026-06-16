@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMsal } from '@azure/msal-react';
 import { useQuery } from '@tanstack/react-query';
@@ -99,18 +99,15 @@ export default function NewSession() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Pre-fetch demographics so they can be forwarded in the pipeline for better ICD-10 coding.
-  // Debounced so the query only fires after the user stops typing, not on every keystroke.
-  const trimmedClientId = metadata.clientId.trim();
-  const [debouncedClientId, setDebouncedClientId] = useState(trimmedClientId);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedClientId(trimmedClientId), 400);
-    return () => clearTimeout(timer);
-  }, [trimmedClientId]);
+  // Pre-fetch demographics once the user finishes typing the client ID (on blur).
+  // Using blur instead of onChange avoids network requests for every partial character.
+  const [committedClientId, setCommittedClientId] = useState(
+    metadata.clientId.trim()
+  );
   const demographicsQuery = useQuery({
-    queryKey: ['clientDemographics', debouncedClientId],
-    queryFn: () => getClientDemographics(debouncedClientId),
-    enabled: debouncedClientId.length > 0,
+    queryKey: ['clientDemographics', committedClientId],
+    queryFn: () => getClientDemographics(committedClientId),
+    enabled: committedClientId.length > 0,
     staleTime: 5 * 60 * 1000, // 5 min — stable intake data
   });
 
@@ -189,7 +186,11 @@ export default function NewSession() {
     <div className={styles.page}>
       <Text className={styles.title}>New Session</Text>
 
-      <SessionMetadataForm value={metadata} onChange={setMetadata} />
+      <SessionMetadataForm
+        value={metadata}
+        onChange={setMetadata}
+        onClientIdBlur={() => setCommittedClientId(metadata.clientId.trim())}
+      />
 
       <AudioRecorder onTranscriptReady={handleTranscriptReady} phraseHints={buildPhraseHints(metadata.clientId, accounts[0])} />
 
