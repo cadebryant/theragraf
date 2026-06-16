@@ -100,6 +100,7 @@ export default function SessionDetail() {
       setting: session.setting,
       payer: session.payer,
       sessionDurationMinutes: session.sessionDurationMinutes,
+      noteFormat: (session.noteFormat ?? 'Soap') as 'Soap' | 'Dap',
       soapNote: session.soapNote,
       cptCodes: session.suggestedCptCodes,
       icdCodes: session.suggestedIcdCodes,

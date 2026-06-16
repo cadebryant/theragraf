@@ -202,6 +202,7 @@ export default function SessionReview() {
                   setting: state.setting ?? '',
                   payer: state.payer ?? '',
                   sessionDurationMinutes: state.sessionDurationMinutes,
+                  noteFormat: noteFormat as 'Soap' | 'Dap',
                   soapNote,
                   cptCodes,
                   icdCodes,

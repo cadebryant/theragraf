@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import type { CptCode, IcdCode, SoapNote } from '@/types';
+import type { CptCode, IcdCode, NoteFormat, SoapNote } from '@/types';
 
 export interface ExportData {
   clientId: string;
@@ -9,6 +9,7 @@ export interface ExportData {
   setting: string;
   payer: string;
   sessionDurationMinutes?: number | null;
+  noteFormat?: NoteFormat;
   soapNote: SoapNote;
   cptCodes: CptCode[];
   icdCodes: IcdCode[];
@@ -83,15 +84,27 @@ export function exportSessionPdf(data: ExportData): void {
   doc.line(margin, y, pageWidth - margin, y);
   y += lineH * 1.2;
 
-  // ── SOAP Note ─────────────────────────────────────────────────────────────
-  const soapSections: [string, string][] = [
-    ['S — Subjective',  data.soapNote.subjective],
-    ['O — Objective',   data.soapNote.objective],
-    ['A — Assessment',  data.soapNote.assessment],
-    ['P — Plan',        data.soapNote.plan],
-  ];
+  // ── Note title + sections (SOAP or DAP) ─────────────────────────────────
+  const isDap = data.noteFormat === 'Dap';
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text(isDap ? 'DAP Note' : 'SOAP Note', margin, y);
+  y += lineH * 1.5;
 
-  for (const [heading, body] of soapSections) {
+  const noteSections: [string, string][] = isDap
+    ? [
+        ['D — Data',       data.soapNote.subjective],
+        ['A — Assessment', data.soapNote.assessment],
+        ['P — Plan',       data.soapNote.plan],
+      ]
+    : [
+        ['S — Subjective', data.soapNote.subjective],
+        ['O — Objective',  data.soapNote.objective],
+        ['A — Assessment', data.soapNote.assessment],
+        ['P — Plan',       data.soapNote.plan],
+      ];
+
+  for (const [heading, body] of noteSections) {
     // Section heading
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
