@@ -59,6 +59,7 @@ export default function SessionReview() {
   const state = location.state as ReviewState | null;
 
   const [soapNote, setSoapNote] = useState<SoapNote | null>(null);
+  const [noteFormat, setNoteFormat] = useState<string>('Soap');
   const [cptCodes, setCptCodes] = useState<CptCode[]>([]);
   const [icdCodes, setIcdCodes] = useState<IcdCode[]>([]);
   const [saving, setSaving] = useState(false);
@@ -83,6 +84,7 @@ export default function SessionReview() {
   useEffect(() => {
     if (status?.runtimeStatus === 'Completed' && status.output && soapNote === null) {
       setSoapNote(status.output.restoredNote);
+      setNoteFormat(status.output.noteFormat ?? 'Soap');
       setCptCodes(status.output.suggestedCptCodes);
       setIcdCodes(status.output.suggestedIcdCodes);
       if (stageTimerRef.current) clearInterval(stageTimerRef.current);
@@ -171,7 +173,7 @@ export default function SessionReview() {
 
       {isComplete && soapNote && (
         <>
-          <SoapNoteEditor value={soapNote} onChange={setSoapNote} />
+          <SoapNoteEditor value={soapNote} onChange={setSoapNote} noteFormat={noteFormat as 'Soap' | 'Dap'} />
           <CptCodesEditor codes={cptCodes} onChange={setCptCodes} />
           <IcdCodesEditor codes={icdCodes} onChange={setIcdCodes} />
 

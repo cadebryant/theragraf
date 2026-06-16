@@ -33,6 +33,7 @@ public class PersistActivity(ISessionRepository repository, ILoggerFactory logge
                                              .ToString("yyyy-MM-ddTHH-mm-ssZ"),
                 TherapistName          = input.OriginalInput.TherapistName,
                 Discipline             = input.OriginalInput.Discipline.ToString(),
+                NoteFormat             = input.OriginalInput.NoteFormat.ToString(),
                 Setting                = input.OriginalInput.Setting.ToString(),
                 Payer                  = input.OriginalInput.Payer.ToString(),
                 SessionDurationMinutes = input.OriginalInput.SessionDurationMinutes,

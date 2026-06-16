@@ -26,6 +26,9 @@ public class ComplianceActivityTests
         string plan       = "Continue CBT weekly.") =>
         new(subjective, objective, assessment, plan);
 
+    private static ComplianceActivityInput BuildInput(SoapNote note, NoteFormat format = NoteFormat.Soap) =>
+        new(note, format);
+
     private static ComplianceResult BuildCompliantResult(SoapNote note) =>
         new(note, IsCompliant: true, Issues: []);
 
@@ -35,31 +38,34 @@ public class ComplianceActivityTests
     [Fact]
     public async Task Run_DelegatesToComplianceAgent()
     {
-        var input = BuildSoapNote();
-        _complianceAgent.ValidateAsync(input).Returns(BuildCompliantResult(input));
+        var note = BuildSoapNote();
+        var input = BuildInput(note);
+        _complianceAgent.ValidateAsync(note, NoteFormat.Soap).Returns(BuildCompliantResult(note));
 
         await _sut.Run(input);
 
-        await _complianceAgent.Received(1).ValidateAsync(input);
+        await _complianceAgent.Received(1).ValidateAsync(note, NoteFormat.Soap);
     }
 
     [Fact]
     public async Task Run_CompliantNote_ReturnsValidatedNoteUnchanged()
     {
-        var input = BuildSoapNote();
-        _complianceAgent.ValidateAsync(input).Returns(BuildCompliantResult(input));
+        var note = BuildSoapNote();
+        var input = BuildInput(note);
+        _complianceAgent.ValidateAsync(note, NoteFormat.Soap).Returns(BuildCompliantResult(note));
 
         var result = await _sut.Run(input);
 
-        result.Should().Be(input);
+        result.Should().Be(note);
     }
 
     [Fact]
     public async Task Run_NonCompliantNote_ReturnsCorrectedNote()
     {
-        var input     = BuildSoapNote(assessment: "unclear");
+        var note      = BuildSoapNote(assessment: "unclear");
         var corrected = BuildSoapNote(assessment: "GAD — further assessment required.");
-        _complianceAgent.ValidateAsync(input)
+        var input = BuildInput(note);
+        _complianceAgent.ValidateAsync(note, NoteFormat.Soap)
             .Returns(BuildNonCompliantResult(corrected, "Assessment is too vague."));
 
         var result = await _sut.Run(input);
@@ -70,22 +76,36 @@ public class ComplianceActivityTests
     [Fact]
     public async Task Run_ReturnsValidatedNoteNotRawInput()
     {
-        var input     = BuildSoapNote(plan: "TBD");
+        var note      = BuildSoapNote(plan: "TBD");
         var corrected = BuildSoapNote(plan: "Schedule follow-up within 7 days.");
-        _complianceAgent.ValidateAsync(input)
+        var input = BuildInput(note);
+        _complianceAgent.ValidateAsync(note, NoteFormat.Soap)
             .Returns(BuildNonCompliantResult(corrected, "Plan lacks specificity."));
 
         var result = await _sut.Run(input);
 
         result.Should().Be(corrected);
-        result.Should().NotBe(input);
+        result.Should().NotBe(note);
+    }
+
+    [Fact]
+    public async Task Run_DapFormat_ForwardsDapFormatToAgent()
+    {
+        var note  = BuildSoapNote(subjective: "Client reported low mood and isolation.", objective: "");
+        var input = BuildInput(note, NoteFormat.Dap);
+        _complianceAgent.ValidateAsync(note, NoteFormat.Dap).Returns(BuildCompliantResult(note));
+
+        await _sut.Run(input);
+
+        await _complianceAgent.Received(1).ValidateAsync(note, NoteFormat.Dap);
     }
 
     [Fact]
     public async Task Run_AgentThrows_ExceptionPropagates()
     {
-        var input = BuildSoapNote();
-        _complianceAgent.ValidateAsync(Arg.Any<SoapNote>())
+        var note = BuildSoapNote();
+        var input = BuildInput(note);
+        _complianceAgent.ValidateAsync(Arg.Any<SoapNote>(), Arg.Any<NoteFormat>())
             .Returns<ComplianceResult>(_ => throw new InvalidOperationException("LLM unavailable"));
 
         var act = async () => await _sut.Run(input);

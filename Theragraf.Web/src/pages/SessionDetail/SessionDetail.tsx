@@ -221,6 +221,7 @@ export default function SessionDetail() {
         value={displaySoap}
         onChange={setSoapNote}
         readOnly={!editing}
+        noteFormat={(session.noteFormat ?? 'Soap') as 'Soap' | 'Dap'}
       />
 
       <CptCodesEditor

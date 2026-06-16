@@ -21,6 +21,9 @@ public class SessionDocument
     [JsonPropertyName("discipline")]
     public string Discipline { get; set; } = string.Empty;
 
+    [JsonPropertyName("noteFormat")]
+    public string NoteFormat { get; set; } = "Soap";
+
     [JsonPropertyName("setting")]
     public string Setting { get; set; } = string.Empty;
 

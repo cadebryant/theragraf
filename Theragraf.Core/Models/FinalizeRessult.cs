@@ -3,5 +3,6 @@
 public record FinalizeResult(
     SoapNote RestoredNote,
     IReadOnlyList<CptCode> SuggestedCptCodes,
-    IReadOnlyList<IcdCode> SuggestedIcdCodes
+    IReadOnlyList<IcdCode> SuggestedIcdCodes,
+    NoteFormat NoteFormat = NoteFormat.Soap
 );

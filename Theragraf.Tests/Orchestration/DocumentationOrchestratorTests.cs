@@ -107,7 +107,10 @@ public class DocumentationOrchestratorTests
 
         await _sut.RunOrchestrator(_context);
 
-        await _context.Received(1).CallActivityAsync<SoapNote>("ComplianceActivity", soapNote, Arg.Any<TaskOptions?>());
+        await _context.Received(1).CallActivityAsync<SoapNote>(
+            "ComplianceActivity",
+            Arg.Is<ComplianceActivityInput>(ci => ci.Note == soapNote),
+            Arg.Any<TaskOptions?>());
     }
 
     [Fact]
@@ -124,7 +127,8 @@ public class DocumentationOrchestratorTests
             "FinalizerActivity",
             Arg.Is<FinalizeInput>(fi =>
                 fi.Note == complianceNote &&
-                fi.RedactionMap == observation.RedactionMap),
+                fi.RedactionMap == observation.RedactionMap &&
+                fi.NoteFormat == NoteFormat.Soap),
             Arg.Any<TaskOptions?>());
     }
 

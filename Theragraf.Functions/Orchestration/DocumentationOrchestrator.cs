@@ -42,11 +42,11 @@ public class DocumentationOrchestrator
 
             logger.LogInformation("Stage: ComplianceValidation");
             var compliance = await context.CallActivityAsync<SoapNote>(
-                "ComplianceActivity", soap, RetryOptions);
+                "ComplianceActivity", new ComplianceActivityInput(soap, input!.NoteFormat), RetryOptions);
 
             logger.LogInformation("Stage: Finalization");
             var finalized = await context.CallActivityAsync<FinalizeResult>(
-                "FinalizerActivity", new FinalizeInput(compliance, observation.RedactionMap));
+                "FinalizerActivity", new FinalizeInput(compliance, observation.RedactionMap, input!.NoteFormat));
 
             logger.LogInformation("Stage: BillingSuggestion");
             var cptCodes = await context.CallActivityAsync<IReadOnlyList<CptCode>>(

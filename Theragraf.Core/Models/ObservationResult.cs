@@ -6,5 +6,6 @@ public record ObservationResult(
     string TherapistName,
     string ClientId,
     DateTimeOffset SessionDate,
-    TherapyDiscipline Discipline = TherapyDiscipline.OccupationalTherapy
+    TherapyDiscipline Discipline = TherapyDiscipline.OccupationalTherapy,
+    NoteFormat NoteFormat = NoteFormat.Soap
 );

@@ -74,6 +74,7 @@ public class SessionsUpdateTests
         SessionDate:            "2024-10-10T10-00-00Z",
         TherapistName:          therapistName,
         Discipline:             "PT",
+        NoteFormat:             "Soap",
         Setting:                "Outpatient",
         Payer:                  "Medicare",
         SessionDurationMinutes: 45,

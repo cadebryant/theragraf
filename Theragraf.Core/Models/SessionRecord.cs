@@ -15,6 +15,7 @@ public class SessionRecord
 
     public string TherapistName { get; set; } = string.Empty;
     public string Discipline { get; set; } = string.Empty;
+    public string NoteFormat { get; set; } = "Soap";
     public string Setting { get; set; } = string.Empty;
     public string Payer { get; set; } = string.Empty;
     public int? SessionDurationMinutes { get; set; }

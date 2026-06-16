@@ -146,7 +146,7 @@ public class SessionsDeleteTests
     }
 
     private static Core.Models.SessionResponse BuildSession(string therapistName) =>
-        new("client-001", "2024-10-10T10-00-00Z", therapistName, "PT", "Outpatient", "Medicare", 45,
+        new("client-001", "2024-10-10T10-00-00Z", therapistName, "PT", "Soap", "Outpatient", "Medicare", 45,
             new Core.Models.SoapNote("S", "O", "A", "P"),
             new List<Core.Models.CptCode>(), new List<Core.Models.IcdCode>(),
             DateTimeOffset.UtcNow);

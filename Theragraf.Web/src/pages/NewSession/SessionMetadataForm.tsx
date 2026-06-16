@@ -7,7 +7,7 @@ import {
   Card,
   Text,
 } from '@fluentui/react-components';
-import type { ClinicalSetting, PayerType, TherapyDiscipline } from '@/types';
+import type { ClinicalSetting, NoteFormat, PayerType, TherapyDiscipline } from '@/types';
 
 const useStyles = makeStyles({
   card: {
@@ -30,9 +30,10 @@ const useStyles = makeStyles({
 export interface SessionMetadata {
   clientId: string;
   discipline: TherapyDiscipline;
+  noteFormat: NoteFormat;
   setting: ClinicalSetting;
   payer: PayerType;
-  sessionDate: string; // ISO 8601 local datetime-local value
+  sessionDate: string;
   sessionDurationMinutes?: number;
 }
 
@@ -63,11 +64,28 @@ export default function SessionMetadataForm({ value, onChange }: Props) {
         <Field label="Discipline" required>
           <Select
             value={value.discipline}
-            onChange={(_e, d) => update('discipline', d.value as TherapyDiscipline)}
+            onChange={(_e, d) => {
+              const disc = d.value as TherapyDiscipline;
+              onChange({
+                ...value,
+                discipline: disc,
+                noteFormat: disc === 'Psychotherapy' ? 'Dap' : 'Soap',
+              });
+            }}
           >
             <option value="OccupationalTherapy">Occupational Therapy</option>
             <option value="PhysicalTherapy">Physical Therapy</option>
             <option value="Psychotherapy">Psychotherapy</option>
+          </Select>
+        </Field>
+
+        <Field label="Note Format" required>
+          <Select
+            value={value.noteFormat}
+            onChange={(_e, d) => update('noteFormat', d.value as NoteFormat)}
+          >
+            <option value="Soap">SOAP (Subjective / Objective / Assessment / Plan)</option>
+            <option value="Dap">DAP (Data / Assessment / Plan)</option>
           </Select>
         </Field>
 

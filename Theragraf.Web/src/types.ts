@@ -5,6 +5,8 @@ export type TherapyDiscipline =
   | 'PhysicalTherapy'
   | 'Psychotherapy';
 
+export type NoteFormat = 'Soap' | 'Dap';
+
 export type ClinicalSetting =
   | 'Outpatient'
   | 'Inpatient'
@@ -61,6 +63,7 @@ export interface SessionResponse {
   sessionDate: string;
   therapistName: string;
   discipline: string;
+  noteFormat: string;
   setting: string;
   payer: string;
   sessionDurationMinutes: number | null;
@@ -81,6 +84,7 @@ export interface TranscriptInput {
   sessionDurationMinutes?: number;
   setting?: ClinicalSetting;
   payer?: PayerType;
+  noteFormat?: NoteFormat;
   /** Optional non-PII demographics context to improve ICD-10 suggestions. */
   demographics?: ClientDemographicsSummary;
 }
@@ -169,6 +173,7 @@ export interface OrchestrationStatus {
   /** Populated once runtimeStatus is "Completed". */
   output?: {
     restoredNote: SoapNote;
+    noteFormat: string;
     suggestedCptCodes: CptCode[];
     suggestedIcdCodes: IcdCode[];
   };

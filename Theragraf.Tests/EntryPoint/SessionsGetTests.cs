@@ -26,6 +26,7 @@ public class SessionsGetTests
         SessionDate: "2024-10-10T10-00-00Z",
         TherapistName: "Dr. Adams",
         Discipline: "OccupationalTherapy",
+        NoteFormat: "Soap",
         Setting: "Outpatient",
         Payer: "Medicare",
         SessionDurationMinutes: 45,

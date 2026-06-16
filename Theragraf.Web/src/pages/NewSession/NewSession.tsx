@@ -90,6 +90,7 @@ export default function NewSession() {
   const [metadata, setMetadata] = useState<SessionMetadata>({
     clientId: stripClientIdPrefix((location.state as { clientId?: string } | null)?.clientId ?? ''),
     discipline: 'OccupationalTherapy',
+    noteFormat: 'Soap',
     setting: 'Outpatient',
     payer: 'Medicare',
     sessionDate: defaultDatetimeLocal(),
@@ -142,6 +143,7 @@ export default function NewSession() {
         sessionDurationMinutes: metadata.sessionDurationMinutes,
         setting: metadata.setting,
         payer: metadata.payer,
+        noteFormat: metadata.noteFormat,
         // Forward non-PII summary when available — only ageYears (never DOB), sex, and clinical text.
         demographics: demographicsQuery.data
           ? {

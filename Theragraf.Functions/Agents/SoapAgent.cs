@@ -14,7 +14,8 @@ public class SoapAgent(Kernel kernel, ILoggerFactory loggerFactory)
             new KernelArguments
             {
                 ["input"] = input.RedactedTranscript,
-                ["discipline"] = input.Discipline.ToString()
+                ["discipline"] = input.Discipline.ToString(),
+                ["noteFormat"] = input.NoteFormat.ToString()
             });
         return JsonSerializer.Deserialize<SoapNote>(StripMarkdownCodeFence(raw))!;
     }

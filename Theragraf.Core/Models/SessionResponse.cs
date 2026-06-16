@@ -10,6 +10,7 @@ public record SessionResponse(
     string SessionDate,
     string TherapistName,
     string Discipline,
+    string NoteFormat,
     string Setting,
     string Payer,
     int? SessionDurationMinutes,
