@@ -17,6 +17,7 @@ import {
   ShieldCheckmark24Regular,
   MicrophoneChat24Regular,
   DocumentBulletList24Regular,
+  Target24Regular,
   ArrowRight24Regular,
 } from '@fluentui/react-icons';
 
@@ -141,9 +142,20 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
                   </div>
                 </div>
                 <div className={styles.step}>
+                  <Target24Regular className={styles.stepIcon} />
+                  <div className={styles.stepText}>
+                    <Text className={styles.stepTitle}>3. Track treatment goals</Text>
+                    <Text className={styles.stepDesc}>
+                      Open a client's profile to manage SMART goals and add progress notes after
+                      each session. Use <strong>Suggest Goals</strong> to generate goal candidates
+                      from the latest SOAP note.
+                    </Text>
+                  </div>
+                </div>
+                <div className={styles.step}>
                   <ArrowRight24Regular className={styles.stepIcon} />
                   <div className={styles.stepText}>
-                    <Text className={styles.stepTitle}>3. Export or save</Text>
+                    <Text className={styles.stepTitle}>4. Export or save</Text>
                     <Text className={styles.stepDesc}>
                       Save the session to your caseload, export as PDF for your EMR, or download an
                       X12 837P file for direct billing submission.

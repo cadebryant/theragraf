@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.43.8.12551",
-      "templateHash": "13954579176025392771"
+      "version": "0.44.1.10279",
+      "templateHash": "10724380139545300144"
     }
   },
   "parameters": {
@@ -43,7 +43,13 @@
         "enableAutomaticFailover": false,
         "enableMultipleWriteLocations": false,
         "publicNetworkAccess": "Enabled",
-        "disableLocalAuth": true
+        "disableLocalAuth": true,
+        "backupPolicy": {
+          "type": "Continuous",
+          "continuousModeProperties": {
+            "tier": "Continuous7Days"
+          }
+        }
       }
     },
     {
@@ -126,6 +132,63 @@
                 {
                   "path": "/createdAt",
                   "order": "descending"
+                }
+              ]
+            ]
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('accountName'), 'theragraf')]"
+      ]
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2024-05-15",
+      "name": "[format('{0}/{1}/{2}', parameters('accountName'), 'theragraf', 'goals')]",
+      "properties": {
+        "resource": {
+          "id": "goals",
+          "partitionKey": {
+            "paths": [
+              "/clientId"
+            ],
+            "kind": "Hash"
+          },
+          "indexingPolicy": {
+            "indexingMode": "consistent",
+            "includedPaths": [
+              {
+                "path": "/*"
+              }
+            ],
+            "excludedPaths": [
+              {
+                "path": "/description/*"
+              },
+              {
+                "path": "/progressNotes/[*]/note/*"
+              }
+            ],
+            "compositeIndexes": [
+              [
+                {
+                  "path": "/clientId",
+                  "order": "ascending"
+                },
+                {
+                  "path": "/createdAt",
+                  "order": "descending"
+                }
+              ],
+              [
+                {
+                  "path": "/clientId",
+                  "order": "ascending"
+                },
+                {
+                  "path": "/status",
+                  "order": "ascending"
                 }
               ]
             ]

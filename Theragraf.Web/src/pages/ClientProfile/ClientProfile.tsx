@@ -13,8 +13,11 @@ import {
 import { Add24Regular, ArrowLeft24Regular } from '@fluentui/react-icons';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getClientStats } from '@/api/stats';
+import { getSessionsByClient } from '@/api/sessions';
 import { stripClientIdPrefix } from '@/utils/clientId';
+import type { TherapyDiscipline } from '@/types';
 import SessionsTable from './SessionsTable';
+import GoalsPanel from './GoalsPanel';
 
 const useStyles = makeStyles({
   page: {
@@ -79,9 +82,18 @@ export default function ClientProfile() {
     enabled: !!clientId,
   });
 
+  // Fetch the single most-recent session to supply a SOAP note for AI goal suggestions.
+  const latestSessionQuery = useQuery({
+    queryKey: ['sessions', clientId, 'latest'],
+    queryFn: () => getSessionsByClient(clientId!, { pageSize: 1, sortOrder: 'desc' }),
+    enabled: !!clientId,
+  });
+
   if (!clientId) return null;
 
   const stats = statsQuery.data;
+  const latestSession = latestSessionQuery.data?.items[0];
+  const latestDiscipline = latestSession?.discipline as TherapyDiscipline | undefined;
 
   function rowKeyToDateStr(key: string | null): string {
     if (!key) return '—';
@@ -186,6 +198,14 @@ export default function ClientProfile() {
           </div>
         </>
       )}
+
+      <Divider>Treatment Goals</Divider>
+
+      <GoalsPanel
+        clientId={clientId}
+        latestSoapNote={latestSession?.soapNote}
+        discipline={latestDiscipline}
+      />
 
       <Divider>Session History</Divider>
 

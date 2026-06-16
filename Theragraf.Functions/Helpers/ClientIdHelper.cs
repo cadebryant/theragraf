@@ -77,6 +77,22 @@ public static class ClientIdHelper
     /// </summary>
     public static bool IsNamespaced(string clientId) => clientId.Contains(Separator);
 
+    /// <summary>
+    /// Returns <see langword="true"/> when the namespace prefix embedded in
+    /// <paramref name="clientId"/> matches the prefix that would be derived from
+    /// <paramref name="therapistEmail"/>, or when <paramref name="clientId"/> has
+    /// no prefix (demo / local-dev record — accessible to everyone).
+    /// </summary>
+    public static bool IsOwner(string therapistEmail, string clientId)
+    {
+        if (!IsNamespaced(clientId))
+            return true; // demo / unnamespaced record
+
+        var expectedPrefix = ComputePrefix(therapistEmail);
+        var actualPrefix   = clientId[..clientId.IndexOf(Separator)];
+        return string.Equals(expectedPrefix, actualPrefix, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ── Internal ──────────────────────────────────────────────────────────────
 
     private static string ComputePrefix(string therapistEmail)

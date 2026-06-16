@@ -91,5 +91,37 @@ resource sessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/c
   }
 }
 
+resource goalsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: database
+  name: 'goals'
+  properties: {
+	resource: {
+	  id: 'goals'
+	  partitionKey: {
+		paths: [ '/clientId' ]
+		kind: 'Hash'
+	  }
+	  indexingPolicy: {
+		indexingMode: 'consistent'
+		includedPaths: [ { path: '/*' } ]
+		excludedPaths: [
+		  { path: '/description/*' }
+		  { path: '/progressNotes/*' }
+		]
+		compositeIndexes: [
+		  [
+			{ path: '/clientId',  order: 'ascending' }
+			{ path: '/createdAt', order: 'descending' }
+		  ]
+		  [
+			{ path: '/clientId', order: 'ascending' }
+			{ path: '/status',   order: 'ascending' }
+		  ]
+		]
+	  }
+	}
+  }
+}
+
 output accountName string = cosmosAccount.name
 output endpoint string = cosmosAccount.properties.documentEndpoint

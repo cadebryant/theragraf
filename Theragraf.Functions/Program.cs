@@ -87,6 +87,7 @@ var host = new HostBuilder()
             kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "ComplianceAgent"), "ComplianceAgent");
             kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "BillingAgent"), "BillingAgent");
             kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "Icd10Agent"), "Icd10Agent");
+            kernel.ImportPluginFromPromptDirectory(Path.Combine(pluginsPath, "GoalAgent"), "GoalAgent");
 
             return kernel;
         });
@@ -96,6 +97,7 @@ var host = new HostBuilder()
         services.AddSingleton<ICmsUnitCalculator, CmsUnitCalculator>();
         services.AddSingleton<IBillingAgent, BillingAgent>();
         services.AddSingleton<IIcd10Agent, Icd10Agent>();
+        services.AddSingleton<IGoalAgent, GoalAgent>();
 
         // Persistence — Azure Cosmos DB for NoSQL
         // Local: connection string from CosmosDb:ConnectionString (Cosmos Emulator)
@@ -142,6 +144,25 @@ var host = new HostBuilder()
             }
 
             return new CosmosSessionRepository(cosmosClient, dbName, container, encryption);
+        });
+
+        services.AddSingleton<IGoalRepository>(sp =>
+        {
+            var cosmosClient    = sp.GetRequiredService<CosmosClient>();
+            var dbName          = config["CosmosDb:DatabaseName"] ?? "theragraf";
+            var goalsContainer  = config["CosmosDb:GoalsContainerName"] ?? "goals";
+
+            // Auto-provision goals container locally. In Azure, add the container in Bicep.
+            var endpoint = config["CosmosDb:AccountEndpoint"];
+            if (string.IsNullOrWhiteSpace(endpoint))
+            {
+                var db = cosmosClient.CreateDatabaseIfNotExistsAsync(dbName).GetAwaiter().GetResult();
+                db.Database.CreateContainerIfNotExistsAsync(
+                    new ContainerProperties { Id = goalsContainer, PartitionKeyPath = "/clientId" })
+                    .GetAwaiter().GetResult();
+            }
+
+            return new CosmosGoalRepository(cosmosClient, dbName, goalsContainer);
         });
     })
     .Build();

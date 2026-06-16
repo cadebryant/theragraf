@@ -172,6 +172,52 @@ export interface OrchestrationStatus {
   };
 }
 
+// ── Goals ─────────────────────────────────────────────────────────────────────
+
+export type GoalStatus = 'Active' | 'Met' | 'Discontinued' | 'NotMet';
+
+export interface GoalProgressNote {
+  noteId: string;
+  recordedAt: string;
+  note: string;
+}
+
+export interface GoalResponse {
+  goalId: string;
+  clientId: string;
+  title: string;
+  description: string;
+  status: GoalStatus;
+  createdAt: string;
+  targetDate: string | null;
+  resolvedAt: string | null;
+  progressNotes: GoalProgressNote[];
+}
+
+export interface CreateGoalRequest {
+  title: string;
+  description: string;
+  targetDate?: string;
+}
+
+export interface UpdateGoalRequest {
+  title?: string;
+  description?: string;
+  status?: GoalStatus;
+  targetDate?: string;
+  progressNote?: string;
+}
+
+export interface GoalSuggestion {
+  title: string;
+  description: string;
+}
+
+export interface GoalSuggestRequest {
+  soapNote: SoapNote;
+  discipline: string;
+}
+
 // ── Speech ────────────────────────────────────────────────────────────────────
 
 export interface SpeechTokenResponse {

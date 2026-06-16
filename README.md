@@ -13,6 +13,7 @@ Modern clinical documentation is broken. Current solutions are high-cost, closed
 - **Privacy-First:** PII is redacted before any AI model sees it. The redaction map is encrypted and stored separately; original names are only restored on retrieval.
 - **Cost-Efficient:** Pay only for the tokens you consume from your own Azure OpenAI resource. No separate subscription required.
 - **Agentic Workflow:** Not just a scribe — an intelligent pipeline that captures diarized audio, redacts PII, generates SOAP notes, validates clinical compliance, suggests CPT billing codes with CMS 8-minute rule unit calculation, and suggests ICD-10 diagnostic codes.
+- **Goal-Oriented:** Track SMART treatment goals per client with progress notes after every session. An AI suggestion endpoint generates goal candidates from the latest SOAP note, which the therapist can accept or discard.
 - **Clinician-Centric:** Built for professionals who value precision, auditability, and data ownership.
 
 ---
@@ -34,6 +35,8 @@ DocumentationOrchestrator (Durable Functions)
         ├── BillingActivity        — CPT code suggestions + CMS 8-minute unit calculation
         ├── Icd10Activity          — ICD-10 code suggestions
         └── PersistActivity        — Saves redacted note + encrypted redaction map to Cosmos DB
+
+AI agents also power a standalone **Goal Agent** (POST `/api/goals/{clientId}/suggest`) that generates SMART treatment-goal suggestions from an existing SOAP note outside of the pipeline.
 ```
 
 ### HTTP API surface
@@ -48,6 +51,11 @@ DocumentationOrchestrator (Durable Functions)
 | `GET` | `/api/sessions/{clientId}/{sessionDate}` | Single session detail |
 | `PATCH` | `/api/sessions/{clientId}/{sessionDate}` | Edit SOAP note or codes |
 | `DELETE` | `/api/sessions/{clientId}/{sessionDate}` | Delete a session |
+| `GET` | `/api/goals/{clientId}` | List treatment goals for a client |
+| `POST` | `/api/goals/{clientId}` | Create a new treatment goal |
+| `PATCH` | `/api/goals/{clientId}/{goalId}` | Update a goal (title, status, progress note) |
+| `DELETE` | `/api/goals/{clientId}/{goalId}` | Delete a goal |
+| `POST` | `/api/goals/{clientId}/suggest` | AI-generated SMART goal suggestions from a SOAP note |
 | `GET` | `/api/stats/therapist/{therapistName}` | Therapist aggregate stats |
 | `GET` | `/api/stats/client/{clientId}` | Client aggregate stats |
 
@@ -58,10 +66,10 @@ All routes enforce **JWT ownership checks** — therapists can only read and mod
 ```
 Theragraf.Web/
   pages/
-    Dashboard/         — Therapist stats, charts, and caseload table
+    Dashboard/         — Therapist stats, legend-labelled charts, searchable/sortable caseload table with overdue-note alerts
     NewSession/        — Diarized audio recording, metadata form, transcript submission
     SessionReview/     — Orchestration status polling, SOAP/CPT/ICD editing
-    ClientProfile/     — Per-client stats and session history
+    ClientProfile/     — Per-client stats, SMART goal tracking (with AI suggestions), and session history
     SessionDetail/     — Single session view and edit
 ```
 
@@ -166,7 +174,7 @@ Launch the **Azure Cosmos DB Emulator** from the Start menu, or:
 & "$env:ProgramFiles\Azure Cosmos DB Emulator\CosmosDB.Emulator.exe"
 ```
 
-The emulator auto-creates the `theragraf` database and `sessions` container on first use.
+The emulator auto-creates the `theragraf` database and both the `sessions` and `goals` containers on first use.
 
 ### 4. Start Azurite
 
@@ -273,14 +281,14 @@ Theragraf.Functions/        — Azure Functions host (isolated worker, .NET 10)
 
 Theragraf.Web/              — React + TypeScript + Vite SPA
   src/
-    api/                    — Typed fetch wrappers (sessions, stats, speech token)
+    api/                    — Typed fetch wrappers (sessions, stats, speech token, goals)
     auth/                   — MSAL configuration and singleton instance
-    components/             — AppLayout, ProtectedRoute
-    pages/                  — Dashboard, NewSession, SessionReview, ClientProfile, SessionDetail
+    components/             — AppLayout, ProtectedRoute, GettingStartedModal
+    pages/                  — Dashboard, NewSession, SessionReview, ClientProfile (with GoalsPanel), SessionDetail
     types.ts                — TypeScript mirrors of all backend models
 
-Theragraf.Tests/            — xUnit unit test suite
-Theragraf.IntegrationTests/ — xUnit integration tests (requires Cosmos DB Emulator)
+Theragraf.Tests/            — xUnit unit test suite (endpoints, helpers, agents, orchestration)
+Theragraf.IntegrationTests/ — xUnit integration tests against Cosmos DB Emulator (sessions + goals)
 
 infra/                      — Bicep IaC for all Azure resources
   main.bicep
@@ -299,4 +307,5 @@ postman/                    — Postman collection for manual API testing
 - In Azure, all service-to-service authentication uses Managed Identity — no API keys are stored in app settings
 - PII is redacted before any AI model processes the transcript; the redaction map is encrypted with a Key Vault-managed key and stored alongside the session record
 - The React SPA contains only public, non-sensitive Entra configuration values (`tenantId`, `clientId`, `scope`, `speechRegion`) — no secrets are embedded in the frontend bundle
-- All HTTP endpoints enforce JWT ownership — therapists cannot read or modify another therapist's sessions
+- All HTTP endpoints enforce JWT ownership — therapists cannot read or modify another therapist's sessions or goals
+- Client IDs are transparently namespaced server-side using a hash of the therapist's email address; the raw client-visible name is stripped from API responses and never stored without the prefix
