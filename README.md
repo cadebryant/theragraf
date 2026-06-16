@@ -12,7 +12,7 @@ Modern clinical documentation is broken. Current solutions are high-cost, closed
 
 - **Privacy-First:** PII is redacted before any AI model sees it. The redaction map is encrypted and stored separately; original names are only restored on retrieval.
 - **Cost-Efficient:** Pay only for the tokens you consume from your own Azure OpenAI resource. No separate subscription required.
-- **Agentic Workflow:** Not just a scribe — an intelligent pipeline that captures diarized audio, redacts PII, generates SOAP notes, validates clinical compliance, suggests CPT billing codes with CMS 8-minute rule unit calculation, and suggests ICD-10 diagnostic codes.
+- **Agentic Workflow:** Not just a scribe — an intelligent pipeline that captures diarized audio, redacts PII, generates **SOAP or DAP notes** (auto-selected by discipline, manually overrideable), validates clinical compliance, suggests CPT billing codes with CMS 8-minute rule unit calculation, and suggests ICD-10 diagnostic codes.
 - **Goal-Oriented:** Track SMART treatment goals per client with progress notes after every session. An AI suggestion endpoint generates goal candidates from the latest SOAP note, which the therapist can accept or discard.
 - **Client Profiles:** Maintain demographic and intake data per client — age range, biological sex, prior diagnoses, and functional limitations. This context informs smarter ICD-10 suggestions without forwarding any PII to the AI pipeline.
 - **Clinician-Centric:** Built for professionals who value precision, auditability, and data ownership.
@@ -30,8 +30,8 @@ POST /api/documentation
 DocumentationOrchestrator (Durable Functions)
         │
         ├── IngestionActivity      — PII redaction via Azure AI Language
-        ├── SoapActivity           — SOAP note generation via Azure OpenAI
-        ├── ComplianceActivity     — Clinical compliance validation via Azure OpenAI
+        ├── SoapActivity           — SOAP or DAP note generation via Azure OpenAI (branches on selected note format)
+        ├── ComplianceActivity     — Clinical compliance validation via Azure OpenAI (validates correct fields per format)
         ├── FinalizerActivity      — PII restoration for in-flight result
         ├── BillingActivity        — CPT code suggestions + CMS 8-minute unit calculation
         ├── Icd10Activity          — ICD-10 code suggestions (uses client demographics context when available)
@@ -70,8 +70,8 @@ All routes enforce **JWT ownership checks** — therapists can only read and mod
 Theragraf.Web/
   pages/
     Dashboard/         — Therapist stats, legend-labelled charts, searchable/sortable caseload table with overdue-note alerts
-    NewSession/        — Diarized audio recording, metadata form, transcript submission
-    SessionReview/     — Orchestration status polling, SOAP/CPT/ICD editing
+    NewSession/        — Diarized audio recording, metadata form (with SOAP/DAP note format selector), transcript submission
+    SessionReview/     — Orchestration status polling, SOAP/DAP note editing with format-appropriate field labels, CPT/ICD editing
     ClientProfile/     — Per-client stats, demographics/intake panel, SMART goal tracking (with AI suggestions), and session history
     SessionDetail/     — Single session view and edit
 ```
@@ -269,7 +269,7 @@ az ad app update --id <spa-client-id> --set spa.redirectUris="[\"http://localhos
 
 ```
 Theragraf.Core/             — Shared models, interfaces, and domain logic
-  Models/                   — CptCode, IcdCode, SoapNote, SessionResponse, TranscriptInput, GoalModels, ClientModels, stats records, etc.
+  Models/                   — CptCode, IcdCode, SoapNote, NoteFormat, SessionResponse, TranscriptInput, GoalModels, ClientModels, stats records, etc.
   Services/                 — IPiiRedactionService, ISessionRepository, IGoalRepository, IClientRepository, ICmsUnitCalculator, etc.
 
 Theragraf.Functions/        — Azure Functions host (isolated worker, .NET 10)

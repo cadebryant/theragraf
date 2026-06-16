@@ -137,8 +137,10 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
                   <div className={styles.stepText}>
                     <Text className={styles.stepTitle}>2. Generate &amp; review documentation</Text>
                     <Text className={styles.stepDesc}>
-                      Press <strong>Generate Documentation</strong>. The AI produces a SOAP note,
-                      suggested CPT codes, and ICD-10 diagnoses. Review and edit before saving.
+                      Press <strong>Generate Documentation</strong>. The AI produces a SOAP or DAP
+                      note (DAP is selected automatically for Psychotherapy; you can override in
+                      Session Details), suggested CPT codes, and ICD-10 diagnoses. Review and edit
+                      before saving.
                     </Text>
                   </div>
                 </div>
