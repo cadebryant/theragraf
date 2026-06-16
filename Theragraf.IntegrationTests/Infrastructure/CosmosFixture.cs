@@ -34,14 +34,16 @@ public sealed class CosmosFixture : IAsyncLifetime
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\Azure Cosmos DB Emulator\CosmosDB.Emulator.exe"),
     ];
 
-    public const string DatabaseName      = "theragraf-integration-tests";
-    public const string ContainerName     = "sessions";
-    public const string GoalsContainerName = "goals";
+    public const string DatabaseName       = "theragraf-integration-tests";
+    public const string ContainerName      = "sessions";
+    public const string GoalsContainerName  = "goals";
+    public const string ClientsContainerName = "clients";
 
     public bool IsAvailable { get; private set; }
     public CosmosClient Client { get; private set; } = null!;
     public Container Container { get; private set; } = null!;
     public Container GoalsContainer { get; private set; } = null!;
+    public Container ClientsContainer { get; private set; } = null!;
 
     public async Task InitializeAsync()
     {
@@ -117,6 +119,16 @@ public sealed class CosmosFixture : IAsyncLifetime
                 cancellationToken: ct);
 
             GoalsContainer = goalsContainerResponse.Container;
+
+            var clientsContainerResponse = await db.Database.CreateContainerIfNotExistsAsync(
+                new ContainerProperties
+                {
+                    Id = ClientsContainerName,
+                    PartitionKeyPath = "/clientId"
+                },
+                cancellationToken: ct);
+
+            ClientsContainer = clientsContainerResponse.Container;
             IsAvailable = true;
         }
         catch (OperationCanceledException)

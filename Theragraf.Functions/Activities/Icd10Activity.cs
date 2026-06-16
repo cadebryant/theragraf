@@ -16,7 +16,7 @@ public class Icd10Activity(IIcd10Agent icd10Agent, ILoggerFactory loggerFactory)
         _logger.LogInformation("Icd10Activity started discipline={Discipline}", input.Discipline);
         try
         {
-            var codes = await icd10Agent.SuggestIcdCodesAsync(input.Note, input.Discipline);
+            var codes = await icd10Agent.SuggestIcdCodesAsync(input.Note, input.Discipline, input.Demographics);
             _logger.LogInformation("Icd10Activity completed icdCodeCount={Count}", codes.Count);
             return codes;
         }
@@ -28,4 +28,7 @@ public class Icd10Activity(IIcd10Agent icd10Agent, ILoggerFactory loggerFactory)
     }
 }
 
-public record Icd10ActivityInput(SoapNote Note, TherapyDiscipline Discipline);
+public record Icd10ActivityInput(
+    SoapNote                   Note,
+    TherapyDiscipline          Discipline,
+    ClientDemographicsSummary? Demographics = null);

@@ -21,5 +21,12 @@ public record TranscriptInput(
     int? SessionDurationMinutes = null,
 
     ClinicalSetting Setting = ClinicalSetting.Outpatient,
-    PayerType Payer = PayerType.Medicare
+    PayerType Payer = PayerType.Medicare,
+
+    /// <summary>
+    /// Optional non-PII demographic context forwarded by the frontend.
+    /// When present, passed to the ICD-10 agent to improve code precision.
+    /// Never contains raw DOB — only computed age in years.
+    /// </summary>
+    ClientDemographicsSummary? Demographics = null
 );

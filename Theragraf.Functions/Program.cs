@@ -164,6 +164,26 @@ var host = new HostBuilder()
 
             return new CosmosGoalRepository(cosmosClient, dbName, goalsContainer);
         });
+
+        services.AddSingleton<IClientRepository>(sp =>
+        {
+            var cosmosClient      = sp.GetRequiredService<CosmosClient>();
+            var encryption        = sp.GetRequiredService<IRedactionMapEncryption>();
+            var dbName            = config["CosmosDb:DatabaseName"] ?? "theragraf";
+            var clientsContainer  = config["CosmosDb:ClientsContainerName"] ?? "clients";
+
+            // Auto-provision clients container locally. In Azure, Bicep owns provisioning.
+            var endpoint = config["CosmosDb:AccountEndpoint"];
+            if (string.IsNullOrWhiteSpace(endpoint))
+            {
+                var db = cosmosClient.CreateDatabaseIfNotExistsAsync(dbName).GetAwaiter().GetResult();
+                db.Database.CreateContainerIfNotExistsAsync(
+                    new ContainerProperties { Id = clientsContainer, PartitionKeyPath = "/clientId" })
+                    .GetAwaiter().GetResult();
+            }
+
+            return new CosmosClientRepository(cosmosClient, dbName, clientsContainer, encryption);
+        });
     })
     .Build();
 

@@ -18,6 +18,7 @@ import { stripClientIdPrefix } from '@/utils/clientId';
 import type { TherapyDiscipline } from '@/types';
 import SessionsTable from './SessionsTable';
 import GoalsPanel from './GoalsPanel';
+import DemographicsPanel from './DemographicsPanel';
 
 const useStyles = makeStyles({
   page: {
@@ -198,6 +199,10 @@ export default function ClientProfile() {
           </div>
         </>
       )}
+
+      <Divider>Demographics &amp; Intake</Divider>
+
+      <DemographicsPanel clientId={clientId} />
 
       <Divider>Treatment Goals</Divider>
 

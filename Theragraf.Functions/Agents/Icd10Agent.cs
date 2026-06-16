@@ -137,21 +137,73 @@ public class Icd10Agent(Kernel kernel, ILoggerFactory loggerFactory)
                 "Z65.8 (other specified problems related to psychosocial circumstances)"
         };
 
-    public async Task<IReadOnlyList<IcdCode>> SuggestIcdCodesAsync(SoapNote note, TherapyDiscipline discipline)
+    public async Task<IReadOnlyList<IcdCode>> SuggestIcdCodesAsync(
+        SoapNote note, TherapyDiscipline discipline,
+        ClientDemographicsSummary? demographics = null)
     {
         var function = Kernel.Plugins.GetFunction("Icd10Agent", "Icd10Agent");
         var soapJson = JsonSerializer.Serialize(note, JsonOptions);
-        var icdList = IcdCodeLists[discipline];
+        var icdList  = IcdCodeLists[discipline];
+
+        // Build a concise, non-PII demographics context string for the prompt.
+        // Only age range (not exact age) and sex are included to minimise re-identification risk.
+        var demographicsContext = BuildDemographicsContext(demographics);
+
         var arguments = new KernelArguments
         {
-            ["input"] = soapJson,
-            ["icdCodeList"] = icdList,
-            ["discipline"] = discipline.ToString()
+            ["input"]               = soapJson,
+            ["icdCodeList"]         = icdList,
+            ["discipline"]          = discipline.ToString(),
+            ["demographicsContext"] = demographicsContext,
         };
         var result = await Kernel.InvokeAsync(function, arguments);
 
         var response = JsonSerializer.Deserialize<Icd10Response>(StripMarkdownCodeFence(result.ToString()), JsonOptions)!;
         return response.SuggestedIcdCodes;
+    }
+
+    /// <summary>
+    /// Returns a short plain-text demographics context string suitable for inclusion in a
+    /// clinical AI prompt.  Only age range (not exact age) and sex are forwarded to reduce
+    /// re-identification risk.  Prior diagnoses and functional limitations are included as
+    /// they are clinical, not identifying, context.
+    /// </summary>
+    private static string BuildDemographicsContext(ClientDemographicsSummary? d)
+    {
+        if (d is null) return "No demographic context available.";
+
+        var parts = new List<string>();
+
+        if (d.AgeYears.HasValue)
+        {
+            var age = d.AgeYears.Value;
+            var range = age switch
+            {
+                < 3   => "infant (0-2 yrs)",
+                < 6   => "preschool age (3-5 yrs)",
+                < 13  => "school age (6-12 yrs)",
+                < 18  => "adolescent (13-17 yrs)",
+                < 26  => "young adult (18-25 yrs)",
+                < 40  => "adult (26-39 yrs)",
+                < 65  => "middle-aged adult (40-64 yrs)",
+                < 80  => "older adult (65-79 yrs)",
+                _     => "elderly adult (80+ yrs)",
+            };
+            parts.Add($"Age range: {range}");
+        }
+
+        if (d.Sex != BiologicalSex.NotSpecified)
+            parts.Add($"Sex: {d.Sex}");
+
+        if (!string.IsNullOrWhiteSpace(d.PriorDiagnoses))
+            parts.Add($"Prior diagnoses/history: {d.PriorDiagnoses}");
+
+        if (!string.IsNullOrWhiteSpace(d.FunctionalLimitations))
+            parts.Add($"Functional limitations: {d.FunctionalLimitations}");
+
+        return parts.Count > 0
+            ? string.Join("; ", parts) + "."
+            : "No demographic context available.";
     }
 
     private record Icd10Response(IReadOnlyList<IcdCode> SuggestedIcdCodes);

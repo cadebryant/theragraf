@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMsal } from '@azure/msal-react';
+import { useQuery } from '@tanstack/react-query';
 import type { AccountInfo } from '@azure/msal-browser';
 import {
   makeStyles,
@@ -17,6 +18,7 @@ import SessionMetadataForm, { type SessionMetadata } from './SessionMetadataForm
 import { stripClientIdPrefix } from '@/utils/clientId';
 import AudioRecorder from './AudioRecorder';
 import { startDocumentation, toSessionDateKey } from '@/api/sessions';
+import { getClientDemographics } from '@/api/clients';
 import type { TranscriptInput } from '@/types';
 
 const useStyles = makeStyles({
@@ -96,6 +98,16 @@ export default function NewSession() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Pre-fetch demographics so they can be forwarded in the pipeline for better ICD-10 coding.
+  // Only triggered once a clientId has been entered.
+  const trimmedClientId = metadata.clientId.trim();
+  const demographicsQuery = useQuery({
+    queryKey: ['clientDemographics', trimmedClientId],
+    queryFn: () => getClientDemographics(trimmedClientId),
+    enabled: trimmedClientId.length > 0,
+    staleTime: 5 * 60 * 1000, // 5 min — stable intake data
+  });
+
   function handleTranscriptReady(transcript: string, durationSeconds: number) {
     setRawTranscript(transcript);
     setMetadata((m) => ({
@@ -130,6 +142,15 @@ export default function NewSession() {
         sessionDurationMinutes: metadata.sessionDurationMinutes,
         setting: metadata.setting,
         payer: metadata.payer,
+        // Forward non-PII summary when available — only ageYears (never DOB), sex, and clinical text.
+        demographics: demographicsQuery.data
+          ? {
+              ageYears: demographicsQuery.data.ageYears,
+              sex: demographicsQuery.data.sex,
+              priorDiagnoses: demographicsQuery.data.priorDiagnoses,
+              functionalLimitations: demographicsQuery.data.functionalLimitations,
+            }
+          : undefined,
       };
 
       const response = await startDocumentation(input);

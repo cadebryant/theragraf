@@ -123,5 +123,27 @@ resource goalsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/cont
   }
 }
 
+resource clientsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: database
+  name: 'clients'
+  properties: {
+	resource: {
+	  id: 'clients'
+	  partitionKey: {
+		paths: [ '/clientId' ]
+		kind: 'Hash'
+	  }
+	  indexingPolicy: {
+		indexingMode: 'consistent'
+		includedPaths: [ { path: '/*' } ]
+		excludedPaths: [
+		  // Never index the encrypted DOB blob — it is opaque binary data.
+		  { path: '/encryptedDateOfBirth/*' }
+		]
+	  }
+	}
+  }
+}
+
 output accountName string = cosmosAccount.name
 output endpoint string = cosmosAccount.properties.documentEndpoint

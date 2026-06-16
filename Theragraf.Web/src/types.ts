@@ -81,6 +81,8 @@ export interface TranscriptInput {
   sessionDurationMinutes?: number;
   setting?: ClinicalSetting;
   payer?: PayerType;
+  /** Optional non-PII demographics context to improve ICD-10 suggestions. */
+  demographics?: ClientDemographicsSummary;
 }
 
 /** Body for PATCH /api/sessions/{clientId}/{sessionDate}. */
@@ -216,6 +218,37 @@ export interface GoalSuggestion {
 export interface GoalSuggestRequest {
   soapNote: SoapNote;
   discipline: string;
+}
+
+// ── Client Demographics ───────────────────────────────────────────────────────
+
+export type BiologicalSex = 'NotSpecified' | 'Male' | 'Female' | 'Other';
+
+/** Non-PII summary forwarded into the documentation pipeline for better ICD-10 coding. */
+export interface ClientDemographicsSummary {
+  ageYears: number | null;
+  sex: BiologicalSex;
+  priorDiagnoses: string | null;
+  functionalLimitations: string | null;
+}
+
+/** Returned by GET /api/clients/{clientId}. DOB is never returned. */
+export interface ClientDemographicsResponse {
+  clientId: string;
+  ageYears: number | null;
+  sex: BiologicalSex;
+  priorDiagnoses: string | null;
+  functionalLimitations: string | null;
+  updatedAt: string;
+}
+
+/** Body for PUT /api/clients/{clientId}. */
+export interface UpsertClientDemographicsRequest {
+  /** ISO 8601 date, e.g. "1985-04-12". Send null to clear; omit to leave unchanged. */
+  dateOfBirth?: string | null;
+  sex: BiologicalSex;
+  priorDiagnoses?: string | null;
+  functionalLimitations?: string | null;
 }
 
 // ── Speech ────────────────────────────────────────────────────────────────────

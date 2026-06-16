@@ -212,5 +212,26 @@ public class DocumentationOrchestratorTests
         result.SuggestedCptCodes.Should().BeEquivalentTo(cptCodes);
         result.SuggestedIcdCodes.Should().BeEquivalentTo(icdCodes);
     }
+
+    [Fact]
+    public async Task RunOrchestrator_ForwardsDemographicsToIcd10Activity()
+    {
+        var demographics = new ClientDemographicsSummary(AgeYears: 45, Sex: BiologicalSex.Female,
+            PriorDiagnoses: "T2DM", FunctionalLimitations: null);
+
+        var input = new TranscriptInput(
+            "transcript", "Dr. Adams", "client-001", DateTimeOffset.UtcNow,
+            Demographics: demographics);
+
+        _context.GetInput<TranscriptInput>().Returns(input);
+        ConfigureActivityStubs();
+
+        await _sut.RunOrchestrator(_context);
+
+        await _context.Received(1).CallActivityAsync<IReadOnlyList<IcdCode>>(
+            "Icd10Activity",
+            Arg.Is<Icd10ActivityInput>(i => i.Demographics == demographics),
+            Arg.Any<TaskOptions?>());
+    }
 }
 

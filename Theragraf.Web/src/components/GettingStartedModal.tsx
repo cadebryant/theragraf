@@ -115,8 +115,9 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
             <div className={styles.content}>
               <Text className={styles.intro}>
                 TheraGraf uses AI to generate SOAP notes, CPT billing codes, and ICD-10 diagnoses
-                from recorded therapy session transcripts — so you can spend less time on
-                documentation and more time with patients.
+                from recorded therapy session transcripts. Build client profiles with intake data
+                and track SMART treatment goals — so you can spend less time on paperwork and more
+                time with patients.
               </Text>
 
               <div className={styles.stepList}>
@@ -144,11 +145,11 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
                 <div className={styles.step}>
                   <Target24Regular className={styles.stepIcon} />
                   <div className={styles.stepText}>
-                    <Text className={styles.stepTitle}>3. Track treatment goals</Text>
+                    <Text className={styles.stepTitle}>3. Build client profiles &amp; track goals</Text>
                     <Text className={styles.stepDesc}>
-                      Open a client's profile to manage SMART goals and add progress notes after
-                      each session. Use <strong>Suggest Goals</strong> to generate goal candidates
-                      from the latest SOAP note.
+                      Open a client's profile to add intake information (age, sex, prior diagnoses)
+                      and manage SMART treatment goals. Intake data enriches ICD-10 suggestions;
+                      date of birth is encrypted and never shared with the AI.
                     </Text>
                   </div>
                 </div>

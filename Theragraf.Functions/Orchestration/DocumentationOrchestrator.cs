@@ -57,7 +57,7 @@ public class DocumentationOrchestrator
             logger.LogInformation("Stage: Icd10Coding");
             var icdCodes = await context.CallActivityAsync<IReadOnlyList<IcdCode>>(
                 "Icd10Activity",
-                new Icd10ActivityInput(finalized.RestoredNote, input.Discipline),
+                new Icd10ActivityInput(finalized.RestoredNote, input.Discipline, input.Demographics),
                 RetryOptions);
 
             var result = finalized with { SuggestedCptCodes = cptCodes, SuggestedIcdCodes = icdCodes };
