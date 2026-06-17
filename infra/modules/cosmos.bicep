@@ -145,5 +145,28 @@ resource clientsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/co
   }
 }
 
+resource rateLimitsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: database
+  name: 'rate-limits'
+  properties: {
+	resource: {
+	  id: 'rate-limits'
+	  partitionKey: {
+		paths: [ '/userId' ]
+		kind: 'Hash'
+	  }
+	  defaultTtl: 60  // Automatically delete rate limit documents after 60 seconds (matches time window)
+	  indexingPolicy: {
+		indexingMode: 'consistent'
+		includedPaths: [ { path: '/*' } ]
+		excludedPaths: [
+		  { path: '/Count/*' }
+		  { path: '/WindowStart/*' }
+		]
+	  }
+	}
+  }
+}
+
 output accountName string = cosmosAccount.name
 output endpoint string = cosmosAccount.properties.documentEndpoint

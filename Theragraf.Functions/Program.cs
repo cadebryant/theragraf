@@ -50,15 +50,17 @@ var host = new HostBuilder()
                 var dbName = config["CosmosDb:DatabaseName"] ?? "theragraf";
                 var logger = sp.GetRequiredService<ILogger<CosmosRateLimitService>>();
 
-                // Auto-provision rate-limit container locally.
-                var endpoint = config["CosmosDb:AccountEndpoint"];
-                if (string.IsNullOrWhiteSpace(endpoint))
-                {
-                    var db = cosmosClient.CreateDatabaseIfNotExistsAsync(dbName).GetAwaiter().GetResult();
-                    db.Database.CreateContainerIfNotExistsAsync(
-                        new ContainerProperties { Id = CosmosRateLimitService.ContainerName, PartitionKeyPath = "/userId" })
-                        .GetAwaiter().GetResult();
-                }
+                // Auto-provision rate-limit container on all deployments (local emulator and Azure).
+                // This ensures the container exists with proper TTL configuration for automatic cleanup.
+                var db = cosmosClient.CreateDatabaseIfNotExistsAsync(dbName).GetAwaiter().GetResult();
+                db.Database.CreateContainerIfNotExistsAsync(
+                    new ContainerProperties
+                    {
+                        Id = CosmosRateLimitService.ContainerName,
+                        PartitionKeyPath = "/userId",
+                        DefaultTimeToLive = 60  // Automatically delete rate limit documents after 60 seconds
+                    })
+                    .GetAwaiter().GetResult();
 
                 return new CosmosRateLimitService(cosmosClient, dbName, logger);
             });
