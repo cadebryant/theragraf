@@ -67,6 +67,10 @@ export default function SessionReview() {
   const [noteFormat, setNoteFormat] = useState<string>('Soap');
   const [cptCodes, setCptCodes] = useState<CptCode[]>([]);
   const [icdCodes, setIcdCodes] = useState<IcdCode[]>([]);
+  const [isApproved, setIsApproved] = useState<boolean>(false);
+  const [approvedBy, setApprovedBy] = useState<string | null>(null);
+  const [approvedAt, setApprovedAt] = useState<string | null>(null);
+  const [attestationChecked, setAttestationChecked] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [activeStage, setActiveStage] = useState(0);
@@ -92,6 +96,10 @@ export default function SessionReview() {
       setNoteFormat(status.output.noteFormat ?? 'Soap');
       setCptCodes(status.output.suggestedCptCodes);
       setIcdCodes(status.output.suggestedIcdCodes);
+      // New draft: not yet approved
+      setIsApproved(false);
+      setApprovedBy(null);
+      setApprovedAt(null);
       if (stageTimerRef.current) clearInterval(stageTimerRef.current);
       setActiveStage(5);
     }
@@ -126,9 +134,31 @@ export default function SessionReview() {
         suggestedCptCodes: cptCodes,
         suggestedIcdCodes: icdCodes,
       });
+      // Content edits clear approval
+      setIsApproved(false);
+      setApprovedBy(null);
+      setApprovedAt(null);
       navigate(`/sessions/${encodeURIComponent(state.clientId)}/${encodeURIComponent(state.sessionDateKey)}`);
     } catch (err) {
       setSaveError((err as Error).message);
+      setSaving(false);
+    }
+  }
+
+  async function handleApprove() {
+    if (!state) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const updated = await updateSession(state.clientId, state.sessionDateKey, {
+        approvalUpdate: { isApproved: true },
+      });
+      setIsApproved(Boolean(updated.isApproved));
+      setApprovedBy(updated.approvedBy ?? null);
+      setApprovedAt(updated.approvedAt ?? null);
+    } catch (err) {
+      setSaveError((err as Error).message);
+    } finally {
       setSaving(false);
     }
   }
@@ -176,8 +206,13 @@ export default function SessionReview() {
         </div>
       )}
 
-      {isComplete && soapNote && (
+          {isComplete && soapNote && (
         <>
+          <MessageBar intent="info">
+            <MessageBarBody>
+              AI-generated draft: This note and suggested codes were produced by the documentation pipeline and may contain errors. Review carefully before approving or exporting.
+            </MessageBarBody>
+          </MessageBar>
           <SoapNoteEditor value={soapNote} onChange={setSoapNote} noteFormat={noteFormat as 'Soap' | 'Dap'} />
           <CptCodesEditor codes={cptCodes} onChange={setCptCodes} />
           <IcdCodesEditor codes={icdCodes} onChange={setIcdCodes} />
@@ -188,10 +223,22 @@ export default function SessionReview() {
             </MessageBar>
           )}
 
-          <div className={styles.actions}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalM }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={attestationChecked}
+                onChange={(e) => setAttestationChecked(e.target.checked)}
+              />
+              <Text style={{ fontSize: 12, color: tokens.colorNeutralForeground3 }}>
+                I have verified this draft and accept responsibility for clinical accuracy.
+              </Text>
+            </label>
+            <div className={styles.actions}>
             <Button
               appearance="subtle"
               icon={<ArrowDownload24Regular />}
+              disabled={!isApproved}
               onClick={() => {
                 if (!state || !soapNote) return;
                 exportSessionPdf({
@@ -214,6 +261,7 @@ export default function SessionReview() {
             <Button
               appearance="subtle"
               icon={<ArrowDownload24Regular />}
+              disabled={!isApproved}
               onClick={() => {
                 if (!state || !soapNote) return;
                 exportSession837p({
@@ -230,6 +278,9 @@ export default function SessionReview() {
             >
               Export 837P
             </Button>
+            </div>
+          </div>
+          <div className={styles.actions}>
             <Button
               appearance="secondary"
               icon={<ArrowLeft24Regular />}
@@ -245,6 +296,26 @@ export default function SessionReview() {
             >
               Save Session
             </Button>
+            <Button
+              appearance="primary"
+              icon={saving ? <Spinner size="tiny" /> : <Save24Regular />}
+              onClick={() => void handleApprove()}
+              disabled={!attestationChecked || saving || isApproved}
+            >
+              Verify & Approve
+            </Button>
+          </div>
+          <div>
+            {!isApproved && (
+              <Text style={{ color: tokens.colorNeutralForeground3, fontSize: 12 }}>
+                Note is not approved. Export is disabled until a therapist verifies and approves.
+              </Text>
+            )}
+            {isApproved && (
+              <Text style={{ color: tokens.colorBrandForeground1, fontSize: 12 }}>
+                Approved by {approvedBy ?? 'therapist'} on {approvedAt ?? ''}
+              </Text>
+            )}
           </div>
         </>
       )}

@@ -20,6 +20,9 @@
   <Folder Name="/postman/">
     <File Path="theragraf.postman_collection.json" />
   </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="docs/copilot-handoff.md" />
+  </Folder>
   <Folder Name="/Theragraf.Web/">
     <File Path="Theragraf.Web/index.html" />
     <File Path="Theragraf.Web/package.json" />

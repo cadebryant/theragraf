@@ -172,10 +172,10 @@ export default function SessionDetail() {
         </div>
         {!editing ? (
           <>
-            <Button appearance="subtle" icon={<ArrowDownload24Regular />} onClick={handleExportPdf}>
+            <Button appearance="subtle" icon={<ArrowDownload24Regular />} onClick={handleExportPdf} disabled={!session.isApproved}>
               Export PDF
             </Button>
-            <Button appearance="subtle" icon={<ArrowDownload24Regular />} onClick={handleExport837p}>
+            <Button appearance="subtle" icon={<ArrowDownload24Regular />} onClick={handleExport837p} disabled={!session.isApproved}>
               Export 837P
             </Button>
             <Button appearance="secondary" icon={<Edit24Regular />} onClick={startEdit}>
@@ -210,6 +210,12 @@ export default function SessionDetail() {
         <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
           Therapist: {session.therapistName}
         </Text>
+        {/* Approval status */}
+        {!session.isApproved ? (
+          <Badge appearance="filled" color="warning">Unapproved draft</Badge>
+        ) : (
+          <Badge appearance="filled" color="success">Approved</Badge>
+        )}
       </div>
 
       {saveMutation.error && (

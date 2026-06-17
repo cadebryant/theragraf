@@ -72,6 +72,10 @@ export interface SessionResponse {
   suggestedCptCodes: CptCode[];
   suggestedIcdCodes: IcdCode[];
   createdAt: string;
+  // Therapist approval metadata (backend persisted)
+  isApproved?: boolean;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
 }
 
 /** Sent to POST /api/DocumentationStart. */
@@ -95,6 +99,14 @@ export interface SessionUpdateRequest {
   soapNote?: SoapNoteUpdate;
   suggestedCptCodes?: CptCode[];
   suggestedIcdCodes?: IcdCode[];
+  /** Optional approval action to persist therapist approval state. */
+  approvalUpdate?: ApprovalUpdate;
+}
+
+/** Sent to session update endpoint when applying/clearing therapist approval. */
+export interface ApprovalUpdate {
+  /** Set to true to mark approved, false to clear approval. */
+  isApproved: boolean;
 }
 
 // ── Caseload / Pagination ─────────────────────────────────────────────────────
