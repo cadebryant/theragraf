@@ -78,6 +78,13 @@ public class SessionsUpdate(
         // Ownership check — the session belongs to the therapist matched by the JWT.
         // Demo records (TherapistName == Demo:TherapistName) are editable by anyone.
         var identity = ClaimsHelper.GetTherapistIdentity(req, config);
+        var approval = update.Approval;
+        if (approval?.VerifyAndApprove == true)
+        {
+            approval = approval with { ApprovedBy = identity ?? approval.ApprovedBy ?? "dev" };
+            update = update with { Approval = approval };
+        }
+
         if (identity is not null
             && !string.Equals(identity, clientId, StringComparison.OrdinalIgnoreCase))
         {
@@ -122,6 +129,7 @@ public class SessionsUpdate(
                 redactedNote, newRedactionMap,
                 update.SuggestedCptCodes,
                 update.SuggestedIcdCodes,
+                update.Approval,
                 cancellationToken);
         }
         catch (Exception ex)

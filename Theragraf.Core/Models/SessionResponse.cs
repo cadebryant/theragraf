@@ -17,5 +17,8 @@ public record SessionResponse(
     SoapNote SoapNote,
     IReadOnlyList<CptCode> SuggestedCptCodes,
     IReadOnlyList<IcdCode> SuggestedIcdCodes,
-    DateTimeOffset CreatedAt
+    DateTimeOffset CreatedAt,
+    bool IsApproved,
+    string? ApprovedBy,
+    DateTimeOffset? ApprovedAt
 );

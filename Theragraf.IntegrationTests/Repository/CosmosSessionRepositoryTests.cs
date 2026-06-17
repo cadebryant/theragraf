@@ -408,7 +408,8 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
             soapNoteUpdate:  null,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        null,
-            icdCodes:        null);
+            icdCodes:        null,
+            approval:        null);
 
         result.Should().BeNull();
     }
@@ -434,7 +435,8 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
             soapNoteUpdate:  updatedNote,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        null,
-            icdCodes:        null);
+            icdCodes:        null,
+            approval:        null);
 
         result.Should().NotBeNull();
         result!.SoapNote.Subjective.Should().Be("Updated subjective.");
@@ -456,7 +458,8 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
             soapNoteUpdate:  updatedNote,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        null,
-            icdCodes:        null);
+            icdCodes:        null,
+            approval:        null);
 
         result.Should().NotBeNull();
         result!.TherapistName.Should().Be("Dr. Smith");
@@ -484,7 +487,8 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
             soapNoteUpdate:  null,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        newCptCodes,
-            icdCodes:        null);
+            icdCodes:        null,
+            approval:        null);
 
         result.Should().NotBeNull();
         result!.SuggestedCptCodes.Should().HaveCount(2);
@@ -512,7 +516,8 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
             soapNoteUpdate:  null,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        null,
-            icdCodes:        newIcdCodes);
+            icdCodes:        newIcdCodes,
+            approval:        null);
 
         result.Should().NotBeNull();
         result!.SuggestedIcdCodes.Should().HaveCount(2);
@@ -535,7 +540,8 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
             soapNoteUpdate:  updatedNote,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        null,
-            icdCodes:        null);
+            icdCodes:        null,
+            approval:        null);
 
         // Independent read-back confirms the document was persisted
         var readBack = await repo.GetByClientIdAndDateAsync(_clientId, rowKey);
@@ -566,7 +572,8 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
             soapNoteUpdate:  redactedNote,
             newRedactionMap: newMap,
             cptCodes:        null,
-            icdCodes:        null);
+            icdCodes:        null,
+            approval:        null);
 
         // MapToResponse should decrypt and restore PII before returning
         result.Should().NotBeNull();
@@ -589,7 +596,8 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
             soapNoteUpdate:  null,  // no SOAP change
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        newCptCodes,
-            icdCodes:        null);
+            icdCodes:        null,
+            approval:        null);
 
         result.Should().NotBeNull();
         result!.SoapNote.Subjective.Should().Be("Original SOAP.");
@@ -623,7 +631,8 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
             soapNoteUpdate:  partialUpdate,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        null,
-            icdCodes:        null);
+            icdCodes:        null,
+            approval:        null);
 
         result.Should().NotBeNull();
         result!.SoapNote.Subjective.Should().Be("Updated S.",   "provided field must be updated");
@@ -653,7 +662,8 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
             soapNoteUpdate:  null,
             newRedactionMap: new Dictionary<string, string>(),
             cptCodes:        newCptCodes,
-            icdCodes:        null);
+            icdCodes:        null,
+            approval:        null);
 
         result.Should().NotBeNull();
         result!.SoapNote.Subjective.Should().Be("John Doe reports mild pain.",
@@ -694,7 +704,8 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
             soapNoteUpdate:  partialUpdate,
             newRedactionMap: newMap,
             cptCodes:        null,
-            icdCodes:        null);
+            icdCodes:        null,
+            approval:        null);
 
         result.Should().NotBeNull();
         result!.SoapNote.Subjective.Should().Be("Jane Doe reports pain.",
@@ -921,3 +932,5 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         stats.TopIcdCodes[0].Count.Should().Be(2);
     }
 }
+
+

@@ -35,6 +35,7 @@ public interface ISessionRepository
         IReadOnlyDictionary<string,string> newRedactionMap,
         IReadOnlyList<CptCode>?            cptCodes,
         IReadOnlyList<IcdCode>?            icdCodes,
+        ApprovalUpdate?                    approval,
         CancellationToken                  cancellationToken = default);
 
     /// <summary>

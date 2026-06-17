@@ -32,5 +32,9 @@ public class SessionRecord
     /// <summary>JSON-serialized list of <see cref="IcdCode"/>.</summary>
     public string IcdCodesJson { get; set; } = string.Empty;
 
+    public bool IsApproved { get; set; }
+    public string? ApprovedBy { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

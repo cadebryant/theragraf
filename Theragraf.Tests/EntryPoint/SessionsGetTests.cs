@@ -33,7 +33,10 @@ public class SessionsGetTests
         SoapNote: new SoapNote("S", "O", "A", "P"),
         SuggestedCptCodes: new List<CptCode> { new("97530", "Therapeutic activities", "Rationale") },
         SuggestedIcdCodes: new List<IcdCode> { new("F82", "Coordination disorder", "Rationale") },
-        CreatedAt: new DateTimeOffset(2024, 10, 10, 10, 0, 0, TimeSpan.Zero)
+        CreatedAt: new DateTimeOffset(2024, 10, 10, 10, 0, 0, TimeSpan.Zero),
+        IsApproved: false,
+        ApprovedBy: null,
+        ApprovedAt: null
     );
 
     private static readonly IConfiguration DisabledAuthConfig =

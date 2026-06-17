@@ -75,6 +75,9 @@ public class CosmosSessionRepository : ISessionRepository
             SoapNote                 = soapNote,
             SuggestedCptCodes        = cptCodes,
             SuggestedIcdCodes        = icdCodes,
+            IsApproved               = record.IsApproved,
+            ApprovedBy               = record.ApprovedBy,
+            ApprovedAt               = record.ApprovedAt,
             CreatedAt                = record.CreatedAt,
         };
 
@@ -204,6 +207,7 @@ public class CosmosSessionRepository : ISessionRepository
         IReadOnlyDictionary<string, string> newRedactionMap,
         IReadOnlyList<CptCode>?             cptCodes,
         IReadOnlyList<IcdCode>?             icdCodes,
+        ApprovalUpdate?                     approval,
         CancellationToken                   cancellationToken = default)
     {
         SessionDocument doc;
@@ -235,6 +239,21 @@ public class CosmosSessionRepository : ISessionRepository
             doc.SuggestedCptCodes = cptCodes.ToList();
         if (icdCodes is not null)
             doc.SuggestedIcdCodes = icdCodes.ToList();
+
+        var contentEdited = soapNoteUpdate is not null || cptCodes is not null || icdCodes is not null;
+        if (contentEdited)
+        {
+            doc.IsApproved = false;
+            doc.ApprovedBy = null;
+            doc.ApprovedAt = null;
+        }
+
+        if (approval?.VerifyAndApprove == true)
+        {
+            doc.IsApproved = true;
+            doc.ApprovedBy = approval.ApprovedBy;
+            doc.ApprovedAt = DateTimeOffset.UtcNow;
+        }
 
         // Update the redaction map only when SOAP fields were re-processed.
         // Codes-only updates leave the stored map untouched so existing PII
@@ -347,7 +366,10 @@ public class CosmosSessionRepository : ISessionRepository
             SoapNote:               restoredNote,
             SuggestedCptCodes:      doc.SuggestedCptCodes,
             SuggestedIcdCodes:      doc.SuggestedIcdCodes,
-            CreatedAt:              doc.CreatedAt
+            CreatedAt:              doc.CreatedAt,
+            IsApproved:             doc.IsApproved,
+            ApprovedBy:             doc.ApprovedBy,
+            ApprovedAt:             doc.ApprovedAt
         );
     }
 

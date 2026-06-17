@@ -64,6 +64,15 @@ public class SessionDocument
     [JsonPropertyName("suggestedIcdCodes")]
     public List<IcdCode> SuggestedIcdCodes { get; set; } = [];
 
+    [JsonPropertyName("isApproved")]
+    public bool IsApproved { get; set; }
+
+    [JsonPropertyName("approvedBy")]
+    public string? ApprovedBy { get; set; }
+
+    [JsonPropertyName("approvedAt")]
+    public DateTimeOffset? ApprovedAt { get; set; }
+
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; set; }
 }

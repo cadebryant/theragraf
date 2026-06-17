@@ -11,7 +11,13 @@ namespace Theragraf.Core.Models;
 public record SessionUpdateRequest(
     SoapNoteUpdate?          SoapNote          = null,
     IReadOnlyList<CptCode>?  SuggestedCptCodes = null,
-    IReadOnlyList<IcdCode>?  SuggestedIcdCodes = null
+    IReadOnlyList<IcdCode>?  SuggestedIcdCodes = null,
+    ApprovalUpdate?          Approval          = null
+);
+
+public record ApprovalUpdate(
+    bool VerifyAndApprove,
+    string? ApprovedBy = null
 );
 
 /// <summary>Individual SOAP section updates — all fields optional.</summary>

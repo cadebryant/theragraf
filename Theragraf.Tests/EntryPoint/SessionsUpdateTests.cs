@@ -81,7 +81,10 @@ public class SessionsUpdateTests
         SoapNote:               new SoapNote("S", "O", "A", "P"),
         SuggestedCptCodes:      [],
         SuggestedIcdCodes:      [],
-        CreatedAt:              DateTimeOffset.UtcNow
+        CreatedAt:              DateTimeOffset.UtcNow,
+        IsApproved:             false,
+        ApprovedBy:             null,
+        ApprovedAt:             null
     );
 
     // ── Validation ────────────────────────────────────────────────────────────
@@ -139,7 +142,7 @@ public class SessionsUpdateTests
             .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
                 Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
-                Arg.Any<CancellationToken>())
+                Arg.Any<ApprovalUpdate?>(), Arg.Any<CancellationToken>())
             .Returns((SessionResponse?)null);
 
         var response = await _sut.Update(
@@ -158,7 +161,7 @@ public class SessionsUpdateTests
             .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
                 Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
-                Arg.Any<CancellationToken>())
+                Arg.Any<ApprovalUpdate?>(), Arg.Any<CancellationToken>())
             .Returns(BuildSessionResponse());
 
         var response = await _sut.Update(
@@ -175,7 +178,7 @@ public class SessionsUpdateTests
             .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
                 Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
-                Arg.Any<CancellationToken>())
+                Arg.Any<ApprovalUpdate?>(), Arg.Any<CancellationToken>())
             .Returns(BuildSessionResponse());
 
         await _sut.Update(
@@ -192,7 +195,7 @@ public class SessionsUpdateTests
             .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
                 Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
-                Arg.Any<CancellationToken>())
+                Arg.Any<ApprovalUpdate?>(), Arg.Any<CancellationToken>())
             .Returns(BuildSessionResponse());
 
         var cptCodes = new[] { new CptCode("97110", "Therapeutic exercise", "Strengthening", 2) };
@@ -217,7 +220,7 @@ public class SessionsUpdateTests
                 Arg.Do<SoapNoteUpdate?>(n => capturedNote = n),
                 Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
-                Arg.Any<CancellationToken>())
+                Arg.Any<ApprovalUpdate?>(), Arg.Any<CancellationToken>())
             .Returns(BuildSessionResponse());
 
         await _sut.Update(
@@ -241,7 +244,7 @@ public class SessionsUpdateTests
                 Arg.Do<SoapNoteUpdate?>(n => capturedNote = n),
                 Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
-                Arg.Any<CancellationToken>())
+                Arg.Any<ApprovalUpdate?>(), Arg.Any<CancellationToken>())
             .Returns(BuildSessionResponse());
 
         // Only subjective and plan are provided; objective and assessment are omitted.
@@ -264,7 +267,7 @@ public class SessionsUpdateTests
             .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
                 Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
-                Arg.Any<CancellationToken>())
+                Arg.Any<ApprovalUpdate?>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new Exception("Cosmos unavailable"));
 
         var response = await _sut.Update(
@@ -281,7 +284,7 @@ public class SessionsUpdateTests
             .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
                 Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
                 Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
-                Arg.Any<CancellationToken>())
+                Arg.Any<ApprovalUpdate?>(), Arg.Any<CancellationToken>())
             .Returns(BuildSessionResponse());
 
         await _sut.Update(
@@ -292,7 +295,34 @@ public class SessionsUpdateTests
             "client-001", "2024-10-10T10-00-00Z",
             Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
             Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
-            Arg.Any<CancellationToken>());
+            Arg.Any<ApprovalUpdate?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Update_ApprovalRequest_PassesApprovalToRepository()
+    {
+        ApprovalUpdate? capturedApproval = null;
+        var approvedResponse = BuildSessionResponse() with
+        {
+            IsApproved = true,
+            ApprovedBy = "Dr. Smith",
+            ApprovedAt = DateTimeOffset.UtcNow
+        };
+
+        _repository
+            .UpdateAsync(Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
+                Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
+                Arg.Do<ApprovalUpdate?>(a => capturedApproval = a),
+                Arg.Any<CancellationToken>())
+            .Returns(approvedResponse);
+
+        await _sut.Update(
+            BuildRequest(new { approval = new { verifyAndApprove = true } }),
+            "client-001", "2024-10-10T10-00-00Z", CancellationToken.None);
+
+        capturedApproval.Should().NotBeNull();
+        capturedApproval!.VerifyAndApprove.Should().BeTrue();
     }
 
     // -- Ownership tests ------------------------------------------------------
@@ -349,6 +379,8 @@ public class SessionsUpdateTests
             Arg.Any<string>(), Arg.Any<string>(),
             Arg.Any<SoapNoteUpdate?>(), Arg.Any<IReadOnlyDictionary<string, string>>(),
             Arg.Any<IReadOnlyList<CptCode>?>(), Arg.Any<IReadOnlyList<IcdCode>?>(),
-            Arg.Any<CancellationToken>());
+                Arg.Any<ApprovalUpdate?>(), Arg.Any<CancellationToken>());
     }
 }
+
+
