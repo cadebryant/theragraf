@@ -10,8 +10,13 @@ using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 using Theragraf.Functions.Helpers;
 using Theragraf.Functions.Logging;
+using Theragraf.Functions.Services;
 
-public class DocumentationStart(ILoggerFactory loggerFactory, IConfiguration config, IAuditLogger auditLogger)
+public class DocumentationStart(
+    ILoggerFactory loggerFactory,
+    IConfiguration config,
+    IAuditLogger auditLogger,
+    IPromptInputHardeningService promptInputHardeningService)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<DocumentationStart>();
     private static readonly JsonSerializerOptions JsonOptions = JsonConfig.Web;
@@ -61,6 +66,13 @@ public class DocumentationStart(ILoggerFactory loggerFactory, IConfiguration con
             var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
             await badRequest.WriteStringAsync(
                 "SessionDurationMinutes must be between 1 and 480.", cancellationToken);
+            return badRequest;
+        }
+
+        if (!promptInputHardeningService.TrySanitize(input, out input, out var hardeningError))
+        {
+            var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+            await badRequest.WriteStringAsync(hardeningError ?? "Request content failed validation.", cancellationToken);
             return badRequest;
         }
 

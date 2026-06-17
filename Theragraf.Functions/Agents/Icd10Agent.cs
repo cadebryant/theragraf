@@ -3,9 +3,14 @@ namespace Theragraf.Functions.Agents;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
+using Theragraf.Core.Exceptions;
 using Theragraf.Core.Models;
+using Theragraf.Functions.Services;
 
-public class Icd10Agent(Kernel kernel, ILoggerFactory loggerFactory)
+public class Icd10Agent(
+    Kernel kernel,
+    ILoggerFactory loggerFactory,
+    IPromptInputHardeningService promptInputHardeningService)
     : BaseAgent(kernel, loggerFactory.CreateLogger<Icd10Agent>()), IIcd10Agent
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -195,6 +200,12 @@ public class Icd10Agent(Kernel kernel, ILoggerFactory loggerFactory)
         var function = Kernel.Plugins.GetFunction("Icd10Agent", "Icd10Agent");
         var soapJson = JsonSerializer.Serialize(note, JsonOptions);
         var icdList  = IcdCodeLists[discipline];
+
+        if (demographics is not null &&
+            !promptInputHardeningService.TrySanitize(demographics, out demographics, out var hardeningError))
+        {
+            throw new AgentException("Icd10Agent", hardeningError ?? "Demographics content failed validation.");
+        }
 
         // Build a concise, non-PII demographics context string for the prompt.
         // Only age range (not exact age) and sex are included to minimise re-identification risk.

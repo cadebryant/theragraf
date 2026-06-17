@@ -83,6 +83,7 @@ var host = new HostBuilder()
         });
         services.AddSingleton<ITextAnalyticsClientAdapter, TextAnalyticsClientAdapter>();
         services.AddSingleton<IPiiRedactionService, PiiRedactionService>();
+        services.AddSingleton<IPromptInputHardeningService, PromptInputHardeningService>();
 
         // Semantic Kernel — Azure OpenAI
         services.AddSingleton<Kernel>(sp =>

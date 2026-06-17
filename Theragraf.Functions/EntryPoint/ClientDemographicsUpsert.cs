@@ -10,12 +10,14 @@ using Theragraf.Core.Models;
 using Theragraf.Core.Services;
 using Theragraf.Functions.Helpers;
 using Theragraf.Functions.Logging;
+using Theragraf.Functions.Services;
 
 public class ClientDemographicsUpsert(
     IClientRepository repository,
     IConfiguration    config,
     ILoggerFactory    loggerFactory,
-    IAuditLogger      auditLogger)
+    IAuditLogger      auditLogger,
+    IPromptInputHardeningService promptInputHardeningService)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<ClientDemographicsUpsert>();
     private static readonly JsonSerializerOptions JsonOptions = JsonConfig.Web;
@@ -71,6 +73,13 @@ public class ClientDemographicsUpsert(
         {
             var bad = req.CreateResponse(HttpStatusCode.BadRequest);
             await bad.WriteStringAsync("Request body is required.", cancellationToken);
+            return bad;
+        }
+
+        if (!promptInputHardeningService.TrySanitize(request, out request, out var hardeningError))
+        {
+            var bad = req.CreateResponse(HttpStatusCode.BadRequest);
+            await bad.WriteStringAsync(hardeningError ?? "Request content failed validation.", cancellationToken);
             return bad;
         }
 
