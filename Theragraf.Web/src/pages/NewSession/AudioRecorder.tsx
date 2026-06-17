@@ -118,6 +118,12 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
   const speakerOrderRef = useRef<string[]>([]);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
+  // Mirror state in refs so stopRecording can read the latest values without
+  // being re-created on every state change (avoids stale closure captures).
+  const segmentsRef = useRef<DiarizedSegment[]>([]);
+  const interimTextRef = useRef('');
+  const elapsedRef = useRef(0);
+
   // Auto-scroll transcript
   useEffect(() => {
     if (transcriptRef.current) {
@@ -139,6 +145,44 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
       const { token, region } = await getSpeechToken();
 
       const speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(token, region);
+
+      // ── Accuracy tuning ────────────────────────────────────────────────────
+      // Explicit locale avoids a silent auto-detect fallback that can reduce accuracy.
+      speechConfig.speechRecognitionLanguage = 'en-US';
+
+      // Raw profanity mode prevents the filter from replacing clinical terms
+      // (e.g. medications, anatomical names) with asterisks.
+      speechConfig.setProfanity(SpeechSDK.ProfanityOption.Raw);
+
+      // Extend the initial silence timeout so the first speaker has time to settle
+      // before the SDK decides there is no audio. Default is 5 000 ms.
+      speechConfig.setProperty(
+        SpeechSDK.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs,
+        '10000',
+      );
+
+      // Extend the end-of-utterance silence timeout. Therapy sessions have natural
+      // pauses mid-thought; the 500 ms default cuts sentences too early, producing
+      // fragmented segments that hurt diarization accuracy. 1 800 ms is a good
+      // balance between responsiveness and complete thought capture.
+      speechConfig.setProperty(
+        SpeechSDK.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs,
+        '1800',
+      );
+
+      // TrueText post-processing inserts punctuation and normalises capitalisation
+      // at the sentence level, making transcripts much more readable and improving
+      // the downstream LLM's ability to parse clinical context.
+      speechConfig.setServiceProperty(
+        'wordLevelTimestamps', 'false',
+        SpeechSDK.ServicePropertyChannel.UriQueryParameter,
+      );
+      speechConfig.setProperty(
+        SpeechSDK.PropertyId.SpeechServiceResponse_PostProcessingOption,
+        'TrueText',
+      );
+      // ───────────────────────────────────────────────────────────────────────
+
       const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
       const transcriber = new SpeechSDK.ConversationTranscriber(speechConfig, audioConfig);
       transcriberRef.current = transcriber;
@@ -150,6 +194,7 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
       }
 
       transcriber.transcribing = (_s, e) => {
+        interimTextRef.current = e.result.text;
         setInterimText(e.result.text);
       };
 
@@ -162,10 +207,12 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
           if (!speakerOrderRef.current.includes(speakerId)) {
             speakerOrderRef.current = [...speakerOrderRef.current, speakerId];
           }
-          setSegments((prev) => [
-            ...prev,
-            { speakerId, text, isFinal: true },
-          ]);
+          setSegments((prev) => {
+            const next = [...prev, { speakerId, text, isFinal: true }];
+            segmentsRef.current = next;
+            return next;
+          });
+          interimTextRef.current = '';
           setInterimText('');
         }
       };
@@ -198,7 +245,11 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
 
       setRecording(true);
       setElapsed(0);
-      timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+      timerRef.current = setInterval(() => setElapsed((s) => {
+        const next = s + 1;
+        elapsedRef.current = next;
+        return next;
+      }), 1000);
       window.dispatchEvent(new CustomEvent('theragraf:recording-start'));
     } catch (err) {
       setError(`Could not start recording: ${(err as Error).message}`);
@@ -218,11 +269,11 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
       stopTimer();
       window.dispatchEvent(new CustomEvent('theragraf:recording-stop'));
 
-      // Build the raw transcript string
-      const finalSegments = [...segments];
-      if (interimText.trim()) {
-        // include any dangling interim text
-        finalSegments.push({ speakerId: 'unknown', text: interimText, isFinal: false });
+      // Read from refs — these always hold the latest values regardless of
+      // when this closure was created, avoiding the stale-state race.
+      const finalSegments = [...segmentsRef.current];
+      if (interimTextRef.current.trim()) {
+        finalSegments.push({ speakerId: 'unknown', text: interimTextRef.current, isFinal: false });
       }
 
       const rawTranscript = finalSegments
@@ -232,9 +283,9 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
         })
         .join('\n');
 
-      onTranscriptReady(rawTranscript, elapsed);
+      onTranscriptReady(rawTranscript, elapsedRef.current);
     });
-  }, [segments, interimText, elapsed, stopTimer, onTranscriptReady]);
+  }, [stopTimer, onTranscriptReady]);
 
   // Cleanup on unmount
   useEffect(

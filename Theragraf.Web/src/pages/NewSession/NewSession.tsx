@@ -19,7 +19,7 @@ import { stripClientIdPrefix } from '@/utils/clientId';
 import AudioRecorder from './AudioRecorder';
 import { startDocumentation, toSessionDateKey } from '@/api/sessions';
 import { getClientDemographics } from '@/api/clients';
-import type { TranscriptInput } from '@/types';
+import type { TranscriptInput, TherapyDiscipline } from '@/types';
 
 const useStyles = makeStyles({
   page: {
@@ -56,19 +56,84 @@ function defaultDatetimeLocal() {
 }
 
 /**
- * Extracts individual word tokens from the client ID and the therapist's display
- * name / username so the speech recogniser can bias toward those specific words.
- * e.g. clientId="Cade-02" + name="Uche Obi" → ["Cade", "Uche", "Obi"]
+ * Discipline-specific clinical vocabulary that the speech recogniser should bias
+ * toward. These are terms that standard ASR models commonly mishear because they
+ * are rare in general-purpose training data.
  */
-function buildPhraseHints(clientId: string, account: AccountInfo | undefined): string[] {
-  const tokens = new Set<string>();
+const CLINICAL_PHRASES: Record<string, string[]> = {
+  OccupationalTherapy: [
+    'ADL', 'IADL', 'COPM', 'MOHO', 'FIM', 'Barthel', 'MMSE', 'MoCA',
+    'hemiplegia', 'hemiparesis', 'spasticity', 'contracture', 'ataxia',
+    'dysmetria', 'tremor', 'apraxia', 'agnosia', 'sensory processing',
+    'fine motor', 'gross motor', 'bilateral coordination', 'proprioception',
+    'vestibular', 'tactile discrimination', 'pinch strength', 'grip strength',
+    'range of motion', 'functional mobility', 'transfers', 'adaptive equipment',
+    'orthosis', 'splint', 'upper extremity', 'lower extremity',
+    'therapeutic activities', 'neuromuscular reeducation', 'sensory integration',
+    'constraint-induced movement therapy', 'CIMT', 'mirror therapy',
+  ],
+  PhysicalTherapy: [
+    'MMT', 'manual muscle test', 'goniometry', 'Berg Balance', 'TUG', 'timed up and go',
+    'Oswestry', 'LEFS', 'FABQ', 'PSFS',
+    'radiculopathy', 'myelopathy', 'stenosis', 'spondylosis', 'spondylolisthesis',
+    'meniscus', 'rotator cuff', 'labrum', 'patellofemoral', 'plantar fasciitis',
+    'Achilles tendinopathy', 'piriformis', 'iliotibial band', 'sciatica',
+    'lumbar', 'cervical', 'thoracic', 'sacroiliac', 'glenohumeral',
+    'tibiofemoral', 'calcaneofibular',
+    'manual therapy', 'mobilization', 'manipulation', 'soft tissue mobilization',
+    'IASTM', 'dry needling', 'therapeutic ultrasound', 'TENS', 'iontophoresis',
+    'aquatic therapy', 'kinesiotaping', 'gait training', 'proprioceptive training',
+  ],
+  SpeechLanguagePathology: [
+    'GFTA', 'CELF', 'PPVT', 'EVT', 'ROWPVT', 'EOWPVT', 'BESA', 'CASL',
+    'MBSS', 'FEES', 'MBS', 'VFSS', 'bedside swallowing evaluation',
+    'aphasia', 'dysphasia', 'apraxia of speech', 'dysarthria', 'anarthria',
+    'dysphagia', 'odynophagia', 'aspiration', 'laryngeal penetration',
+    'phonological disorder', 'articulation disorder', 'fluency disorder',
+    'stuttering', 'cluttering', 'voice disorder', 'dysphonia', 'aphonia',
+    'hypernasality', 'hyponasality', 'resonance disorder',
+    'receptive language', 'expressive language', 'pragmatics',
+    'social communication', 'AAC', 'augmentative and alternative communication',
+    'Lidcombe', 'PROMPT', 'minimal pairs', 'Cycles approach', 'Hanen',
+    'oral motor therapy', 'Shaker exercise', 'Mendelsohn maneuver',
+    'supraglottic swallow', 'effortful swallow', 'Masako maneuver',
+    'VitalStim', 'LSVT', 'Lee Silverman Voice Treatment',
+  ],
+  Psychotherapy: [
+    'CBT', 'cognitive behavioral therapy', 'DBT', 'dialectical behavior therapy',
+    'EMDR', 'ACT', 'acceptance and commitment therapy', 'CPT',
+    'motivational interviewing', 'psychodynamic', 'somatic therapy',
+    'mindfulness-based cognitive therapy', 'MBCT', 'exposure therapy',
+    'prolonged exposure', 'narrative therapy',
+    'PHQ-9', 'GAD-7', 'PCL-5', 'BDI', 'BAI', 'C-SSRS', 'Columbia Suicide Severity',
+    'Beck Depression Inventory', 'hypervigilance',
+    'PTSD', 'post-traumatic stress', 'major depressive disorder',
+    'generalized anxiety', 'panic disorder', 'social anxiety',
+    'borderline personality', 'dysthymia', 'cyclothymia',
+    'rumination', 'catastrophizing', 'avoidance', 'dissociation',
+    'affect regulation', 'emotional dysregulation', 'suicidal ideation',
+    'safety plan', 'therapeutic alliance', 'transference', 'countertransference',
+  ],
+};
+
+/**
+ * Builds a phrase-hint list for the Azure Speech recogniser, biasing toward
+ * names found in the client ID and therapist account, plus discipline-specific
+ * clinical vocabulary that general-purpose ASR models commonly mishear.
+ */
+function buildPhraseHints(
+  clientId: string,
+  account: AccountInfo | undefined,
+  discipline: TherapyDiscipline,
+): string[] {
+  const hints = new Set<string>();
 
   // Split client ID on common separators and add each word-like token
   clientId
     .split(/[-_\s.]+/)
     .map((t) => t.trim())
     .filter((t) => t.length > 1 && /[a-zA-Z]/.test(t))
-    .forEach((t) => tokens.add(t));
+    .forEach((t) => hints.add(t));
 
   // Add individual name tokens from the therapist's account
   const nameSource = account?.name ?? account?.username ?? '';
@@ -76,9 +141,12 @@ function buildPhraseHints(clientId: string, account: AccountInfo | undefined): s
     .split(/[\s@.,]+/)
     .map((t) => t.trim())
     .filter((t) => t.length > 1 && /[a-zA-Z]/.test(t))
-    .forEach((t) => tokens.add(t));
+    .forEach((t) => hints.add(t));
 
-  return Array.from(tokens);
+  // Add discipline-specific clinical vocabulary
+  (CLINICAL_PHRASES[discipline] ?? []).forEach((phrase) => hints.add(phrase));
+
+  return Array.from(hints);
 }
 
 export default function NewSession() {
@@ -192,7 +260,7 @@ export default function NewSession() {
         onClientIdBlur={() => setCommittedClientId(metadata.clientId.trim())}
       />
 
-      <AudioRecorder onTranscriptReady={handleTranscriptReady} phraseHints={buildPhraseHints(metadata.clientId, accounts[0])} />
+      <AudioRecorder onTranscriptReady={handleTranscriptReady} phraseHints={buildPhraseHints(metadata.clientId, accounts[0], metadata.discipline)} />
 
       {rawTranscript && (
         <>
