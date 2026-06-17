@@ -1,0 +1,70 @@
+// Application Insights Kusto Query Language (KQL) Queries for Rate Limit Monitoring
+
+// Query 1: Count rate limit violations by user and endpoint over the last hour
+traces
+| where message startswith "Rate limit exceeded"
+| where tostring(timestamp) > ago(1h)
+| summarize Violations = count() by tostring(customDimensions.userId), tostring(customDimensions.endpoint), bin(timestamp, 5m)
+| render timechart
+
+// Query 2: Top endpoints with rate limit violations
+traces
+| where message startswith "Rate limit exceeded"
+| summarize Violations = count() by tostring(customDimensions.endpoint)
+| top 10 by Violations desc
+| render barchart
+
+// Query 3: Top users hitting rate limits
+traces
+| where message startswith "Rate limit exceeded"
+| summarize Violations = count() by tostring(customDimensions.userId)
+| top 10 by Violations desc
+| render barchart
+
+// Query 4: Rate limit violations trend (daily)
+traces
+| where message startswith "Rate limit exceeded"
+| summarize Violations = count() by bin(timestamp, 1d)
+| render timechart
+
+// Query 5: Rate limit violations with current count vs limit
+traces
+| where message startswith "Rate limit exceeded"
+| parse message with * "user " userId " on endpoint " endpoint ": " current "/" max
+| project timestamp, userId, endpoint, current = toint(current), max = toint(max)
+| render table
+
+// Query 6: Endpoints with most sustained rate limiting activity
+traces
+| where message startswith "Rate limit exceeded"
+| extend hour = floor(timestamp, 1h)
+| summarize Violations = count() by tostring(customDimensions.endpoint), hour
+| where Violations > 5
+| render timechart
+
+// Query 7: Rate limit bypass usage (if configured)
+traces
+| where message contains "bypassed from rate limiting"
+| summarize Events = count() by tostring(customDimensions.userId)
+| render table
+
+// Query 8: Exceptions in rate limit service
+exceptions
+| where cloud_RoleName contains "RateLimitService"
+| summarize Count = count(), LastOccurrence = max(timestamp) by type, method_name
+| render table
+
+// Query 9: SpeechTokenGet endpoint rate limit pressure
+traces
+| where tostring(customDimensions.endpoint) == "GetSpeechToken"
+| where message startswith "Rate limit exceeded"
+| summarize DailyViolations = count() by bin(timestamp, 1d)
+| render timechart
+
+// Query 10: Alert on sustained rate limit violations (potential abuse)
+traces
+| where message startswith "Rate limit exceeded"
+| where timestamp > ago(30m)
+| summarize ViolationCount = count() by tostring(customDimensions.userId)
+| where ViolationCount > 20
+| project UserId = tostring(customDimensions.userId), Violations = ViolationCount, AlertSeverity = "HIGH"

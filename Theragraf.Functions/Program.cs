@@ -15,6 +15,7 @@ using OpenAI;
 using System.ClientModel;
 using Theragraf.Core.Services;
 using Theragraf.Functions.Agents;
+using Theragraf.Functions.Configuration;
 using Theragraf.Functions.Logging;
 using Theragraf.Functions.Middleware;
 using Theragraf.Functions.Services;
@@ -23,6 +24,7 @@ var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults(workerApp =>
     {
         workerApp.UseMiddleware<JwtAuthMiddleware>();
+        workerApp.UseMiddleware<RateLimitMiddleware>();
     })
     .ConfigureServices((context, services) =>
     {
@@ -31,6 +33,41 @@ var host = new HostBuilder()
         services.AddSingleton<IAuditLogger, ApplicationInsightsAuditLogger>();
 
         var config = context.Configuration;
+
+        // Rate limiting configuration
+        var rateLimitConfig = new Theragraf.Functions.Configuration.RateLimitConfiguration();
+        config.GetSection(Theragraf.Functions.Configuration.RateLimitConfiguration.Section).Bind(rateLimitConfig);
+        services.AddSingleton(rateLimitConfig);
+
+        // Register rate limit service based on environment.
+        // In Azure (production), use Cosmos DB for distributed rate limiting.
+        // Locally/in tests, use in-memory for speed (no external dependencies).
+        if (rateLimitConfig.UseDistributedBackend && !string.IsNullOrWhiteSpace(config["CosmosDb:AccountEndpoint"]))
+        {
+            services.AddSingleton<IRateLimitService>(sp =>
+            {
+                var cosmosClient = sp.GetRequiredService<CosmosClient>();
+                var dbName = config["CosmosDb:DatabaseName"] ?? "theragraf";
+                var logger = sp.GetRequiredService<ILogger<CosmosRateLimitService>>();
+
+                // Auto-provision rate-limit container locally.
+                var endpoint = config["CosmosDb:AccountEndpoint"];
+                if (string.IsNullOrWhiteSpace(endpoint))
+                {
+                    var db = cosmosClient.CreateDatabaseIfNotExistsAsync(dbName).GetAwaiter().GetResult();
+                    db.Database.CreateContainerIfNotExistsAsync(
+                        new ContainerProperties { Id = CosmosRateLimitService.ContainerName, PartitionKeyPath = "/userId" })
+                        .GetAwaiter().GetResult();
+                }
+
+                return new CosmosRateLimitService(cosmosClient, dbName, logger);
+            });
+        }
+        else
+        {
+            // Use in-memory service (testing, or when Cosmos isn't configured).
+            services.AddSingleton<IRateLimitService, MemoryRateLimitService>();
+        }
 
         // Azure AI Language (PII Redaction)
         // Uses API key locally; falls back to Managed Identity in Azure when no key is configured.

@@ -1,5 +1,6 @@
 namespace Theragraf.Functions.Helpers;
 
+using System.Collections.Generic;
 using System.Security.Claims;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -22,6 +23,27 @@ internal static class ClaimsHelper
             return null;
 
         if (req.FunctionContext.Items.TryGetValue("ClaimsPrincipal", out var raw)
+            && raw is ClaimsPrincipal principal)
+        {
+            // Prefer preferred_username (UPN/email), fall back to email claim, then display name.
+            return principal.FindFirst("preferred_username")?.Value
+                ?? principal.FindFirst("email")?.Value
+                ?? principal.FindFirst(ClaimTypes.Email)?.Value
+                ?? principal.FindFirst(ClaimTypes.Name)?.Value
+                ?? principal.FindFirst("name")?.Value;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Extracts the user identity from the FunctionContext.Items dictionary.
+    /// Used by rate limiting and other middleware to identify the current user.
+    /// Returns null if no ClaimsPrincipal is present.
+    /// </summary>
+    internal static string? GetIdentity(IDictionary<string, object> items)
+    {
+        if (items.TryGetValue("ClaimsPrincipal", out var raw)
             && raw is ClaimsPrincipal principal)
         {
             // Prefer preferred_username (UPN/email), fall back to email claim, then display name.
