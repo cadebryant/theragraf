@@ -715,6 +715,65 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
         result.SoapNote.Plan.Should().Be("Updated plan.");
     }
 
+    [SkippableFact]
+    public async Task UpdateAsync_ApprovalRequest_PersistsApprovalMetadata()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var rowKey = "2025-09-12T10-00-00Z";
+
+        await repo.SaveAsync(BuildRecord(rowKey));
+
+        var result = await repo.UpdateAsync(
+            _clientId, rowKey,
+            soapNoteUpdate:  null,
+            newRedactionMap: new Dictionary<string, string>(),
+            cptCodes:        null,
+            icdCodes:        null,
+            approval:        new ApprovalUpdate(VerifyAndApprove: true, ApprovedBy: "Dr. Smith"));
+
+        result.Should().NotBeNull();
+        result!.IsApproved.Should().BeTrue();
+        result.ApprovedBy.Should().Be("Dr. Smith");
+        result.ApprovedAt.Should().NotBeNull();
+
+        var readBack = await repo.GetByClientIdAndDateAsync(_clientId, rowKey);
+        readBack.Should().NotBeNull();
+        readBack!.IsApproved.Should().BeTrue();
+        readBack.ApprovedBy.Should().Be("Dr. Smith");
+        readBack.ApprovedAt.Should().NotBeNull();
+    }
+
+    [SkippableFact]
+    public async Task UpdateAsync_ContentEdit_ClearsExistingApproval()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var rowKey = "2025-09-13T10-00-00Z";
+
+        await repo.SaveAsync(BuildRecord(rowKey));
+        await repo.UpdateAsync(
+            _clientId, rowKey,
+            soapNoteUpdate:  null,
+            newRedactionMap: new Dictionary<string, string>(),
+            cptCodes:        null,
+            icdCodes:        null,
+            approval:        new ApprovalUpdate(VerifyAndApprove: true, ApprovedBy: "Dr. Smith"));
+
+        var result = await repo.UpdateAsync(
+            _clientId, rowKey,
+            soapNoteUpdate:  new SoapNoteUpdate(Subjective: "Edited by therapist.", Objective: null, Assessment: null, Plan: null),
+            newRedactionMap: new Dictionary<string, string>(),
+            cptCodes:        null,
+            icdCodes:        null,
+            approval:        null);
+
+        result.Should().NotBeNull();
+        result!.IsApproved.Should().BeFalse();
+        result.ApprovedBy.Should().BeNull();
+        result.ApprovedAt.Should().BeNull();
+    }
+
     // -- GetTherapistStatsAsync ------------------------------------------------
 
     [SkippableFact]
