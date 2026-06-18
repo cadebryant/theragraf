@@ -11,6 +11,7 @@ import {
 import { MicrophoneChat24Regular, Stop24Regular } from '@fluentui/react-icons';
 import * as SpeechSDK from 'microsoft-cognitiveservices-speech-sdk';
 import { getSpeechToken } from '@/api/sessions';
+import { formatErrorMessage } from '@/utils/errorMessages';
 import type { DiarizedSegment } from '@/types';
 
 const useStyles = makeStyles({
@@ -260,7 +261,7 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
       }), 1000);
       window.dispatchEvent(new CustomEvent('theragraf:recording-start'));
     } catch (err) {
-      setError(`Could not start recording: ${(err as Error).message}`);
+      setError(formatErrorMessage(err, 'starting recording'));
     } finally {
       setInitialising(false);
     }

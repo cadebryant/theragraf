@@ -175,7 +175,7 @@ public class ClientDemographicsGetTests
     }
 
     [Fact]
-    public async Task Get_RepositoryThrows_Returns500()
+    public async Task Get_RepositoryThrows_Returns500WithSanitizedError()
     {
         _repository.GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns<ClientDemographicsResponse?>(_ => throw new InvalidOperationException("Cosmos unavailable"));
@@ -183,5 +183,18 @@ public class ClientDemographicsGetTests
         var result = await _sut.Get(BuildRequest(), "patient-001", CancellationToken.None);
 
         result.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+
+        // Verify correlation ID header
+        result.Headers.TryGetValues("X-Correlation-ID", out var correlationIds).Should().BeTrue();
+        var correlationId = correlationIds!.First();
+        correlationId.Should().MatchRegex("^[0-9a-f]{16}$");
+
+        // Verify sanitized response body
+        result.Body.Position = 0;
+        var body = await new StreamReader(result.Body, Encoding.UTF8).ReadToEndAsync();
+        body.Should().NotContain("Cosmos unavailable");
+        body.Should().NotContain("InvalidOperationException");
+        body.Should().Contain("retrieving client demographics");
+        body.Should().Contain(correlationId);
     }
 }

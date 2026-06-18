@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
+using Theragraf.Core.Helpers;
 using Theragraf.Functions.Helpers;
 using Theragraf.Functions.Logging;
 
@@ -80,10 +81,15 @@ public class SessionsGet(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "GetCaseload failed for therapist={TherapistName}", identity);
-            auditLogger.Log(AuditEvent.Failure(identity, AuditAction.Read, "Caseload", detail: ex.Message));
+            var correlationId = SafeErrorHelper.GenerateCorrelationId();
+            _logger.LogError(ex, SafeErrorHelper.GetInternalLogDetail(ex, correlationId));
+            auditLogger.Log(AuditEvent.Failure(identity, AuditAction.Read, "Caseload", 
+                detail: SafeErrorHelper.GetAuditLogDetail(ex, correlationId)));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await error.WriteStringAsync("An unexpected error occurred while retrieving the caseload.", cancellationToken);
+            error.Headers.Add("X-Correlation-ID", correlationId);
+            await error.WriteStringAsync(
+                SafeErrorHelper.GetSafeErrorMessage("retrieving the caseload", correlationId), 
+                cancellationToken);
             return error;
         }
     }
@@ -159,11 +165,15 @@ public class SessionsGet(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "GetSessionsByClient failed for clientId={ClientId}", clientId);
+            var correlationId = SafeErrorHelper.GenerateCorrelationId();
+            _logger.LogError(ex, SafeErrorHelper.GetInternalLogDetail(ex, correlationId));
             auditLogger.Log(AuditEvent.Failure(identity ?? "anonymous", AuditAction.Read, "SessionList",
-                resourceId: clientId, detail: ex.Message));
+                resourceId: clientId, detail: SafeErrorHelper.GetAuditLogDetail(ex, correlationId)));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await error.WriteStringAsync("An unexpected error occurred while retrieving sessions.", cancellationToken);
+            error.Headers.Add("X-Correlation-ID", correlationId);
+            await error.WriteStringAsync(
+                SafeErrorHelper.GetSafeErrorMessage("retrieving sessions", correlationId), 
+                cancellationToken);
             return error;
         }
 
@@ -208,9 +218,13 @@ public class SessionsGet(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "GetSessionByClientAndDate failed for clientId={ClientId}", clientId);
+            var correlationId = SafeErrorHelper.GenerateCorrelationId();
+            _logger.LogError(ex, SafeErrorHelper.GetInternalLogDetail(ex, correlationId));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await error.WriteStringAsync("An unexpected error occurred while retrieving the session.", cancellationToken);
+            error.Headers.Add("X-Correlation-ID", correlationId);
+            await error.WriteStringAsync(
+                SafeErrorHelper.GetSafeErrorMessage("retrieving the session", correlationId), 
+                cancellationToken);
             return error;
         }
 

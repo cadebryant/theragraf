@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using Theragraf.Core.Models;
 using Theragraf.Core.Services;
 using Theragraf.Functions.EntryPoint;
 using Theragraf.Functions.Logging;
@@ -145,10 +146,10 @@ public class SessionsDeleteTests
         return request;
     }
 
-    private static Core.Models.SessionResponse BuildSession(string therapistName) =>
+    private static SessionResponse BuildSession(string therapistName) =>
         new("client-001", "2024-10-10T10-00-00Z", therapistName, "PT", "Soap", "Outpatient", "Medicare", 45,
-            new Core.Models.SoapNote("S", "O", "A", "P"),
-            new List<Core.Models.CptCode>(), new List<Core.Models.IcdCode>(),
+            new SoapNote("S", "O", "A", "P"),
+            new List<CptCode>(), new List<IcdCode>(),
             DateTimeOffset.UtcNow, false, null, null);
 
     [Fact]

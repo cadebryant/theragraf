@@ -6,6 +6,7 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Services;
+using Theragraf.Core.Helpers;
 using Theragraf.Functions.Helpers;
 using Theragraf.Functions.Logging;
 
@@ -67,9 +68,15 @@ public class GoalsDelete(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "DeleteGoal failed for clientId={ClientId} goalId={GoalId}", clientId, goalId);
+            var correlationId = SafeErrorHelper.GenerateCorrelationId();
+            _logger.LogError(ex, SafeErrorHelper.GetInternalLogDetail(ex, correlationId));
+            auditLogger.Log(AuditEvent.Failure(identity ?? "dev", AuditAction.Delete, "Goal",
+                resourceId: $"{clientId}/{goalId}", detail: SafeErrorHelper.GetAuditLogDetail(ex, correlationId)));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await error.WriteStringAsync("An unexpected error occurred.", cancellationToken);
+            error.Headers.Add("X-Correlation-ID", correlationId);
+            await error.WriteStringAsync(
+                SafeErrorHelper.GetSafeErrorMessage("deleting goal", correlationId), 
+                cancellationToken);
             return error;
         }
     }

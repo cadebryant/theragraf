@@ -20,6 +20,7 @@ import {
 } from '@fluentui/react-icons';
 import { getSessionByClientAndDate, updateSession } from '@/api/sessions';
 import { formatSessionDate } from '@/utils/dateFormat';
+import { formatErrorMessage } from '@/utils/errorMessages';
 import type { CptCode, IcdCode, SoapNote } from '@/types';
 import SoapNoteEditor from '@/pages/SessionReview/SoapNoteEditor';
 import { CptCodesEditor, IcdCodesEditor } from '@/pages/SessionReview/CodesEditor';
@@ -153,7 +154,7 @@ export default function SessionDetail() {
     return (
       <MessageBar intent="error">
         <MessageBarBody>
-          {error ? (error as Error).message : 'Session not found.'}
+          {error ? formatErrorMessage(error, 'loading session') : 'Session not found.'}
         </MessageBarBody>
       </MessageBar>
     );
@@ -228,13 +229,13 @@ export default function SessionDetail() {
 
       {saveMutation.error && (
         <MessageBar intent="error">
-          <MessageBarBody>Save failed: {(saveMutation.error as Error).message}</MessageBarBody>
+          <MessageBarBody>{formatErrorMessage(saveMutation.error, 'saving session')}</MessageBarBody>
         </MessageBar>
       )}
 
       {approveMutation.error && (
         <MessageBar intent="error">
-          <MessageBarBody>Approval failed: {(approveMutation.error as Error).message}</MessageBarBody>
+          <MessageBarBody>{formatErrorMessage(approveMutation.error, 'approving session')}</MessageBarBody>
         </MessageBar>
       )}
 

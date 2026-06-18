@@ -38,7 +38,17 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
   if (!response.ok) {
     const message = await response.text().catch(() => response.statusText);
-    throw new Error(`${response.status} ${response.statusText}: ${message}`);
+    const correlationId = response.headers.get('X-Correlation-ID');
+
+    const error = new Error(message || response.statusText) as Error & { 
+      status: number; 
+      correlationId?: string;
+    };
+    error.status = response.status;
+    if (correlationId) {
+      error.correlationId = correlationId;
+    }
+    throw error;
   }
 
   // 204 No Content

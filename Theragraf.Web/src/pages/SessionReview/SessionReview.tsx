@@ -13,6 +13,7 @@ import {
 import { Save24Regular, ArrowLeft24Regular, ArrowDownload24Regular } from '@fluentui/react-icons';
 import { getOrchestrationStatus, updateSession } from '@/api/sessions';
 import { formatTimestamp } from '@/utils/dateFormat';
+import { formatErrorMessage } from '@/utils/errorMessages';
 import type { CptCode, IcdCode, SoapNote } from '@/types';
 import PipelineStatus from './PipelineStatus';
 import SoapNoteEditor from './SoapNoteEditor';
@@ -191,7 +192,7 @@ export default function SessionReview() {
 
       {pollError && (
         <MessageBar intent="error">
-          <MessageBarBody>Polling failed: {(pollError as Error).message}</MessageBarBody>
+          <MessageBarBody>{formatErrorMessage(pollError, 'polling orchestration status')}</MessageBarBody>
         </MessageBar>
       )}
 

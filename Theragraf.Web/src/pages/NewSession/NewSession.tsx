@@ -17,6 +17,7 @@ import { DocumentBulletList24Regular } from '@fluentui/react-icons';
 import SessionMetadataForm, { type SessionMetadata } from './SessionMetadataForm';
 import { stripClientIdPrefix } from '@/utils/clientId';
 import { toDateTimeLocalValue } from '@/utils/dateFormat';
+import { formatErrorMessage } from '@/utils/errorMessages';
 import AudioRecorder from './AudioRecorder';
 import { startDocumentation, toSessionDateKey } from '@/api/sessions';
 import { getClientDemographics } from '@/api/clients';
@@ -238,7 +239,7 @@ export default function NewSession() {
         },
       });
     } catch (err) {
-      setSubmitError((err as Error).message);
+      setSubmitError(formatErrorMessage(err, 'starting documentation'));
       setSubmitting(false);
     }
   }

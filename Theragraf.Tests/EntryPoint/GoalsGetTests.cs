@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Azure.Functions.Worker;
@@ -199,7 +200,7 @@ public class GoalsGetTests
     // ── Error handling ────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Get_RepositoryThrows_Returns500()
+    public async Task Get_RepositoryThrows_Returns500WithCorrelationId()
     {
         _repository.GetByClientIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                    .Returns<IReadOnlyList<GoalResponse>>(_ => throw new Exception("Cosmos failure"));
@@ -207,5 +208,20 @@ public class GoalsGetTests
         var response = await _sut.Get(BuildRequest(), OwnedClientId, CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+
+        // Verify correlation ID header is present
+        response.Headers.TryGetValues("X-Correlation-ID", out var correlationIds).Should().BeTrue();
+        var correlationId = correlationIds!.First();
+        correlationId.Should().NotBeNullOrEmpty();
+        correlationId.Should().HaveLength(16);
+        correlationId.Should().MatchRegex("^[0-9a-f]{16}$");
+
+        // Verify response body is sanitized (doesn't leak "Cosmos failure")
+        response.Body.Position = 0;
+        var body = await new StreamReader(response.Body, Encoding.UTF8).ReadToEndAsync();
+        body.Should().NotContain("Cosmos failure");
+        body.Should().NotContain("Exception");
+        body.Should().Contain("retrieving goals");
+        body.Should().Contain(correlationId);
     }
 }

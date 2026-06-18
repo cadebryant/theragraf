@@ -4,6 +4,7 @@ import { makeStyles, tokens, Spinner, Text, Divider } from '@fluentui/react-comp
 import { getTherapistStats } from '@/api/stats';
 import { getCaseload } from '@/api/sessions';
 import { getNoteStatus } from '@/utils/noteStatus';
+import { formatErrorMessage } from '@/utils/errorMessages';
 import StatsCards from './StatsCards';
 import StatsCharts from './StatsCharts';
 import CaseloadTable from './CaseloadTable';
@@ -68,7 +69,7 @@ export default function Dashboard() {
   if (error && !statsQuery.data && !caseloadQuery.data) {
     return (
       <Text className={styles.error}>
-        Failed to load dashboard: {(error as Error).message}
+        {formatErrorMessage(error, 'loading dashboard')}
       </Text>
     );
   }

@@ -377,4 +377,52 @@ public class SessionsGetTests
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         await _repository.DidNotReceive().GetCaseloadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
+
+    // ── Error handling ────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetByClient_RepositoryThrows_Returns500WithCorrelationId()
+    {
+        _repository.GetByClientIdPagedAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<SessionQueryOptions?>(), Arg.Any<CancellationToken>())
+            .Returns<PagedResult<SessionResponse>>(_ => throw new Exception("Database timeout"));
+
+        var response = await _sut.GetByClient(BuildRequest(), "client-001", CancellationToken.None);
+
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+
+        // Verify X-Correlation-ID header
+        response.Headers.TryGetValues("X-Correlation-ID", out var correlationIds).Should().BeTrue();
+        var correlationId = correlationIds!.First();
+        correlationId.Should().MatchRegex("^[0-9a-f]{16}$");
+
+        // Verify sanitized response (no "Database timeout" leak)
+        response.Body.Position = 0;
+        var body = await new StreamReader(response.Body, Encoding.UTF8).ReadToEndAsync();
+        body.Should().NotContain("Database timeout");
+        body.Should().Contain("retrieving sessions");
+        body.Should().Contain(correlationId);
+    }
+
+    [Fact]
+    public async Task GetCaseload_RepositoryThrows_Returns500WithCorrelationId()
+    {
+        _repository.GetCaseloadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns<CaseloadSummary>(_ => throw new InvalidOperationException("Connection lost"));
+
+        var response = await _sut.GetCaseload(BuildRequest("http://localhost/api/sessions"), CancellationToken.None);
+
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+
+        // Verify correlation ID header
+        response.Headers.TryGetValues("X-Correlation-ID", out var correlationIds).Should().BeTrue();
+        var correlationId = correlationIds!.First();
+        correlationId.Should().HaveLength(16);
+
+        // Verify error message is sanitized
+        response.Body.Position = 0;
+        var body = await new StreamReader(response.Body, Encoding.UTF8).ReadToEndAsync();
+        body.Should().NotContain("Connection lost");
+        body.Should().NotContain("InvalidOperationException");
+        body.Should().Contain("retrieving the caseload");
+    }
 }

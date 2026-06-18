@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
+using Theragraf.Core.Helpers;
 using Theragraf.Functions.Helpers;
 using Theragraf.Functions.Logging;
 
@@ -86,9 +87,15 @@ public class GoalsCreate(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "CreateGoal failed for clientId={ClientId}", clientId);
+            var correlationId = SafeErrorHelper.GenerateCorrelationId();
+            _logger.LogError(ex, SafeErrorHelper.GetInternalLogDetail(ex, correlationId));
+            auditLogger.Log(AuditEvent.Failure(identity ?? "dev", AuditAction.Write, "Goal",
+                resourceId: clientId, detail: SafeErrorHelper.GetAuditLogDetail(ex, correlationId)));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await error.WriteStringAsync("An unexpected error occurred.", cancellationToken);
+            error.Headers.Add("X-Correlation-ID", correlationId);
+            await error.WriteStringAsync(
+                SafeErrorHelper.GetSafeErrorMessage("creating goal", correlationId), 
+                cancellationToken);
             return error;
         }
     }

@@ -8,6 +8,7 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
+using Theragraf.Core.Helpers;
 using Theragraf.Functions.Agents;
 using Theragraf.Functions.Helpers;
 using Theragraf.Functions.Logging;
@@ -93,9 +94,15 @@ public class GoalsSuggest(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "SuggestGoals failed for clientId={ClientId}", clientId);
+            var correlationId = SafeErrorHelper.GenerateCorrelationId();
+            _logger.LogError(ex, SafeErrorHelper.GetInternalLogDetail(ex, correlationId));
+            auditLogger.Log(AuditEvent.Failure(identity ?? "dev", AuditAction.Read, "Goal",
+                resourceId: clientId, detail: SafeErrorHelper.GetAuditLogDetail(ex, correlationId)));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await error.WriteStringAsync("Goal suggestion failed. Please try again.", cancellationToken);
+            error.Headers.Add("X-Correlation-ID", correlationId);
+            await error.WriteStringAsync(
+                SafeErrorHelper.GetSafeErrorMessage("suggesting goals", correlationId), 
+                cancellationToken);
             return error;
         }
     }

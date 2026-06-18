@@ -8,6 +8,7 @@ using Microsoft.DurableTask.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
+using Theragraf.Core.Helpers;
 using Theragraf.Functions.Helpers;
 using Theragraf.Functions.Logging;
 using Theragraf.Functions.Services;
@@ -109,11 +110,15 @@ public class DocumentationStart(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to schedule orchestration for client {ClientId}", input.ClientId);
+            var correlationId = SafeErrorHelper.GenerateCorrelationId();
+            _logger.LogError(ex, SafeErrorHelper.GetInternalLogDetail(ex, correlationId));
             auditLogger.Log(AuditEvent.Failure(input.TherapistName, AuditAction.Write, "Session",
-                resourceId: input.ClientId, detail: ex.Message));
+                resourceId: input.ClientId, detail: SafeErrorHelper.GetAuditLogDetail(ex, correlationId)));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await error.WriteStringAsync("An unexpected error occurred while starting the documentation pipeline.", cancellationToken);
+            error.Headers.Add("X-Correlation-ID", correlationId);
+            await error.WriteStringAsync(
+                SafeErrorHelper.GetSafeErrorMessage("starting the documentation pipeline", correlationId), 
+                cancellationToken);
             return error;
         }
 

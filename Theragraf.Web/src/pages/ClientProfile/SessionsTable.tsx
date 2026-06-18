@@ -26,6 +26,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSessionsByClient, deleteSession } from '@/api/sessions';
 import { formatSessionDate } from '@/utils/dateFormat';
+import { formatErrorMessage } from '@/utils/errorMessages';
 import type { SessionResponse } from '@/types';
 
 const useStyles = makeStyles({
@@ -96,7 +97,7 @@ export default function SessionsTable({ clientId }: Props) {
   }
 
   if (isLoading) return <Spinner label="Loading sessions…" />;
-  if (error) return <Text style={{ color: tokens.colorStatusDangerForeground1 }}>{(error as Error).message}</Text>;
+  if (error) return <Text style={{ color: tokens.colorStatusDangerForeground1 }}>{formatErrorMessage(error, 'loading sessions')}</Text>;
 
   const sessions: SessionResponse[] = data?.items ?? [];
 
@@ -154,7 +155,7 @@ export default function SessionsTable({ clientId }: Props) {
 
       {deleteMutation.error && (
         <MessageBar intent="error">
-          <MessageBarBody>Delete failed: {(deleteMutation.error as Error).message}</MessageBarBody>
+          <MessageBarBody>{formatErrorMessage(deleteMutation.error, 'deleting session')}</MessageBarBody>
         </MessageBar>
       )}
 
