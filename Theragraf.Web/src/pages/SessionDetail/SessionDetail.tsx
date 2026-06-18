@@ -70,6 +70,7 @@ export default function SessionDetail() {
   const [soapNote, setSoapNote] = useState<SoapNote | null>(null);
   const [cptCodes, setCptCodes] = useState<CptCode[]>([]);
   const [icdCodes, setIcdCodes] = useState<IcdCode[]>([]);
+  const [attestationChecked, setAttestationChecked] = useState<boolean>(false);
 
   const { data: session, isLoading, error } = useQuery({
     queryKey: ['session', clientId, sessionDate],
@@ -87,6 +88,17 @@ export default function SessionDetail() {
     onSuccess: (updated) => {
       queryClient.setQueryData(['session', clientId, sessionDate], updated);
       setEditing(false);
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: () =>
+      updateSession(clientId!, sessionDate!, {
+        approvalUpdate: { isApproved: true },
+      }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['session', clientId, sessionDate], updated);
+      setAttestationChecked(false);
     },
   });
 
@@ -222,6 +234,45 @@ export default function SessionDetail() {
         <MessageBar intent="error">
           <MessageBarBody>Save failed: {(saveMutation.error as Error).message}</MessageBarBody>
         </MessageBar>
+      )}
+
+      {approveMutation.error && (
+        <MessageBar intent="error">
+          <MessageBarBody>Approval failed: {(approveMutation.error as Error).message}</MessageBarBody>
+        </MessageBar>
+      )}
+
+      {/* Approval card - shown only when not approved and not editing */}
+      {!session.isApproved && !editing && (
+        <div style={{ 
+          padding: tokens.spacingVerticalL, 
+          border: `1px solid ${attestationChecked ? tokens.colorBrandStroke1 : tokens.colorNeutralStroke1}`,
+          borderRadius: tokens.borderRadiusMedium,
+          backgroundColor: attestationChecked ? tokens.colorBrandBackground2 : tokens.colorNeutralBackground1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: tokens.spacingHorizontalM
+        }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}>
+            <input
+              type="checkbox"
+              checked={attestationChecked}
+              onChange={(e) => setAttestationChecked(e.target.checked)}
+              style={{ width: 20, height: 20, cursor: 'pointer' }}
+            />
+            <Text style={{ fontSize: tokens.fontSizeBase300, fontWeight: tokens.fontWeightSemibold }}>
+              I have reviewed this draft and accept responsibility for clinical accuracy.
+            </Text>
+          </label>
+          <Button
+            appearance="primary"
+            icon={approveMutation.isPending ? <Spinner size="tiny" /> : <Save24Regular />}
+            onClick={() => approveMutation.mutate()}
+            disabled={!attestationChecked || approveMutation.isPending}
+          >
+            Verify & Approve
+          </Button>
+        </div>
       )}
 
       <SoapNoteEditor

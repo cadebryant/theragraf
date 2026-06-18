@@ -223,17 +223,38 @@ export default function SessionReview() {
             </MessageBar>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalM }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Attestation card */}
+          <div style={{ 
+            padding: tokens.spacingVerticalL, 
+            border: `1px solid ${attestationChecked ? tokens.colorBrandStroke1 : tokens.colorNeutralStroke1}`,
+            borderRadius: tokens.borderRadiusMedium,
+            backgroundColor: attestationChecked ? tokens.colorBrandBackground2 : tokens.colorNeutralBackground1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: tokens.spacingHorizontalM
+          }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}>
               <input
                 type="checkbox"
                 checked={attestationChecked}
                 onChange={(e) => setAttestationChecked(e.target.checked)}
+                style={{ width: 20, height: 20, cursor: 'pointer' }}
               />
-              <Text style={{ fontSize: 12, color: tokens.colorNeutralForeground3 }}>
-                I have verified this draft and accept responsibility for clinical accuracy.
+              <Text style={{ fontSize: tokens.fontSizeBase300, fontWeight: tokens.fontWeightSemibold }}>
+                I have reviewed this draft and accept responsibility for clinical accuracy.
               </Text>
             </label>
+            <Button
+              appearance="primary"
+              icon={saving ? <Spinner size="tiny" /> : <Save24Regular />}
+              onClick={() => void handleApprove()}
+              disabled={!attestationChecked || saving || isApproved}
+            >
+              Verify & Approve
+            </Button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalM }}>
             <div className={styles.actions}>
             <Button
               appearance="subtle"
@@ -295,14 +316,6 @@ export default function SessionReview() {
               disabled={saving}
             >
               Save Session
-            </Button>
-            <Button
-              appearance="primary"
-              icon={saving ? <Spinner size="tiny" /> : <Save24Regular />}
-              onClick={() => void handleApprove()}
-              disabled={!attestationChecked || saving || isApproved}
-            >
-              Verify & Approve
             </Button>
           </div>
           <div>
