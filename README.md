@@ -2,7 +2,9 @@
 
 **TheraGraf** is an open-source, agentic clinical documentation engine designed to eliminate the "paperwork tax" for occupational therapists, physical therapists, and mental health practitioners.
 
-Built with a privacy-first philosophy, TheraGraf uses a **Bring-Your-Own-Key (BYOK)** architecture to ensure your patient data never touches shared servers — you maintain full control of your clinical records by deploying entirely within your own Azure subscription.
+Built with a privacy-first philosophy, TheraGraf is architected to deploy entirely within your own Azure subscription using your own AI resources — ensuring patient data never touches shared servers and you maintain full control of your clinical records.
+
+> **⚠️ Important Note on Deployment:** The infrastructure-as-code files in this repository (`infra/parameters/*.bicepparam`) contain references to the author's specific Azure resources (OpenAI account, Language service, tenant ID, etc.). These are provided as a working reference implementation. **To deploy TheraGraf to your own Azure subscription, you must customize these parameter files** to point to your own pre-created Azure resources. See the [Azure Deployment](#azure-deployment) section for details.
 
 ---
 
@@ -11,8 +13,9 @@ Built with a privacy-first philosophy, TheraGraf uses a **Bring-Your-Own-Key (BY
 Modern clinical documentation is broken. Current solutions are high-cost, closed-source, and create data silos. TheraGraf changes the paradigm:
 
 - **Privacy-First:** PII is redacted before any AI model sees it. The redaction map is encrypted and stored separately; original names are only restored on retrieval.
-- **Cost-Efficient:** Pay only for the tokens you consume from your own Azure OpenAI resource. No separate subscription required.
+- **Bring-Your-Own-Resources:** TheraGraf deploys into your Azure subscription and uses your Azure OpenAI account, Language service, and Speech service. Pay only for the tokens and API calls you consume — no separate subscription or per-user licensing fees.
 - **Agentic Workflow:** Not just a scribe — an intelligent pipeline that captures diarized audio, redacts PII, generates **SOAP or DAP notes** (auto-selected by discipline, manually overrideable), validates clinical compliance, suggests CPT billing codes with CMS 8-minute rule unit calculation, and suggests ICD-10 diagnostic codes.
+- **Therapist-in-the-Loop:** AI-generated documentation is clearly labeled as a draft. Sessions require explicit therapist attestation and approval before export. Approval is automatically cleared if clinical content is edited, ensuring accountability.
 - **Goal-Oriented:** Track SMART treatment goals per client with progress notes after every session. An AI suggestion endpoint generates goal candidates from the latest SOAP note, which the therapist can accept or discard.
 - **Client Profiles:** Maintain demographic and intake data per client — age range, biological sex, prior diagnoses, and functional limitations. This context informs smarter ICD-10 suggestions without forwarding any PII to the AI pipeline.
 - **Clinician-Centric:** Built for professionals who value precision, auditability, and data ownership.
@@ -50,7 +53,7 @@ AI agents also power a standalone **Goal Agent** (POST `/api/goals/{clientId}/su
 | `GET` | `/api/sessions` | Caseload overview for the authenticated therapist |
 | `GET` | `/api/sessions/{clientId}` | Pageable session list (with filters and sorting) |
 | `GET` | `/api/sessions/{clientId}/{sessionDate}` | Single session detail |
-| `PATCH` | `/api/sessions/{clientId}/{sessionDate}` | Edit SOAP note or codes |
+| `PATCH` | `/api/sessions/{clientId}/{sessionDate}` | Edit SOAP note, codes, or approve session (with `approval: { verifyAndApprove: true }`) |
 | `DELETE` | `/api/sessions/{clientId}/{sessionDate}` | Delete a session |
 | `GET` | `/api/goals/{clientId}` | List treatment goals for a client |
 | `POST` | `/api/goals/{clientId}` | Create a new treatment goal |
@@ -70,10 +73,10 @@ All routes enforce **JWT ownership checks** — therapists can only read and mod
 Theragraf.Web/
   pages/
     Dashboard/         — Therapist stats, legend-labelled charts, searchable/sortable caseload table with overdue-note alerts
-    NewSession/        — Diarized audio recording, metadata form (with SOAP/DAP note format selector), transcript submission
-    SessionReview/     — Orchestration status polling, SOAP/DAP note editing with format-appropriate field labels, CPT/ICD editing
+    NewSession/        — Diarized audio recording with speaker diarization, explicit role assignment (Therapist/Client), metadata form (with SOAP/DAP note format selector), transcript submission
+    SessionReview/     — Orchestration status polling, SOAP/DAP note editing with format-appropriate field labels, CPT/ICD editing, AI draft banner, attestation workflow, Verify & Approve button
     ClientProfile/     — Per-client stats, demographics/intake panel, SMART goal tracking (with AI suggestions), and session history
-    SessionDetail/     — Single session view and edit
+    SessionDetail/     — Single session view and edit, approval status badge, conditional export access
 ```
 
 The SPA authenticates via **MSAL** (Microsoft Authentication Library) and acquires an access token scoped to the Function App's Entra ID registration before every API call. It is hosted on **Azure Static Web Apps (Standard)** with the Function App linked as the API backend — no CORS configuration is required.
@@ -220,9 +223,45 @@ Integration tests that require the Cosmos DB Emulator are automatically skipped 
 
 ## Azure deployment
 
-In Azure, the Function App uses **Managed Identity** for all service-to-service authentication — no API keys are stored in app settings.
+TheraGraf is designed to deploy entirely within your own Azure subscription, giving you full control over your data and AI resources. **The Bicep templates reference existing Azure resources** — they do not create new Cognitive Services accounts for you.
+
+### Prerequisites for deployment
+
+Before deploying, you must create the following Azure resources in your subscription:
+
+1. **Azure OpenAI account** with a chat model deployment (e.g., `gpt-4o-mini` or `gpt-4o`)
+2. **Azure AI Language account** (for PII detection/redaction)
+3. **Azure AI Speech resource** (for browser-side audio transcription)
+4. **Two Entra ID app registrations:**
+   - **API registration:** Defines the `access_as_user` scope (represents the Function App)
+   - **SPA registration:** Has delegated permission to call the API scope (represents the React frontend)
+
+### Customize the infrastructure parameters
+
+The parameter files in `infra/parameters/` currently reference the author's Azure resources. You must edit these files to match your environment:
+
+**Edit `infra/parameters/dev.bicepparam` (or `prod.bicepparam`):**
+
+```bicep
+param openAiAccountName      = 'your-openai-account-name'      // Your Azure OpenAI resource name
+param openAiDeploymentName   = 'your-deployment-name'          // Your model deployment name (e.g., gpt-4o)
+param languageAccountName    = 'your-language-service-name'    // Your Azure AI Language resource name
+param cognitiveResourceGroup = 'your-cognitive-rg'             // Resource group containing your Cognitive Services
+param tenantId               = 'your-entra-tenant-id'          // Your Entra ID tenant GUID
+param apiClientId            = 'your-api-app-registration-id'  // Client ID of your API app registration
+param spaClientId            = 'your-spa-app-registration-id'  // Client ID of your SPA app registration
+param storageAccountName     = 'yourstorageaccount'            // Unique storage account name (3-24 chars, lowercase)
+param cosmosAccountName      = 'your-cosmos-account'           // Unique Cosmos DB account name
+param keyVaultName           = 'your-keyvault-name'            // Unique Key Vault name
+param staticWebAppName       = 'your-swa-name'                 // Unique Static Web App name
+// ... (see file for full list of parameters)
+```
 
 ### One-time infrastructure provisioning
+
+In Azure, the Function App uses **Managed Identity** for all service-to-service authentication — no API keys are stored in app settings.
+
+After customizing the parameters, deploy:
 
 ```powershell
 az deployment sub create --location eastus --template-file infra/main.bicep --parameters infra/parameters/dev.bicepparam
@@ -308,8 +347,11 @@ postman/                    — Postman collection for manual API testing
 - `local.settings.json` is excluded from git via `.gitignore` — **never commit it**
 - Use `local.settings.template.json` as the shareable reference for required config values
 - In Azure, all service-to-service authentication uses Managed Identity — no API keys are stored in app settings
-- PII is redacted before any AI model processes the transcript; the redaction map is encrypted with a Key Vault-managed key and stored alongside the session record
-- Client date of birth is stored AES-GCM encrypted at rest and is never returned through the API; only a computed age range is forwarded to the AI pipeline
+- **PII Protection:** PII is redacted before any AI model processes the transcript; the redaction map is encrypted with a Key Vault-managed key and stored alongside the session record
+- **Prompt Hardening:** All user-supplied text (transcripts, demographics, prompts) is sanitized via `PromptInputHardeningService` to prevent prompt injection attacks
+- **Rate Limiting:** Middleware-based HTTP rate limiting with pluggable backends (in-memory for dev, Cosmos for production) protects against abuse
+- **Approval Workflow:** AI-generated documentation is clearly labeled as a draft. Sessions require explicit therapist attestation and approval before export. Editing clinical content automatically clears approval status.
+- **Encrypted Sensitive Data:** Client date of birth is stored AES-GCM encrypted at rest and is never returned through the API; only a computed age range is forwarded to the AI pipeline
+- **Access Control:** All HTTP endpoints enforce JWT ownership — therapists cannot read or modify another therapist's sessions, goals, or client records
+- **Client ID Namespacing:** Client IDs are transparently namespaced server-side using a hash of the therapist's email address; the raw client-visible name is stripped from API responses and never stored without the prefix
 - The React SPA contains only public, non-sensitive Entra configuration values
-- All HTTP endpoints enforce JWT ownership — therapists cannot read or modify another therapist's sessions, goals, or client records
-- Client IDs are transparently namespaced server-side using a hash of the therapist's email address; the raw client-visible name is stripped from API responses and never stored without the prefix

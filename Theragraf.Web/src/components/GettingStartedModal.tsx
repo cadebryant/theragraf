@@ -19,6 +19,7 @@ import {
   DocumentBulletList24Regular,
   Target24Regular,
   ArrowRight24Regular,
+  CheckmarkCircle24Regular,
 } from '@fluentui/react-icons';
 
 const useStyles = makeStyles({
@@ -128,7 +129,8 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
                     <Text className={styles.stepDesc}>
                       Click <strong>New Session</strong>, fill in the session details, then press
                       Record. TheraGraf transcribes the conversation in real time with speaker
-                      labels.
+                      labels. When multiple speakers are detected, you'll assign roles (Therapist
+                      or Client) after recording ends.
                     </Text>
                   </div>
                 </div>
@@ -139,15 +141,27 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
                     <Text className={styles.stepDesc}>
                       Press <strong>Generate Documentation</strong>. The AI produces a SOAP or DAP
                       note (DAP is selected automatically for Psychotherapy; you can override in
-                      Session Details), suggested CPT codes, and ICD-10 diagnoses. Review and edit
-                      before saving.
+                      Session Details), suggested CPT codes, and ICD-10 diagnoses. The session is
+                      marked as an <strong>AI Draft</strong> until you review and approve it.
+                    </Text>
+                  </div>
+                </div>
+                <div className={styles.step}>
+                  <CheckmarkCircle24Regular className={styles.stepIcon} />
+                  <div className={styles.stepText}>
+                    <Text className={styles.stepTitle}>3. Attest &amp; approve</Text>
+                    <Text className={styles.stepDesc}>
+                      Edit the AI-generated content as needed, then check the attestation box to
+                      confirm clinical accuracy. Click <strong>Verify &amp; Approve</strong> to
+                      finalize the session. Editing content after approval clears the approval
+                      status, ensuring accountability.
                     </Text>
                   </div>
                 </div>
                 <div className={styles.step}>
                   <Target24Regular className={styles.stepIcon} />
                   <div className={styles.stepText}>
-                    <Text className={styles.stepTitle}>3. Build client profiles &amp; track goals</Text>
+                    <Text className={styles.stepTitle}>4. Build client profiles &amp; track goals</Text>
                     <Text className={styles.stepDesc}>
                       Open a client's profile to add intake information (age, sex, prior diagnoses)
                       and manage SMART treatment goals. Intake data enriches ICD-10 suggestions;
@@ -158,10 +172,11 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
                 <div className={styles.step}>
                   <ArrowRight24Regular className={styles.stepIcon} />
                   <div className={styles.stepText}>
-                    <Text className={styles.stepTitle}>4. Export or save</Text>
+                    <Text className={styles.stepTitle}>5. Export approved sessions</Text>
                     <Text className={styles.stepDesc}>
-                      Save the session to your caseload, export as PDF for your EMR, or download an
-                      X12 837P file for direct billing submission.
+                      Once a session is approved, export as PDF for your EMR or download an X12
+                      837P file for direct billing submission. Exports are disabled for unapproved
+                      drafts to ensure quality control.
                     </Text>
                   </div>
                 </div>
