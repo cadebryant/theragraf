@@ -15,6 +15,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import { getClientStats } from '@/api/stats';
 import { getSessionsByClient } from '@/api/sessions';
 import { stripClientIdPrefix } from '@/utils/clientId';
+import { formatSessionDateOrPlaceholder } from '@/utils/dateFormat';
 import type { TherapyDiscipline } from '@/types';
 import SessionsTable from './SessionsTable';
 import GoalsPanel from './GoalsPanel';
@@ -96,12 +97,6 @@ export default function ClientProfile() {
   const latestSession = latestSessionQuery.data?.items[0];
   const latestDiscipline = latestSession?.discipline as TherapyDiscipline | undefined;
 
-  function rowKeyToDateStr(key: string | null): string {
-    if (!key) return '—';
-    const iso = key.replace(/T(\d{2})-(\d{2})-(\d{2})Z$/, 'T$1:$2:$3Z');
-    return new Date(iso).toLocaleDateString();
-  }
-
   return (
     <div className={styles.page}>
       <div className={styles.headerRow}>
@@ -134,8 +129,8 @@ export default function ClientProfile() {
                 label: 'Avg Duration',
                 value: `${Math.round(stats.averageSessionDurationMinutes)} min`,
               },
-              { label: 'First Session', value: rowKeyToDateStr(stats.firstSessionDate) },
-              { label: 'Last Session', value: rowKeyToDateStr(stats.lastSessionDate) },
+              { label: 'First Session', value: formatSessionDateOrPlaceholder(stats.firstSessionDate, '—', { includeTime: false }) },
+              { label: 'Last Session', value: formatSessionDateOrPlaceholder(stats.lastSessionDate, '—', { includeTime: false }) },
             ].map((item) => (
               <Card key={item.label} className={styles.statCard}>
                 <Text className={styles.statValue}>{item.value}</Text>

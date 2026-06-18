@@ -12,6 +12,7 @@ import {
 } from '@fluentui/react-components';
 import { Save24Regular, ArrowLeft24Regular, ArrowDownload24Regular } from '@fluentui/react-icons';
 import { getOrchestrationStatus, updateSession } from '@/api/sessions';
+import { formatTimestamp } from '@/utils/dateFormat';
 import type { CptCode, IcdCode, SoapNote } from '@/types';
 import PipelineStatus from './PipelineStatus';
 import SoapNoteEditor from './SoapNoteEditor';
@@ -229,7 +230,7 @@ export default function SessionReview() {
           {isApproved && (
             <MessageBar intent="success">
               <MessageBarBody>
-                ✓ Session approved by {approvedBy ?? 'therapist'} {approvedAt ? `on ${new Date(approvedAt).toLocaleString()}` : ''}. Exports are now enabled.
+                ✓ Session approved by {approvedBy ?? 'therapist'} {approvedAt ? `on ${formatTimestamp(approvedAt)}` : ''}. Exports are now enabled.
               </MessageBarBody>
             </MessageBar>
           )}

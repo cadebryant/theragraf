@@ -16,6 +16,7 @@ import {
 import { DocumentBulletList24Regular } from '@fluentui/react-icons';
 import SessionMetadataForm, { type SessionMetadata } from './SessionMetadataForm';
 import { stripClientIdPrefix } from '@/utils/clientId';
+import { toDateTimeLocalValue } from '@/utils/dateFormat';
 import AudioRecorder from './AudioRecorder';
 import { startDocumentation, toSessionDateKey } from '@/api/sessions';
 import { getClientDemographics } from '@/api/clients';
@@ -48,12 +49,6 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalM,
   },
 });
-
-function defaultDatetimeLocal() {
-  const now = new Date();
-  now.setSeconds(0, 0);
-  return now.toISOString().slice(0, 16);
-}
 
 /**
  * Discipline-specific clinical vocabulary that the speech recogniser should bias
@@ -161,7 +156,7 @@ export default function NewSession() {
     noteFormat: 'Soap',
     setting: 'Outpatient',
     payer: 'Medicare',
-    sessionDate: defaultDatetimeLocal(),
+    sessionDate: toDateTimeLocalValue(),
   });
   const [rawTranscript, setRawTranscript] = useState('');
   const [submitting, setSubmitting] = useState(false);

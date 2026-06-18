@@ -19,6 +19,7 @@ import {
   ArrowDownload24Regular,
 } from '@fluentui/react-icons';
 import { getSessionByClientAndDate, updateSession } from '@/api/sessions';
+import { formatSessionDate } from '@/utils/dateFormat';
 import type { CptCode, IcdCode, SoapNote } from '@/types';
 import SoapNoteEditor from '@/pages/SessionReview/SoapNoteEditor';
 import { CptCodesEditor, IcdCodesEditor } from '@/pages/SessionReview/CodesEditor';
@@ -54,11 +55,6 @@ const useStyles = makeStyles({
     justifyContent: 'flex-end',
   },
 });
-
-function rowKeyToDateStr(key: string): string {
-  const iso = key.replace(/T(\d{2})-(\d{2})-(\d{2})Z$/, 'T$1:$2:$3Z');
-  return new Date(iso).toLocaleString();
-}
 
 export default function SessionDetail() {
   const styles = useStyles();
@@ -179,7 +175,7 @@ export default function SessionDetail() {
             {stripClientIdPrefix(clientId!)}
           </Text>
           <Text block style={{ fontSize: tokens.fontSizeBase300, color: tokens.colorNeutralForeground3 }}>
-            {rowKeyToDateStr(sessionDate!)}
+            {formatSessionDate(sessionDate!)}
           </Text>
         </div>
         {!editing ? (

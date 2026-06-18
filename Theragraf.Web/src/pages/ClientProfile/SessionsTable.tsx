@@ -25,6 +25,7 @@ import {
 } from '@fluentui/react-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSessionsByClient, deleteSession } from '@/api/sessions';
+import { formatSessionDate } from '@/utils/dateFormat';
 import type { SessionResponse } from '@/types';
 
 const useStyles = makeStyles({
@@ -46,12 +47,6 @@ const useStyles = makeStyles({
     marginLeft: 'auto',
   },
 });
-
-/** Convert row key "2025-06-15T14-30-00Z" to a displayable date string. */
-function rowKeyToDate(rowKey: string): string {
-  const iso = rowKey.replace(/T(\d{2})-(\d{2})-(\d{2})Z$/, 'T$1:$2:$3Z');
-  return new Date(iso).toLocaleString();
-}
 
 interface Props {
   clientId: string;
@@ -181,7 +176,7 @@ export default function SessionsTable({ clientId }: Props) {
           <TableBody>
             {sessions.map((s) => (
               <TableRow key={s.sessionDate}>
-                <TableCell>{rowKeyToDate(s.sessionDate)}</TableCell>
+                <TableCell>{formatSessionDate(s.sessionDate)}</TableCell>
                 <TableCell>
                   <Badge appearance="tint" color="brand">{s.discipline}</Badge>
                 </TableCell>
