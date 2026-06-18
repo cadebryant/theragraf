@@ -94,7 +94,7 @@ export default function SessionDetail() {
   const approveMutation = useMutation({
     mutationFn: () =>
       updateSession(clientId!, sessionDate!, {
-        approvalUpdate: { isApproved: true },
+        approval: { verifyAndApprove: true },
       }),
     onSuccess: (updated) => {
       queryClient.setQueryData(['session', clientId, sessionDate], updated);

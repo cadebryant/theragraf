@@ -100,13 +100,15 @@ export interface SessionUpdateRequest {
   suggestedCptCodes?: CptCode[];
   suggestedIcdCodes?: IcdCode[];
   /** Optional approval action to persist therapist approval state. */
-  approvalUpdate?: ApprovalUpdate;
+  approval?: ApprovalUpdate;
 }
 
 /** Sent to session update endpoint when applying/clearing therapist approval. */
 export interface ApprovalUpdate {
-  /** Set to true to mark approved, false to clear approval. */
-  isApproved: boolean;
+  /** Set to true to mark approved. Backend requires this exact property name. */
+  verifyAndApprove: boolean;
+  /** Optional - backend will populate from JWT if not provided. */
+  approvedBy?: string;
 }
 
 // ── Caseload / Pagination ─────────────────────────────────────────────────────

@@ -152,17 +152,15 @@ export default function SessionReview() {
     try {
       console.log('[SessionReview] Sending approval request...');
       const updated = await updateSession(state.clientId, state.sessionDateKey, {
-        approvalUpdate: { isApproved: true },
+        approval: { verifyAndApprove: true },
       });
       console.log('[SessionReview] Approval response:', updated);
-      setIsApproved(Boolean(updated.isApproved));
-      setApprovedBy(updated.approvedBy ?? null);
-      setApprovedAt(updated.approvedAt ?? null);
-      setAttestationChecked(false); // Reset checkbox after successful approval
+
+      // Navigate to session detail after successful approval
+      navigate(`/sessions/${encodeURIComponent(state.clientId)}/${encodeURIComponent(state.sessionDateKey)}`);
     } catch (err) {
       console.error('[SessionReview] Approval failed:', err);
       setSaveError((err as Error).message);
-    } finally {
       setSaving(false);
     }
   }
@@ -325,12 +323,12 @@ export default function SessionReview() {
               Discard
             </Button>
             <Button
-              appearance="primary"
+              appearance="secondary"
               icon={saving ? <Spinner size="tiny" /> : <Save24Regular />}
               onClick={() => void handleSave()}
               disabled={saving}
             >
-              Save Session
+              Save as Draft
             </Button>
           </div>
         </>

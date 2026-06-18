@@ -61,12 +61,16 @@ const useStyles = makeStyles({
     fontWeight: tokens.fontWeightSemibold,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
+    color: tokens.colorNeutralForeground2,
   },
-  therapistLabel: {
+  speaker1Label: {
     color: tokens.colorBrandForeground1,
   },
-  clientLabel: {
+  speaker2Label: {
     color: tokens.colorPaletteTealForeground2,
+  },
+  speakerOtherLabel: {
+    color: tokens.colorPaletteMarigoldForeground2,
   },
   segmentText: {
     fontSize: tokens.fontSizeBase300,
@@ -96,11 +100,13 @@ function formatTime(seconds: number) {
   return `${m}:${s}`;
 }
 
-/** Maps speakerId ("Guest-1", "Guest-2", …) to "Therapist" / "Client" / "Speaker N" */
+/** Maps speakerId ("Guest-1", "Guest-2", …) to display label with speaker order.
+ * Since we can't determine therapist vs client from order alone, we show neutral labels.
+ */
 function labelFor(speakerId: string, speakerOrder: string[]): string {
   const idx = speakerOrder.indexOf(speakerId);
-  if (idx === 0) return 'Therapist';
-  if (idx === 1) return 'Client';
+  if (idx === 0) return 'Speaker 1 (You)';
+  if (idx === 1) return 'Speaker 2';
   return `Speaker ${idx + 1}`;
 }
 
@@ -112,6 +118,8 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [initialising, setInitialising] = useState(false);
+  const [awaitingRoleAssignment, setAwaitingRoleAssignment] = useState(false);
+  const [speaker1Role, setSpeaker1Role] = useState<'Therapist' | 'Client'>('Therapist');
 
   const transcriberRef = useRef<SpeechSDK.ConversationTranscriber | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -269,23 +277,41 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
       stopTimer();
       window.dispatchEvent(new CustomEvent('theragraf:recording-stop'));
 
-      // Read from refs — these always hold the latest values regardless of
-      // when this closure was created, avoiding the stale-state race.
-      const finalSegments = [...segmentsRef.current];
-      if (interimTextRef.current.trim()) {
-        finalSegments.push({ speakerId: 'unknown', text: interimTextRef.current, isFinal: false });
+      // Show role assignment UI if we have multiple speakers
+      if (speakerOrderRef.current.length >= 2) {
+        setAwaitingRoleAssignment(true);
+      } else {
+        // Single speaker or no diarization - finalize immediately
+        finalizeTranscript('Therapist');
       }
-
-      const rawTranscript = finalSegments
-        .map((seg) => {
-          const label = labelFor(seg.speakerId, speakerOrderRef.current);
-          return `[${label}]: ${seg.text}`;
-        })
-        .join('\n');
-
-      onTranscriptReady(rawTranscript, elapsedRef.current);
     });
   }, [stopTimer, onTranscriptReady]);
+
+  const finalizeTranscript = useCallback((speaker1Role: 'Therapist' | 'Client') => {
+    // Read from refs — these always hold the latest values
+    const finalSegments = [...segmentsRef.current];
+    if (interimTextRef.current.trim()) {
+      finalSegments.push({ speakerId: 'unknown', text: interimTextRef.current, isFinal: false });
+    }
+
+    const rawTranscript = finalSegments
+      .map((seg) => {
+        const idx = speakerOrderRef.current.indexOf(seg.speakerId);
+        let label: string;
+        if (idx === 0) {
+          label = speaker1Role;
+        } else if (idx === 1) {
+          label = speaker1Role === 'Therapist' ? 'Client' : 'Therapist';
+        } else {
+          label = labelFor(seg.speakerId, speakerOrderRef.current);
+        }
+        return `[${label}]: ${seg.text}`;
+      })
+      .join('\n');
+
+    setAwaitingRoleAssignment(false);
+    onTranscriptReady(rawTranscript, elapsedRef.current);
+  }, [onTranscriptReady]);
 
   // Cleanup on unmount
   useEffect(
@@ -346,11 +372,12 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
           <>
             {segments.map((seg, i) => {
               const label = labelFor(seg.speakerId, speakerOrderRef.current);
-              const isTherapist = label === 'Therapist';
+              const idx = speakerOrderRef.current.indexOf(seg.speakerId);
+              const colorClass = idx === 0 ? styles.speaker1Label : idx === 1 ? styles.speaker2Label : styles.speakerOtherLabel;
               return (
                 <div key={i} className={styles.segment}>
                   <Text
-                    className={`${styles.speakerLabel} ${isTherapist ? styles.therapistLabel : styles.clientLabel}`}
+                    className={`${styles.speakerLabel} ${colorClass}`}
                   >
                     {label}
                   </Text>
@@ -362,6 +389,46 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
           </>
         )}
       </div>
+
+      {/* Speaker role assignment UI - shown after recording stops with multiple speakers */}
+      {awaitingRoleAssignment && speakerOrderRef.current.length >= 2 && (
+        <div style={{
+          padding: tokens.spacingVerticalL,
+          border: `1px solid ${tokens.colorBrandStroke1}`,
+          borderRadius: tokens.borderRadiusMedium,
+          backgroundColor: tokens.colorBrandBackground2,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: tokens.spacingVerticalM,
+        }}>
+          <Text style={{ fontWeight: tokens.fontWeightSemibold }}>
+            Assign speaker roles:
+          </Text>
+          <div style={{ display: 'flex', gap: tokens.spacingHorizontalM, alignItems: 'center' }}>
+            <Text>Speaker 1 (You) is:</Text>
+            <Button
+              appearance={speaker1Role === 'Therapist' ? 'primary' : 'secondary'}
+              onClick={() => setSpeaker1Role('Therapist')}
+              size="small"
+            >
+              Therapist
+            </Button>
+            <Button
+              appearance={speaker1Role === 'Client' ? 'primary' : 'secondary'}
+              onClick={() => setSpeaker1Role('Client')}
+              size="small"
+            >
+              Client
+            </Button>
+          </div>
+          <Button
+            appearance="primary"
+            onClick={() => finalizeTranscript(speaker1Role)}
+          >
+            Confirm and Continue
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }
