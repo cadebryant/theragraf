@@ -242,6 +242,15 @@ export default function SessionDetail() {
         </MessageBar>
       )}
 
+      {/* Approval success message */}
+      {session.isApproved && (
+        <MessageBar intent="success">
+          <MessageBarBody>
+            ✓ Session approved by {session.approvedBy ?? 'therapist'} {session.approvedAt ? `on ${new Date(session.approvedAt).toLocaleString()}` : ''}. Exports are enabled.
+          </MessageBarBody>
+        </MessageBar>
+      )}
+
       {/* Approval card - shown only when not approved and not editing */}
       {!session.isApproved && !editing && (
         <div style={{ 

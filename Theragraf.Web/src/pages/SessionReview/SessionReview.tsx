@@ -150,13 +150,17 @@ export default function SessionReview() {
     setSaving(true);
     setSaveError(null);
     try {
+      console.log('[SessionReview] Sending approval request...');
       const updated = await updateSession(state.clientId, state.sessionDateKey, {
         approvalUpdate: { isApproved: true },
       });
+      console.log('[SessionReview] Approval response:', updated);
       setIsApproved(Boolean(updated.isApproved));
       setApprovedBy(updated.approvedBy ?? null);
       setApprovedAt(updated.approvedAt ?? null);
+      setAttestationChecked(false); // Reset checkbox after successful approval
     } catch (err) {
+      console.error('[SessionReview] Approval failed:', err);
       setSaveError((err as Error).message);
     } finally {
       setSaving(false);
@@ -223,36 +227,47 @@ export default function SessionReview() {
             </MessageBar>
           )}
 
-          {/* Attestation card */}
-          <div style={{ 
-            padding: tokens.spacingVerticalL, 
-            border: `1px solid ${attestationChecked ? tokens.colorBrandStroke1 : tokens.colorNeutralStroke1}`,
-            borderRadius: tokens.borderRadiusMedium,
-            backgroundColor: attestationChecked ? tokens.colorBrandBackground2 : tokens.colorNeutralBackground1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: tokens.spacingHorizontalM
-          }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}>
-              <input
-                type="checkbox"
-                checked={attestationChecked}
-                onChange={(e) => setAttestationChecked(e.target.checked)}
-                style={{ width: 20, height: 20, cursor: 'pointer' }}
-              />
-              <Text style={{ fontSize: tokens.fontSizeBase300, fontWeight: tokens.fontWeightSemibold }}>
-                I have reviewed this draft and accept responsibility for clinical accuracy.
-              </Text>
-            </label>
-            <Button
-              appearance="primary"
-              icon={saving ? <Spinner size="tiny" /> : <Save24Regular />}
-              onClick={() => void handleApprove()}
-              disabled={!attestationChecked || saving || isApproved}
-            >
-              Verify & Approve
-            </Button>
-          </div>
+          {/* Approval success message */}
+          {isApproved && (
+            <MessageBar intent="success">
+              <MessageBarBody>
+                ✓ Session approved by {approvedBy ?? 'therapist'} {approvedAt ? `on ${new Date(approvedAt).toLocaleString()}` : ''}. Exports are now enabled.
+              </MessageBarBody>
+            </MessageBar>
+          )}
+
+          {/* Attestation card - only show if not yet approved */}
+          {!isApproved && (
+            <div style={{ 
+              padding: tokens.spacingVerticalL, 
+              border: `1px solid ${attestationChecked ? tokens.colorBrandStroke1 : tokens.colorNeutralStroke1}`,
+              borderRadius: tokens.borderRadiusMedium,
+              backgroundColor: attestationChecked ? tokens.colorBrandBackground2 : tokens.colorNeutralBackground1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: tokens.spacingHorizontalM
+            }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}>
+                <input
+                  type="checkbox"
+                  checked={attestationChecked}
+                  onChange={(e) => setAttestationChecked(e.target.checked)}
+                  style={{ width: 20, height: 20, cursor: 'pointer' }}
+                />
+                <Text style={{ fontSize: tokens.fontSizeBase300, fontWeight: tokens.fontWeightSemibold }}>
+                  I have reviewed this draft and accept responsibility for clinical accuracy.
+                </Text>
+              </label>
+              <Button
+                appearance="primary"
+                icon={saving ? <Spinner size="tiny" /> : <Save24Regular />}
+                onClick={() => void handleApprove()}
+                disabled={!attestationChecked || saving}
+              >
+                Verify & Approve
+              </Button>
+            </div>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalM }}>
             <div className={styles.actions}>
@@ -317,18 +332,6 @@ export default function SessionReview() {
             >
               Save Session
             </Button>
-          </div>
-          <div>
-            {!isApproved && (
-              <Text style={{ color: tokens.colorNeutralForeground3, fontSize: 12 }}>
-                Note is not approved. Export is disabled until a therapist verifies and approves.
-              </Text>
-            )}
-            {isApproved && (
-              <Text style={{ color: tokens.colorBrandForeground1, fontSize: 12 }}>
-                Approved by {approvedBy ?? 'therapist'} on {approvedAt ?? ''}
-              </Text>
-            )}
           </div>
         </>
       )}
