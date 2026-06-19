@@ -33,7 +33,8 @@ public record ClientStats(
     IReadOnlyDictionary<string, int>    SessionsBySetting,
     IReadOnlyDictionary<string, int>    SessionsByPayer,
     IReadOnlyList<CodeFrequency>        TopCptCodes,
-    IReadOnlyList<CodeFrequency>        TopIcdCodes
+    IReadOnlyList<CodeFrequency>        TopIcdCodes,
+    bool                                IsSynthetic
 );
 
 /// <summary>A billing code with its frequency count across the aggregated sessions.</summary>

@@ -358,7 +358,7 @@ public class SessionsGetTests
         var sut = new SessionsGet(_repository, AuthEnabledConfig, NullLoggerFactory.Instance, new NullAuditLogger());
         _repository.GetCaseloadAsync("Dr. Adams", Arg.Any<CancellationToken>())
             .Returns(new CaseloadSummary("Dr. Adams",
-                new List<ClientSummary> { new("client-001", "2024-10-10T10-00-00Z", 3) }));
+                new List<ClientSummary> { new("client-001", "2024-10-10T10-00-00Z", 3, false) }));
 
         var req = BuildAuthenticatedRequest("Dr. Adams", "http://localhost/api/sessions");
         var response = await sut.GetCaseload(req, CancellationToken.None);

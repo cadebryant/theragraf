@@ -80,11 +80,12 @@ internal static class CosmosSessionQueries
 
     /// <summary>
     /// Returns one row per distinct client for the given therapist, with the most-recent
-    /// session date and total session count. Ordered by lastSession descending.
+    /// session date, total session count, and synthetic flag. Ordered by lastSession descending.
     /// Filter: <c>@therapistName</c>
     /// </summary>
     internal const string CaseloadByTherapist =
-        "SELECT c.clientId, MAX(c.id) AS lastSession, COUNT(1) AS totalSessions " +
+        "SELECT c.clientId, MAX(c.id) AS lastSession, COUNT(1) AS totalSessions, " +
+        "MAX(c.isSynthetic ? 1 : 0) AS isSynthetic " +
         "FROM c WHERE c.therapistName = @therapistName " +
         "GROUP BY c.clientId";
 
@@ -95,6 +96,6 @@ internal static class CosmosSessionQueries
     /// </summary>
     internal const string StatsProjectionByClient =
         "SELECT c.id, c.clientId, c.therapistName, c.discipline, c.setting, c.payer, " +
-        "c.sessionDurationMinutes, c.suggestedCptCodes, c.suggestedIcdCodes " +
+        "c.sessionDurationMinutes, c.suggestedCptCodes, c.suggestedIcdCodes, c.isSynthetic " +
         "FROM c WHERE c.clientId = @clientId";
 }

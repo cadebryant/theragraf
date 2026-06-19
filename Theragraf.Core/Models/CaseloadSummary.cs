@@ -7,7 +7,8 @@ namespace Theragraf.Core.Models;
 public record ClientSummary(
     string         ClientId,
     string?        LastSessionDate,
-    int            TotalSessions
+    int            TotalSessions,
+    bool           IsSynthetic
 );
 
 /// <summary>

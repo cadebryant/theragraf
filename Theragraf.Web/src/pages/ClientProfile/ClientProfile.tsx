@@ -20,6 +20,7 @@ import type { TherapyDiscipline } from '@/types';
 import SessionsTable from './SessionsTable';
 import GoalsPanel from './GoalsPanel';
 import DemographicsPanel from './DemographicsPanel';
+import { SyntheticDataBadge } from '@/components/SyntheticDataBadge';
 
 const useStyles = makeStyles({
   page: {
@@ -116,6 +117,8 @@ export default function ClientProfile() {
           New Session
         </Button>
       </div>
+
+      <SyntheticDataBadge isSynthetic={stats?.isSynthetic ?? false} />
 
       {statsQuery.isLoading && <Spinner label="Loading client stats…" />}
 

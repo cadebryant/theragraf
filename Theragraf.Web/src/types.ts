@@ -119,6 +119,7 @@ export interface ClientSummary {
   clientId: string;
   lastSessionDate: string | null;
   totalSessions: number;
+  isSynthetic: boolean;
 }
 
 export interface CaseloadSummary {
@@ -168,6 +169,7 @@ export interface ClientStats {
   sessionsByPayer: Record<string, number>;
   topCptCodes: CodeFrequency[];
   topIcdCodes: CodeFrequency[];
+  isSynthetic: boolean;
 }
 
 // ── Orchestration ─────────────────────────────────────────────────────────────

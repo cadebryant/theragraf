@@ -24,6 +24,7 @@ import {
   Search24Regular,
   ChevronUp16Regular,
   ChevronDown16Regular,
+  BeakerRegular,
 } from '@fluentui/react-icons';
 import type { CaseloadSummary, ClientSummary } from '@/types';
 
@@ -68,6 +69,11 @@ const useStyles = makeStyles({
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalS,
+  },
+  clientIdCell: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalXS,
   },
   sortableHeader: {
     display: 'flex',
@@ -217,7 +223,19 @@ export default function CaseloadTable({ caseload }: Props) {
               {pageSlice.map((client) => (
                 <TableRow key={client.clientId}>
                   <TableCell>
-                    <Text weight="semibold">{stripClientIdPrefix(client.clientId)}</Text>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS }}>
+                      <Text weight="semibold">{stripClientIdPrefix(client.clientId)}</Text>
+                      {client.isSynthetic && (
+                        <Tooltip content="Synthetic demo data" relationship="label">
+                          <Badge
+                            appearance="tint"
+                            color="informative"
+                            icon={<BeakerRegular />}
+                            size="small"
+                          />
+                        </Tooltip>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className={styles.lastSessionCell}>

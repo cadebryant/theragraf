@@ -418,7 +418,7 @@ public class CosmosSessionRepository : ISessionRepository
 
         var clients = caseloadRows
             .OrderByDescending(d => d.LastSession)
-            .Select(d => new ClientSummary(d.ClientId, d.LastSession, d.TotalSessions))
+            .Select(d => new ClientSummary(d.ClientId, d.LastSession, d.TotalSessions, d.IsSynthetic > 0))
             .ToList();
 
         return new CaseloadSummary(therapistName, clients);
@@ -490,7 +490,8 @@ public class CosmosSessionRepository : ISessionRepository
             SessionsBySetting:            GroupCount(docs, d => d.Setting),
             SessionsByPayer:              GroupCount(docs, d => d.Payer),
             TopCptCodes:                  TopCodes(docs, d => d.SuggestedCptCodes),
-            TopIcdCodes:                  TopIcdCodes(docs)
+            TopIcdCodes:                  TopIcdCodes(docs),
+            IsSynthetic:                  docs.Any(d => d.IsSynthetic)
         );
     }
 
@@ -585,6 +586,9 @@ public class CosmosSessionRepository : ISessionRepository
 
         [System.Text.Json.Serialization.JsonPropertyName("suggestedIcdCodes")]
         public List<IcdCode> SuggestedIcdCodes { get; set; } = [];
+
+        [System.Text.Json.Serialization.JsonPropertyName("isSynthetic")]
+        public bool IsSynthetic { get; set; }
     }
 
     private async Task<IReadOnlyList<SessionResponse>> DrainIteratorAsync(
@@ -619,5 +623,8 @@ public class CosmosSessionRepository : ISessionRepository
 
         [System.Text.Json.Serialization.JsonPropertyName("totalSessions")]
         public int TotalSessions { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("isSynthetic")]
+        public int IsSynthetic { get; set; }
     }
 }

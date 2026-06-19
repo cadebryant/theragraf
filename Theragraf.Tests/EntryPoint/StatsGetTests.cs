@@ -89,7 +89,8 @@ public class StatsGetTests
         SessionsBySetting:            new Dictionary<string, int>(),
         SessionsByPayer:              new Dictionary<string, int>(),
         TopCptCodes:                  [],
-        TopIcdCodes:                  []
+        TopIcdCodes:                  [],
+        IsSynthetic:                  false
     );
 
     private static ClientStats PopulatedClientStats() => new(
@@ -104,7 +105,8 @@ public class StatsGetTests
         SessionsBySetting:            new Dictionary<string, int> { ["Outpatient"] = 5 },
         SessionsByPayer:              new Dictionary<string, int> { ["Medicare"] = 5 },
         TopCptCodes:                  [new CodeFrequency("97110", "Therapeutic Exercise", 5, 10)],
-        TopIcdCodes:                  [new CodeFrequency("M54.5", "Low back pain", 5, 0)]
+        TopIcdCodes:                  [new CodeFrequency("M54.5", "Low back pain", 5, 0)],
+        IsSynthetic:                  false
     );
 
     // ── GetByTherapist: validation ────────────────────────────────────────────
