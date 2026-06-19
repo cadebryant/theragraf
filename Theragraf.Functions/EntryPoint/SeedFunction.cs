@@ -3,6 +3,7 @@ namespace Theragraf.Functions.EntryPoint;
 using System.Net;
 using System.Text.Json;
 using Bogus;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Configuration;
@@ -17,7 +18,10 @@ using Theragraf.Functions.Helpers;
 /// Set that value to enable seeding; leave it blank (default) to disable in production.
 /// </summary>
 public class SeedFunction(
-    ISessionRepository repository,
+    ISessionRepository sessionRepository,
+    IClientRepository  clientRepository,
+    IGoalRepository    goalRepository,
+    CosmosClient       cosmosClient,
     IConfiguration     config,
     ILoggerFactory     loggerFactory)
 {
@@ -124,7 +128,7 @@ public class SeedFunction(
 
         var records = BuildFakeRecords(demoTherapist, count);
 
-        var tasks = records.Select(r => repository.SaveAsync(r, cancellationToken));
+        var tasks = records.Select(r => sessionRepository.SaveAsync(r, cancellationToken));
         await Task.WhenAll(tasks);
 
         _logger.LogInformation("Seeded {Count} demo records for therapist '{TherapistName}'", count, demoTherapist);
@@ -156,7 +160,7 @@ public class SeedFunction(
         }
 
         // Pull the caseload for the demo therapist, then delete every session for each client.
-        var caseload  = await repository.GetCaseloadAsync(demoTherapist, cancellationToken);
+        var caseload  = await sessionRepository.GetCaseloadAsync(demoTherapist, cancellationToken);
         int deleted   = 0;
 
         foreach (var client in caseload.Clients)
@@ -164,14 +168,14 @@ public class SeedFunction(
             string? token = null;
             do
             {
-                var page = await repository.GetByClientIdPagedAsync(
+                var page = await sessionRepository.GetByClientIdPagedAsync(
                     client.ClientId, 100, token,
                     new SessionQueryOptions(Therapist: demoTherapist),
                     cancellationToken);
 
                 foreach (var session in page.Items)
                 {
-                    if (await repository.DeleteAsync(client.ClientId, session.SessionDate, cancellationToken))
+                    if (await sessionRepository.DeleteAsync(client.ClientId, session.SessionDate, cancellationToken))
                         deleted++;
                 }
 
@@ -265,5 +269,111 @@ public class SeedFunction(
         }
 
         return results;
+    }
+
+    // ── Retroactive migration ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// PATCH /api/seed/mark-synthetic
+    /// One-time operation to mark all existing Cosmos DB records as synthetic.
+    /// Requires <c>Demo:TherapistName</c> to be set in configuration.
+    /// </summary>
+    [Function("MarkAllSynthetic")]
+    public async Task<HttpResponseData> MarkAllSynthetic(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "patch", Route = "seed/mark-synthetic")] HttpRequestData req,
+        CancellationToken cancellationToken)
+    {
+        var demoTherapist = config["Demo:TherapistName"];
+        if (string.IsNullOrWhiteSpace(demoTherapist))
+        {
+            var disabled = req.CreateResponse(HttpStatusCode.Forbidden);
+            await disabled.WriteStringAsync("Demo seeding is not enabled on this deployment.", cancellationToken);
+            return disabled;
+        }
+
+        var dbName = config["CosmosDb:DatabaseName"] ?? "theragraf";
+        var sessionsContainer = config["CosmosDb:ContainerName"] ?? "sessions";
+        var clientsContainer = config["CosmosDb:ClientsContainerName"] ?? "clients";
+        var goalsContainer = config["CosmosDb:GoalsContainerName"] ?? "goals";
+
+        var database = cosmosClient.GetDatabase(dbName);
+
+        int sessionsUpdated = 0;
+        int clientsUpdated = 0;
+        int goalsUpdated = 0;
+
+        // ── Mark all sessions as synthetic ────────────────────────────────────────
+        {
+            var container = database.GetContainer(sessionsContainer);
+            var query = new QueryDefinition("SELECT * FROM c WHERE NOT IS_DEFINED(c.isSynthetic) OR c.isSynthetic = false");
+
+            using var iterator = container.GetItemQueryIterator<SessionDocument>(query);
+            while (iterator.HasMoreResults)
+            {
+                var page = await iterator.ReadNextAsync(cancellationToken);
+                foreach (var doc in page)
+                {
+                    doc.IsSynthetic = true;
+                    await container.ReplaceItemAsync(
+                        doc, doc.Id, new PartitionKey(doc.ClientId), cancellationToken: cancellationToken);
+                    sessionsUpdated++;
+                }
+            }
+        }
+
+        // ── Mark all clients as synthetic ─────────────────────────────────────────
+        {
+            var container = database.GetContainer(clientsContainer);
+            var query = new QueryDefinition("SELECT * FROM c WHERE NOT IS_DEFINED(c.isSynthetic) OR c.isSynthetic = false");
+
+            using var iterator = container.GetItemQueryIterator<ClientDocument>(query);
+            while (iterator.HasMoreResults)
+            {
+                var page = await iterator.ReadNextAsync(cancellationToken);
+                foreach (var doc in page)
+                {
+                    doc.IsSynthetic = true;
+                    await container.ReplaceItemAsync(
+                        doc, doc.Id, new PartitionKey(doc.ClientId), cancellationToken: cancellationToken);
+                    clientsUpdated++;
+                }
+            }
+        }
+
+        // ── Mark all goals as synthetic ───────────────────────────────────────────
+        {
+            var container = database.GetContainer(goalsContainer);
+            var query = new QueryDefinition("SELECT * FROM c WHERE NOT IS_DEFINED(c.isSynthetic) OR c.isSynthetic = false");
+
+            using var iterator = container.GetItemQueryIterator<GoalDocument>(query);
+            while (iterator.HasMoreResults)
+            {
+                var page = await iterator.ReadNextAsync(cancellationToken);
+                foreach (var doc in page)
+                {
+                    doc.IsSynthetic = true;
+                    await container.ReplaceItemAsync(
+                        doc, doc.Id, new PartitionKey(doc.ClientId), cancellationToken: cancellationToken);
+                    goalsUpdated++;
+                }
+            }
+        }
+
+        _logger.LogInformation(
+            "Marked {Sessions} sessions, {Clients} clients, and {Goals} goals as synthetic",
+            sessionsUpdated, clientsUpdated, goalsUpdated);
+
+        var ok = req.CreateResponse(HttpStatusCode.OK);
+        ok.Headers.Add("Content-Type", "application/json; charset=utf-8");
+        await ok.WriteStringAsync(
+            JsonSerializer.Serialize(new
+            {
+                sessionsUpdated,
+                clientsUpdated,
+                goalsUpdated,
+                totalUpdated = sessionsUpdated + clientsUpdated + goalsUpdated
+            }, JsonOptions),
+            cancellationToken);
+        return ok;
     }
 }
