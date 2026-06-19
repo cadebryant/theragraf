@@ -91,7 +91,7 @@ const useStyles = makeStyles({
 
 interface Props {
   onTranscriptReady: (rawTranscript: string, durationSeconds: number) => void;
-  /** Words the speech recogniser should bias toward, e.g. client and therapist names. */
+  /** Words the speech recognizer should bias toward, e.g. client and therapist names. */
   phraseHints?: string[];
 }
 
@@ -118,7 +118,7 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
   const [interimText, setInterimText] = useState('');
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [initialising, setInitialising] = useState(false);
+  const [initializing, setInitializing] = useState(false);
   const [awaitingRoleAssignment, setAwaitingRoleAssignment] = useState(false);
   const [speaker1Role, setSpeaker1Role] = useState<'Therapist' | 'Client'>('Therapist');
 
@@ -149,7 +149,7 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
 
   const startRecording = useCallback(async () => {
     setError(null);
-    setInitialising(true);
+    setInitializing(true);
     try {
       const { token, region } = await getSpeechToken();
 
@@ -263,7 +263,7 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
     } catch (err) {
       setError(formatErrorMessage(err, 'starting recording'));
     } finally {
-      setInitialising(false);
+      setInitializing(false);
     }
   }, [stopTimer]);
 
@@ -337,12 +337,12 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
               <Text className={styles.timer}>{formatTime(elapsed)}</Text>
             </>
           )}
-          {!recording && !initialising ? (
+          {!recording && !initializing ? (
             <Button
               appearance="primary"
               icon={<MicrophoneChat24Regular />}
               onClick={() => void startRecording()}
-              disabled={initialising}
+              disabled={initializing}
             >
               Record
             </Button>
@@ -355,7 +355,7 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
               Stop
             </Button>
           ) : (
-            <Spinner size="tiny" label="Initialising microphone…" />
+            <Spinner size="tiny" label="Initializing microphone…" />
           )}
         </div>
       </div>

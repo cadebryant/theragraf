@@ -1,4 +1,4 @@
-ï»¿namespace Theragraf.Functions.EntryPoint;
+namespace Theragraf.Functions.EntryPoint;
 
 using System.Net;
 using System.Text.Json;
@@ -133,7 +133,7 @@ public class SessionsGet(
             SortOrder:   query["sortOrder"] ?? "desc"
         );
 
-        // Ownership check â€” if the JWT is present, the caller must own this client.
+        // Ownership check — if the JWT is present, the caller must own this client.
         // Demo records (TherapistName == Demo:TherapistName) are readable by anyone.
         var identity = ClaimsHelper.GetTherapistIdentity(req, config);
         var requestedTherapist = options.Therapist;
@@ -145,7 +145,7 @@ public class SessionsGet(
             auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "SessionList",
                 resourceId: clientId, detail: "Therapist filter mismatch"));
             var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
-            await forbidden.WriteStringAsync("You are not authorised to filter by a different therapist.", cancellationToken);
+            await forbidden.WriteStringAsync("You are not authorized to filter by a different therapist.", cancellationToken);
             return forbidden;
         }
 
@@ -185,7 +185,7 @@ public class SessionsGet(
         return response;
     }
 
-    /// <summary>GET /api/sessions/{clientId}/{sessionDate} â€” get one specific session.</summary>
+    /// <summary>GET /api/sessions/{clientId}/{sessionDate} — get one specific session.</summary>
     [Function("GetSessionByClientAndDate")]
     public async Task<HttpResponseData> GetByClientAndDate(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sessions/{clientId}/{sessionDate}")] HttpRequestData req,
@@ -236,7 +236,7 @@ public class SessionsGet(
             return notFound;
         }
 
-        // Ownership check â€” the session must belong to the authenticated therapist.
+        // Ownership check — the session must belong to the authenticated therapist.
         // Demo records (TherapistName == Demo:TherapistName) are readable by anyone.
         var identity = ClaimsHelper.GetTherapistIdentity(req, config);
         if (identity is not null
@@ -246,7 +246,7 @@ public class SessionsGet(
             auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "Session",
                 resourceId: $"{clientId}/{sessionDate}", detail: "Ownership check failed"));
             var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
-            await forbidden.WriteStringAsync("You are not authorised to access this session.", cancellationToken);
+            await forbidden.WriteStringAsync("You are not authorized to access this session.", cancellationToken);
             return forbidden;
         }
 

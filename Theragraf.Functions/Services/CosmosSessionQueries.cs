@@ -1,4 +1,4 @@
-﻿namespace Theragraf.Functions.Services;
+namespace Theragraf.Functions.Services;
 
 using Theragraf.Core.Models;
 
@@ -16,7 +16,7 @@ using Theragraf.Core.Models;
 /// </remarks>
 internal static class CosmosSessionQueries
 {
-    // ── Base clause ───────────────────────────────────────────────────────────
+    // -- Base clause -----------------------------------------------------------
 
     /// <summary>
     /// Starting point for the paged/filtered query. The <c>@clientId</c> parameter
@@ -24,7 +24,7 @@ internal static class CosmosSessionQueries
     /// </summary>
     internal const string BaseSelect = "SELECT * FROM c WHERE c.clientId = @clientId AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)";
 
-    // ── Optional WHERE fragments (appended only when the filter is active) ────
+    // -- Optional WHERE fragments (appended only when the filter is active) ----
 
     internal const string FilterDiscipline  = " AND c.discipline = @discipline";
     internal const string FilterTherapist   = " AND c.therapistName = @therapist";
@@ -37,10 +37,10 @@ internal static class CosmosSessionQueries
     /// </summary>
     internal const string FilterDateFrom    = " AND c.id >= @dateFrom";
 
-    /// <summary>Upper-bound date filter — same caveat as <see cref="FilterDateFrom"/>.</summary>
+    /// <summary>Upper-bound date filter � same caveat as <see cref="FilterDateFrom"/>.</summary>
     internal const string FilterDateTo      = " AND c.id <= @dateTo";
 
-    // ── ORDER BY ──────────────────────────────────────────────────────────────
+    // -- ORDER BY --------------------------------------------------------------
 
     /// <summary>
     /// Builds the <c>ORDER BY</c> clause from a <see cref="SessionQueryOptions"/>
@@ -66,10 +66,10 @@ internal static class CosmosSessionQueries
         return $" ORDER BY {field} {direction}";
     }
 
-    // ── Stats projections ─────────────────────────────────────────────────────
+    // -- Stats projections -----------------------------------------------------
 
     /// <summary>
-    /// Projects only the fields required for stats aggregation — omits redactionMap
+    /// Projects only the fields required for stats aggregation � omits redactionMap
     /// and encryptedRedactionMap to avoid loading PHI unnecessarily.
     /// Excludes soft-deleted records.
     /// Filter: <c>@therapistName</c>
@@ -94,7 +94,7 @@ internal static class CosmosSessionQueries
         "GROUP BY c.clientId";
 
     /// <summary>
-    /// Projects only the fields required for stats aggregation — omits redactionMap
+    /// Projects only the fields required for stats aggregation � omits redactionMap
     /// and encryptedRedactionMap to avoid loading PHI unnecessarily.
     /// Excludes soft-deleted records.
     /// Filter: <c>@clientId</c> (partition-key query).

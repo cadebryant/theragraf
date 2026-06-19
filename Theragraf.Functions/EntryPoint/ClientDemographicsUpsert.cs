@@ -52,7 +52,7 @@ public class ClientDemographicsUpsert(
             auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "ClientDemographics",
                 resourceId: clientId, detail: "ClientId namespace mismatch"));
             var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
-            await forbidden.WriteStringAsync("You are not authorised to modify this client's record.", cancellationToken);
+            await forbidden.WriteStringAsync("You are not authorized to modify this client's record.", cancellationToken);
             return forbidden;
         }
 

@@ -1,4 +1,4 @@
-﻿using Azure.AI.TextAnalytics;
+using Azure.AI.TextAnalytics;
 using Theragraf.Core.Services;
 
 namespace Theragraf.Functions.Services;

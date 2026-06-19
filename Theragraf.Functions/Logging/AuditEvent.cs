@@ -1,7 +1,7 @@
 namespace Theragraf.Functions.Logging;
 
 /// <summary>
-/// Categorises every operation that touches PHI.
+/// Categorizes every operation that touches PHI.
 /// Used as the <c>action</c> field in <see cref="AuditEvent"/>.
 /// </summary>
 public enum AuditAction

@@ -48,7 +48,7 @@ public class GoalsCreate(
             auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "Goal",
                 resourceId: clientId, detail: "ClientId namespace mismatch"));
             var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
-            await forbidden.WriteStringAsync("You are not authorised to create goals for this client.", cancellationToken);
+            await forbidden.WriteStringAsync("You are not authorized to create goals for this client.", cancellationToken);
             return forbidden;
         }
 

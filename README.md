@@ -1,10 +1,10 @@
-ï»¿# TheraGraf
+# TheraGraf
 
 **TheraGraf** is an open-source, agentic clinical documentation engine designed to eliminate the "paperwork tax" for occupational therapists, physical therapists, and mental health practitioners.
 
-Built with a privacy-first philosophy, TheraGraf is architected to deploy entirely within your own Azure subscription using your own AI resources â€” ensuring patient data never touches shared servers and you maintain full control of your clinical records.
+Built with a privacy-first philosophy, TheraGraf is architected to deploy entirely within your own Azure subscription using your own AI resources — ensuring patient data never touches shared servers and you maintain full control of your clinical records.
 
-> **âš ï¸ Important Note on Deployment:** The infrastructure-as-code files in this repository (`infra/parameters/*.bicepparam`) contain references to the author's specific Azure resources (OpenAI account, Language service, tenant ID, etc.). These are provided as a working reference implementation. **To deploy TheraGraf to your own Azure subscription, you must customize these parameter files** to point to your own pre-created Azure resources. See the [Azure Deployment](#azure-deployment) section for details.
+> **?? Important Note on Deployment:** The infrastructure-as-code files in this repository (`infra/parameters/*.bicepparam`) contain references to the author's specific Azure resources (OpenAI account, Language service, tenant ID, etc.). These are provided as a working reference implementation. **To deploy TheraGraf to your own Azure subscription, you must customize these parameter files** to point to your own pre-created Azure resources. See the [Azure Deployment](#azure-deployment) section for details.
 
 ---
 
@@ -13,11 +13,11 @@ Built with a privacy-first philosophy, TheraGraf is architected to deploy entire
 Modern clinical documentation is broken. Current solutions are high-cost, closed-source, and create data silos. TheraGraf changes the paradigm:
 
 - **Privacy-First:** PII is redacted before any AI model sees it. The redaction map is encrypted and stored separately; original names are only restored on retrieval.
-- **Bring-Your-Own-Resources:** TheraGraf deploys into your Azure subscription and uses your Azure OpenAI account, Language service, and Speech service. Pay only for the tokens and API calls you consume â€” no separate subscription or per-user licensing fees.
-- **Agentic Workflow:** Not just a scribe â€” an intelligent pipeline that captures diarized audio, redacts PII, generates **SOAP or DAP notes** (auto-selected by discipline, manually overrideable), validates clinical compliance, suggests CPT billing codes with CMS 8-minute rule unit calculation, and suggests ICD-10 diagnostic codes.
+- **Bring-Your-Own-Resources:** TheraGraf deploys into your Azure subscription and uses your Azure OpenAI account, Language service, and Speech service. Pay only for the tokens and API calls you consume — no separate subscription or per-user licensing fees.
+- **Agentic Workflow:** Not just a scribe — an intelligent pipeline that captures diarized audio, redacts PII, generates **SOAP or DAP notes** (auto-selected by discipline, manually overrideable), validates clinical compliance, suggests CPT billing codes with CMS 8-minute rule unit calculation, and suggests ICD-10 diagnostic codes.
 - **Therapist-in-the-Loop:** AI-generated documentation is clearly labeled as a draft. Sessions require explicit therapist attestation and approval before export. Approval is automatically cleared if clinical content is edited, ensuring accountability.
 - **Goal-Oriented:** Track SMART treatment goals per client with progress notes after every session. An AI suggestion endpoint generates goal candidates from the latest SOAP note, which the therapist can accept or discard.
-- **Client Profiles:** Maintain demographic and intake data per client â€” age range, biological sex, prior diagnoses, and functional limitations. This context informs smarter ICD-10 suggestions without forwarding any PII to the AI pipeline.
+- **Client Profiles:** Maintain demographic and intake data per client — age range, biological sex, prior diagnoses, and functional limitations. This context informs smarter ICD-10 suggestions without forwarding any PII to the AI pipeline.
 - **Clinician-Centric:** Built for professionals who value precision, auditability, and data ownership.
 
 ---
@@ -28,17 +28,17 @@ Modern clinical documentation is broken. Current solutions are high-cost, closed
 
 ```
 POST /api/documentation
-        â”‚
-        â–¼
+        ¦
+        ?
 DocumentationOrchestrator (Durable Functions)
-        â”‚
-        â”œâ”€â”€ IngestionActivity      â€” PII redaction via Azure AI Language
-        â”œâ”€â”€ SoapActivity           â€” SOAP or DAP note generation via Azure OpenAI (branches on selected note format)
-        â”œâ”€â”€ ComplianceActivity     â€” Clinical compliance validation via Azure OpenAI (validates correct fields per format)
-        â”œâ”€â”€ FinalizerActivity      â€” PII restoration for in-flight result
-        â”œâ”€â”€ BillingActivity        â€” CPT code suggestions + CMS 8-minute unit calculation
-        â”œâ”€â”€ Icd10Activity          â€” ICD-10 code suggestions (uses client demographics context when available)
-        â””â”€â”€ PersistActivity        â€” Saves redacted note + encrypted redaction map to Cosmos DB
+        ¦
+        +-- IngestionActivity      — PII redaction via Azure AI Language
+        +-- SoapActivity           — SOAP or DAP note generation via Azure OpenAI (branches on selected note format)
+        +-- ComplianceActivity     — Clinical compliance validation via Azure OpenAI (validates correct fields per format)
+        +-- FinalizerActivity      — PII restoration for in-flight result
+        +-- BillingActivity        — CPT code suggestions + CMS 8-minute unit calculation
+        +-- Icd10Activity          — ICD-10 code suggestions (uses client demographics context when available)
+        +-- PersistActivity        — Saves redacted note + encrypted redaction map to Cosmos DB
 
 AI agents also power a standalone **Goal Agent** (POST `/api/goals/{clientId}/suggest`) that generates SMART treatment-goal suggestions from an existing SOAP note outside of the pipeline.
 ```
@@ -65,22 +65,22 @@ AI agents also power a standalone **Goal Agent** (POST `/api/goals/{clientId}/su
 | `GET` | `/api/stats/therapist/{therapistName}` | Therapist aggregate stats |
 | `GET` | `/api/stats/client/{clientId}` | Client aggregate stats |
 
-All routes enforce **JWT ownership checks** â€” therapists can only read and modify their own records.
+All routes enforce **JWT ownership checks** — therapists can only read and modify their own records.
 
 ### Frontend (React SPA)
 
 ```
 Theragraf.Web/
   pages/
-    Dashboard/         â€” Therapist stats, legend-labelled charts, searchable/sortable caseload table with overdue-note alerts
-    NewSession/        â€” Diarized audio recording with speaker diarization, explicit role assignment (Therapist/Client), metadata form (with SOAP/DAP note format selector), transcript submission
-    SessionReview/     â€” Orchestration status polling, SOAP/DAP note editing with format-appropriate field labels, CPT/ICD editing, AI draft banner, attestation workflow, Verify & Approve button
-    ClientProfile/     â€” Per-client stats, demographics/intake panel, SMART goal tracking (with AI suggestions), and session history
-    SessionDetail/     â€” Single session view and edit, approval status badge, conditional export access
-    Settings/          â€” User preferences (display, documentation defaults, notifications, accessibility, privacy), retention policy remains admin-only configuration
+    Dashboard/         — Therapist stats, legend-labeled charts, searchable/sortable caseload table with overdue-note alerts
+    NewSession/        — Diarized audio recording with speaker diarization, explicit role assignment (Therapist/Client), metadata form (with SOAP/DAP note format selector), transcript submission
+    SessionReview/     — Orchestration status polling, SOAP/DAP note editing with format-appropriate field labels, CPT/ICD editing, AI draft banner, attestation workflow, Verify & Approve button
+    ClientProfile/     — Per-client stats, demographics/intake panel, SMART goal tracking (with AI suggestions), and session history
+    SessionDetail/     — Single session view and edit, approval status badge, conditional export access
+    Settings/          — User preferences (display, documentation defaults, notifications, accessibility, privacy), retention policy remains admin-only configuration
 ```
 
-The SPA authenticates via **MSAL** (Microsoft Authentication Library) and acquires an access token scoped to the Function App's Entra ID registration before every API call. It is hosted on **Azure Static Web Apps (Standard)** with the Function App linked as the API backend â€” no CORS configuration is required.
+The SPA authenticates via **MSAL** (Microsoft Authentication Library) and acquires an access token scoped to the Function App's Entra ID registration before every API call. It is hosted on **Azure Static Web Apps (Standard)** with the Function App linked as the API backend — no CORS configuration is required.
 
 ### Infrastructure
 
@@ -88,18 +88,18 @@ All Azure resources are defined as **Bicep IaC** under `infra/`. A single `az de
 
 ```
 infra/
-  main.bicep                        â€” Subscription-level orchestrator
+  main.bicep                        — Subscription-level orchestrator
   modules/
-    functionApp.bicep               â€” App Service Plan + Function App + app settings
-    cosmos.bicep                    â€” Cosmos DB account, database, and container
-    storage.bicep                   â€” Azure Storage (required by Durable Functions runtime)
-    openai.bicep                    â€” Azure OpenAI account reference
-    language.bicep                  â€” Azure AI Language account reference
-    speech.bicep                    â€” Azure AI Speech resource
-    keyVault.bicep                  â€” Key Vault for redaction map encryption key
-    staticWebApp.bicep              â€” Azure Static Web Apps (Standard) with linked backend
-    monitoring.bicep                â€” App Insights + Log Analytics workspace
-    roleAssignments.bicep           â€” Managed Identity role assignments
+    functionApp.bicep               — App Service Plan + Function App + app settings
+    cosmos.bicep                    — Cosmos DB account, database, and container
+    storage.bicep                   — Azure Storage (required by Durable Functions runtime)
+    openai.bicep                    — Azure OpenAI account reference
+    language.bicep                  — Azure AI Language account reference
+    speech.bicep                    — Azure AI Speech resource
+    keyVault.bicep                  — Key Vault for redaction map encryption key
+    staticWebApp.bicep              — Azure Static Web Apps (Standard) with linked backend
+    monitoring.bicep                — App Insights + Log Analytics workspace
+    roleAssignments.bicep           — Managed Identity role assignments
     cognitiveRoleAssignments.bicep
     cosmosRoleAssignment.bicep
     keyVaultRoleAssignment.bicep
@@ -169,8 +169,8 @@ Open `local.settings.json` and fill in your Azure endpoint URLs and API keys. Fo
 | Setting | Local value |
 |---|---|
 | `CosmosDb__ConnectionString` | Cosmos DB Emulator default connection string (pre-filled in template) |
-| `Auth__Disabled` | `true` â€” bypasses JWT validation so API calls work without an Entra token |
-| `KeyVault__VaultUri` | Leave blank â€” falls back to no-op redaction map encryption |
+| `Auth__Disabled` | `true` — bypasses JWT validation so API calls work without an Entra token |
+| `KeyVault__VaultUri` | Leave blank — falls back to no-op redaction map encryption |
 | `AzureSpeech__*` | Required only if you want to test audio capture locally |
 
 ### 3. Start the Cosmos DB Emulator
@@ -224,7 +224,7 @@ Integration tests that require the Cosmos DB Emulator are automatically skipped 
 
 ## Azure deployment
 
-TheraGraf is designed to deploy entirely within your own Azure subscription, giving you full control over your data and AI resources. **The Bicep templates reference existing Azure resources** â€” they do not create new Cognitive Services accounts for you.
+TheraGraf is designed to deploy entirely within your own Azure subscription, giving you full control over your data and AI resources. **The Bicep templates reference existing Azure resources** — they do not create new Cognitive Services accounts for you.
 
 ### Prerequisites for deployment
 
@@ -260,7 +260,7 @@ param staticWebAppName       = 'your-swa-name'                 // Unique Static 
 
 ### One-time infrastructure provisioning
 
-In Azure, the Function App uses **Managed Identity** for all service-to-service authentication â€” no API keys are stored in app settings.
+In Azure, the Function App uses **Managed Identity** for all service-to-service authentication — no API keys are stored in app settings.
 
 After customizing the parameters, deploy:
 
@@ -292,7 +292,7 @@ Every push to `main` automatically:
 2. Publishes and deploys the Function App via `az functionapp deployment source config-zip`
 3. Builds the Vite SPA and deploys it to Azure Static Web Apps
 
-Trigger manually from **Actions â†’ Build, Test & Deploy to Azure â†’ Run workflow**.
+Trigger manually from **Actions ? Build, Test & Deploy to Azure ? Run workflow**.
 
 ### Register the SWA redirect URI
 
@@ -308,52 +308,52 @@ az ad app update --id <spa-client-id> --set spa.redirectUris="[\"http://localhos
 ## Project structure
 
 ```
-Theragraf.Core/             â€” Shared models, interfaces, and domain logic
-  Models/                   â€” CptCode, IcdCode, SoapNote, NoteFormat, SessionResponse, TranscriptInput, GoalModels, ClientModels, stats records, etc.
-  Services/                 â€” IPiiRedactionService, ISessionRepository, IGoalRepository, IClientRepository, ICmsUnitCalculator, etc.
+Theragraf.Core/             — Shared models, interfaces, and domain logic
+  Models/                   — CptCode, IcdCode, SoapNote, NoteFormat, SessionResponse, TranscriptInput, GoalModels, ClientModels, stats records, etc.
+  Services/                 — IPiiRedactionService, ISessionRepository, IGoalRepository, IClientRepository, ICmsUnitCalculator, etc.
 
-Theragraf.Functions/        â€” Azure Functions host (isolated worker, .NET 10)
-  Activities/               â€” Durable activity functions
-  Agents/                   â€” Semantic Kernel agents (SOAP, Compliance, Billing, ICD-10)
-  EntryPoint/               â€” HTTP triggers
-  Helpers/                  â€” ClaimsHelper (JWT identity extraction)
-  Middleware/               â€” JwtAuthMiddleware (Entra ID token validation)
-  Orchestration/            â€” DocumentationOrchestrator
-  Plugins/                  â€” Semantic Kernel prompt templates
-  Services/                 â€” PiiRedactionService, CosmosSessionRepository, CosmosGoalRepository, CosmosClientRepository
+Theragraf.Functions/        — Azure Functions host (isolated worker, .NET 10)
+  Activities/               — Durable activity functions
+  Agents/                   — Semantic Kernel agents (SOAP, Compliance, Billing, ICD-10)
+  EntryPoint/               — HTTP triggers
+  Helpers/                  — ClaimsHelper (JWT identity extraction)
+  Middleware/               — JwtAuthMiddleware (Entra ID token validation)
+  Orchestration/            — DocumentationOrchestrator
+  Plugins/                  — Semantic Kernel prompt templates
+  Services/                 — PiiRedactionService, CosmosSessionRepository, CosmosGoalRepository, CosmosClientRepository
 
-Theragraf.Web/              â€” React + TypeScript + Vite SPA
+Theragraf.Web/              — React + TypeScript + Vite SPA
   src/
-    api/                    â€” Typed fetch wrappers (sessions, stats, speech token, goals, clients/demographics)
-    auth/                   â€” MSAL configuration and singleton instance
-    components/             â€” AppLayout, ProtectedRoute, GettingStartedModal
-    hooks/                  â€” useSettings (localStorage-based user preferences with cross-tab sync)
-    pages/                  â€” Dashboard, NewSession, SessionReview, ClientProfile (with GoalsPanel), SessionDetail, Settings
-    types.ts                â€” TypeScript mirrors of all backend models plus user settings types
+    api/                    — Typed fetch wrappers (sessions, stats, speech token, goals, clients/demographics)
+    auth/                   — MSAL configuration and singleton instance
+    components/             — AppLayout, ProtectedRoute, GettingStartedModal
+    hooks/                  — useSettings (localStorage-based user preferences with cross-tab sync)
+    pages/                  — Dashboard, NewSession, SessionReview, ClientProfile (with GoalsPanel), SessionDetail, Settings
+    types.ts                — TypeScript mirrors of all backend models plus user settings types
 
-Theragraf.Tests/            â€” xUnit unit test suite (endpoints, helpers, agents, orchestration)
-Theragraf.IntegrationTests/ â€” xUnit integration tests against Cosmos DB Emulator (sessions, goals, client demographics)
+Theragraf.Tests/            — xUnit unit test suite (endpoints, helpers, agents, orchestration)
+Theragraf.IntegrationTests/ — xUnit integration tests against Cosmos DB Emulator (sessions, goals, client demographics)
 
-infra/                      â€” Bicep IaC for all Azure resources
+infra/                      — Bicep IaC for all Azure resources
   main.bicep
   modules/
   parameters/
 
-postman/                    â€” Postman collection for manual API testing
+postman/                    — Postman collection for manual API testing
 ```
 
 ---
 
 ## Security notes
 
-- `local.settings.json` is excluded from git via `.gitignore` â€” **never commit it**
+- `local.settings.json` is excluded from git via `.gitignore` — **never commit it**
 - Use `local.settings.template.json` as the shareable reference for required config values
-- In Azure, all service-to-service authentication uses Managed Identity â€” no API keys are stored in app settings
+- In Azure, all service-to-service authentication uses Managed Identity — no API keys are stored in app settings
 - **PII Protection:** PII is redacted before any AI model processes the transcript; the redaction map is encrypted with a Key Vault-managed key and stored alongside the session record
 - **Prompt Hardening:** All user-supplied text (transcripts, demographics, prompts) is sanitized via `PromptInputHardeningService` to prevent prompt injection attacks
 - **Rate Limiting:** Middleware-based HTTP rate limiting with pluggable backends (in-memory for dev, Cosmos for production) protects against abuse
 - **Approval Workflow:** AI-generated documentation is clearly labeled as a draft. Sessions require explicit therapist attestation and approval before export. Editing clinical content automatically clears approval status.
 - **Encrypted Sensitive Data:** Client date of birth is stored AES-GCM encrypted at rest and is never returned through the API; only a computed age range is forwarded to the AI pipeline
-- **Access Control:** All HTTP endpoints enforce JWT ownership â€” therapists cannot read or modify another therapist's sessions, goals, or client records
+- **Access Control:** All HTTP endpoints enforce JWT ownership — therapists cannot read or modify another therapist's sessions, goals, or client records
 - **Client ID Namespacing:** Client IDs are transparently namespaced server-side using a hash of the therapist's email address; the raw client-visible name is stripped from API responses and never stored without the prefix
 - The React SPA contains only public, non-sensitive Entra configuration values

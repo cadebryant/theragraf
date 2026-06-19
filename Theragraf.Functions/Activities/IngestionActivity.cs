@@ -1,4 +1,4 @@
-﻿using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Exceptions;
 using Theragraf.Core.Models;

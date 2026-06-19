@@ -98,7 +98,7 @@ public class SessionsUpdate(
                 auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "Session",
                     resourceId: $"{clientId}/{sessionDate}", detail: "Ownership check failed"));
                 var r = req.CreateResponse(HttpStatusCode.Forbidden);
-                await r.WriteStringAsync("You are not authorised to update this session.", cancellationToken);
+                await r.WriteStringAsync("You are not authorized to update this session.", cancellationToken);
                 return r;
             }
         }

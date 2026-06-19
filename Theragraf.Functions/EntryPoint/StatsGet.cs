@@ -1,4 +1,4 @@
-ï»¿namespace Theragraf.Functions.EntryPoint;
+namespace Theragraf.Functions.EntryPoint;
 
 using System.Net;
 using System.Text.Json;
@@ -29,7 +29,7 @@ public class StatsGet(ISessionRepository repository, IConfiguration config, ILog
             return bad;
         }
 
-        // Ownership check â€” callers may only query their own therapist stats.
+        // Ownership check — callers may only query their own therapist stats.
         // Demo therapist stats are visible to all authenticated users.
         var identity = ClaimsHelper.GetTherapistIdentity(req, config);
         if (identity is not null
@@ -39,7 +39,7 @@ public class StatsGet(ISessionRepository repository, IConfiguration config, ILog
             auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "TherapistStats",
                 resourceId: therapistName, detail: "Ownership check failed"));
             var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
-            await forbidden.WriteStringAsync("You are not authorised to view another therapist's statistics.", cancellationToken);
+            await forbidden.WriteStringAsync("You are not authorized to view another therapist's statistics.", cancellationToken);
             return forbidden;
         }
 
@@ -103,7 +103,7 @@ public class StatsGet(ISessionRepository repository, IConfiguration config, ILog
         {
             var stats = await repository.GetClientStatsAsync(clientId, cancellationToken);
 
-            // Ownership check â€” the authenticated therapist must have at least one recorded
+            // Ownership check — the authenticated therapist must have at least one recorded
             // session for this client, OR the client's sessions belong only to the demo therapist
             // (which is readable by anyone). Prevents one therapist querying another's patient data.
             if (identity is not null && stats.SessionsByTherapist.Count > 0)
@@ -117,7 +117,7 @@ public class StatsGet(ISessionRepository repository, IConfiguration config, ILog
                     auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "ClientStats",
                         resourceId: clientId, detail: "Ownership check failed"));
                     var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
-                    await forbidden.WriteStringAsync("You are not authorised to view statistics for this client.", cancellationToken);
+                    await forbidden.WriteStringAsync("You are not authorized to view statistics for this client.", cancellationToken);
                     return forbidden;
                 }
             }

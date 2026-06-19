@@ -1,4 +1,4 @@
-﻿using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker;
 using Theragraf.Core.Models;
 
 namespace Theragraf.Functions.Activities;

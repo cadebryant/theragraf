@@ -62,7 +62,7 @@ public sealed class CosmosFixture : IAsyncLifetime
         }
 
         // Always do an HTTP readiness probe — the port can be listening while
-        // the Cosmos data plane API is still initialising, which causes the SDK
+        // the Cosmos data plane API is still initializing, which causes the SDK
         // to receive a malformed response and throw a Base-64 parse error.
         if (!await WaitForReadyAsync(EmulatorPort, TimeSpan.FromSeconds(StartupTimeoutSecs), ct))
         {

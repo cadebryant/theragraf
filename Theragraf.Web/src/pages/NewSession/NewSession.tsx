@@ -52,7 +52,7 @@ const useStyles = makeStyles({
 });
 
 /**
- * Discipline-specific clinical vocabulary that the speech recogniser should bias
+ * Discipline-specific clinical vocabulary that the speech recognizer should bias
  * toward. These are terms that standard ASR models commonly mishear because they
  * are rare in general-purpose training data.
  */
@@ -113,7 +113,7 @@ const CLINICAL_PHRASES: Record<string, string[]> = {
 };
 
 /**
- * Builds a phrase-hint list for the Azure Speech recogniser, biasing toward
+ * Builds a phrase-hint list for the Azure Speech recognizer, biasing toward
  * names found in the client ID and therapist account, plus discipline-specific
  * clinical vocabulary that general-purpose ASR models commonly mishear.
  */

@@ -51,7 +51,7 @@ public class SessionsDelete(ISessionRepository repository, IConfiguration config
                 auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "Session",
                     resourceId: $"{clientId}/{sessionDate}", detail: "Ownership check failed"));
                 var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
-                await forbidden.WriteStringAsync("You are not authorised to delete this session.", cancellationToken);
+                await forbidden.WriteStringAsync("You are not authorized to delete this session.", cancellationToken);
                 return forbidden;
             }
         }

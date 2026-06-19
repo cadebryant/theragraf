@@ -51,7 +51,7 @@ public class SessionsRestore(ISessionRepository repository, IConfiguration confi
                 auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "Session",
                     resourceId: $"{clientId}/{sessionDate}", detail: "Ownership check failed for restore"));
                 var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
-                await forbidden.WriteStringAsync("You are not authorised to restore this session.", cancellationToken);
+                await forbidden.WriteStringAsync("You are not authorized to restore this session.", cancellationToken);
                 return forbidden;
             }
         }

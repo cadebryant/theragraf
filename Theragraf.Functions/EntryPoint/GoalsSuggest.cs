@@ -53,7 +53,7 @@ public class GoalsSuggest(
             auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "Goal",
                 resourceId: clientId, detail: "ClientId namespace mismatch on suggest"));
             var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
-            await forbidden.WriteStringAsync("You are not authorised to request suggestions for this client.", cancellationToken);
+            await forbidden.WriteStringAsync("You are not authorized to request suggestions for this client.", cancellationToken);
             return forbidden;
         }
 

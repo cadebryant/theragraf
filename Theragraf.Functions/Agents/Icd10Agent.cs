@@ -208,7 +208,7 @@ public class Icd10Agent(
         }
 
         // Build a concise, non-PII demographics context string for the prompt.
-        // Only age range (not exact age) and sex are included to minimise re-identification risk.
+        // Only age range (not exact age) and sex are included to minimize re-identification risk.
         var demographicsContext = BuildDemographicsContext(demographics);
 
         var arguments = new KernelArguments

@@ -47,7 +47,7 @@ public class ClientDemographicsGet(
             auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "ClientDemographics",
                 resourceId: clientId, detail: "ClientId namespace mismatch"));
             var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
-            await forbidden.WriteStringAsync("You are not authorised to access this client's record.", cancellationToken);
+            await forbidden.WriteStringAsync("You are not authorized to access this client's record.", cancellationToken);
             return forbidden;
         }
 

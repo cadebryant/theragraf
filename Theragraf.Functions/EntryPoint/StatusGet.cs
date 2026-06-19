@@ -87,7 +87,7 @@ public class StatusGet(ILoggerFactory loggerFactory, IConfiguration config, IAud
                 auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "OrchestrationStatus",
                     resourceId: instanceId, detail: "Ownership check failed"));
                 var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
-                await forbidden.WriteStringAsync("You are not authorised to access this orchestration status.", cancellationToken);
+                await forbidden.WriteStringAsync("You are not authorized to access this orchestration status.", cancellationToken);
                 return forbidden;
             }
         }

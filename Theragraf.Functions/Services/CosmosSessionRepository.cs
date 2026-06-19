@@ -1,4 +1,4 @@
-﻿namespace Theragraf.Functions.Services;
+namespace Theragraf.Functions.Services;
 
 using System.Text;
 using Microsoft.Azure.Cosmos;
@@ -28,7 +28,7 @@ public class CosmosSessionRepository : ISessionRepository
         _retentionPolicy = retentionPolicy;
     }
 
-    // ── Write ─────────────────────────────────────────────────────────────────
+    // -- Write -----------------------------------------------------------------
 
     public async Task SaveAsync(SessionRecord record, CancellationToken cancellationToken = default)
     {
@@ -87,7 +87,7 @@ public class CosmosSessionRepository : ISessionRepository
         await _container.UpsertItemAsync(doc, new PartitionKey(doc.ClientId), cancellationToken: cancellationToken);
     }
 
-    // ── Read (unpaged) ────────────────────────────────────────────────────────
+    // -- Read (unpaged) --------------------------------------------------------
 
     // GetItemLinqQueryable has its own LINQ serializer that does NOT inherit
     // CosmosClientOptions.SerializerOptions. Passing CosmosLinqSerializerOptions
@@ -132,7 +132,7 @@ public class CosmosSessionRepository : ISessionRepository
         }
     }
 
-    // ── Read (paged with filter/sort) ─────────────────────────────────────────
+    // -- Read (paged with filter/sort) -----------------------------------------
 
     public async Task<PagedResult<SessionResponse>> GetByClientIdPagedAsync(
         string clientId,
@@ -154,7 +154,7 @@ public class CosmosSessionRepository : ISessionRepository
         if (!string.IsNullOrEmpty(continuationToken))
         {
             try { rawToken = Encoding.UTF8.GetString(Convert.FromBase64String(continuationToken)); }
-            catch (FormatException) { /* invalid token → first page */ }
+            catch (FormatException) { /* invalid token ? first page */ }
         }
 
         var requestOptions = new QueryRequestOptions
@@ -189,7 +189,7 @@ public class CosmosSessionRepository : ISessionRepository
         );
     }
 
-    // ── Delete ────────────────────────────────────────────────────────────────
+    // -- Delete ----------------------------------------------------------------
 
     public async Task<bool> DeleteAsync(string clientId, string rowKey, string deletedBy, CancellationToken cancellationToken = default)
     {
@@ -229,7 +229,7 @@ public class CosmosSessionRepository : ISessionRepository
         }
     }
 
-    // ── Restore ───────────────────────────────────────────────────────────────
+    // -- Restore ---------------------------------------------------------------
 
     public async Task<bool> RestoreAsync(string clientId, string rowKey, CancellationToken cancellationToken = default)
     {
@@ -261,7 +261,7 @@ public class CosmosSessionRepository : ISessionRepository
         }
     }
 
-    // ── Update ────────────────────────────────────────────────────────────────
+    // -- Update ----------------------------------------------------------------
 
     public async Task<SessionResponse?> UpdateAsync(
         string                              clientId,
@@ -350,7 +350,7 @@ public class CosmosSessionRepository : ISessionRepository
         return MapToResponse(doc);
     }
 
-    // ── Query builder ─────────────────────────────────────────────────────────
+    // -- Query builder ---------------------------------------------------------
 
     internal static (string Sql, List<(string Name, object Value)> Parameters) BuildQuery(
         string clientId, SessionQueryOptions options)
@@ -393,7 +393,7 @@ public class CosmosSessionRepository : ISessionRepository
         return (sb.ToString(), parameters);
     }
 
-    // ── Mapping ───────────────────────────────────────────────────────────────
+    // -- Mapping ---------------------------------------------------------------
 
     private SessionResponse MapToResponse(SessionDocument doc)
     {
@@ -486,7 +486,7 @@ public class CosmosSessionRepository : ISessionRepository
 
         return new CaseloadSummary(therapistName, clients);
     }
-    // ── Stats ─────────────────────────────────────────────────────────────────
+    // -- Stats -----------------------------------------------------------------
 
     public async Task<TherapistStats> GetTherapistStatsAsync(
         string therapistName, CancellationToken cancellationToken = default)
@@ -558,7 +558,7 @@ public class CosmosSessionRepository : ISessionRepository
         );
     }
 
-    // ── Stats helpers ─────────────────────────────────────────────────────────
+    // -- Stats helpers ---------------------------------------------------------
 
     private static IReadOnlyDictionary<string, int> GroupCount(
         IEnumerable<SessionStatsProjection> docs, Func<SessionStatsProjection, string> key) =>
