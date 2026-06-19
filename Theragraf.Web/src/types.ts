@@ -76,6 +76,8 @@ export interface SessionResponse {
   isApproved?: boolean;
   approvedBy?: string | null;
   approvedAt?: string | null;
+  // Synthetic/demo data flag
+  isSynthetic?: boolean;
 }
 
 /** Sent to POST /api/DocumentationStart. */
@@ -214,6 +216,7 @@ export interface GoalResponse {
   targetDate: string | null;
   resolvedAt: string | null;
   progressNotes: GoalProgressNote[];
+  isSynthetic?: boolean;
 }
 
 export interface CreateGoalRequest {
@@ -260,6 +263,7 @@ export interface ClientDemographicsResponse {
   priorDiagnoses: string | null;
   functionalLimitations: string | null;
   updatedAt: string;
+  isSynthetic?: boolean;
 }
 
 /** Body for PUT /api/clients/{clientId}. */

@@ -27,6 +27,7 @@ import { CptCodesEditor, IcdCodesEditor } from '@/pages/SessionReview/CodesEdito
 import { exportSessionPdf } from '@/utils/exportPdf';
 import { stripClientIdPrefix } from '@/utils/clientId';
 import { exportSession837p } from '@/utils/export837p';
+import { SyntheticDataBadge } from '@/components/SyntheticDataBadge';
 
 const useStyles = makeStyles({
   page: {
@@ -207,6 +208,8 @@ export default function SessionDetail() {
           </>
         )}
       </div>
+
+      <SyntheticDataBadge isSynthetic={session.isSynthetic ?? false} />
 
       {/* Metadata row */}
       <div className={styles.metaRow}>
