@@ -78,6 +78,10 @@ export interface SessionResponse {
   approvedAt?: string | null;
   // Synthetic/demo data flag
   isSynthetic?: boolean;
+  // Soft-delete metadata for HIPAA data retention
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
 }
 
 /** Sent to POST /api/DocumentationStart. */
@@ -219,6 +223,10 @@ export interface GoalResponse {
   resolvedAt: string | null;
   progressNotes: GoalProgressNote[];
   isSynthetic?: boolean;
+  // Soft-delete metadata for HIPAA data retention
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
 }
 
 export interface CreateGoalRequest {

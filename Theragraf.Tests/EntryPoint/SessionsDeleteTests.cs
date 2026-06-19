@@ -52,7 +52,7 @@ public class SessionsDeleteTests
     [Fact]
     public async Task Delete_ExistingSession_Returns204()
     {
-        _repository.DeleteAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<CancellationToken>())
+        _repository.DeleteAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<string>(), Arg.Any<CancellationToken>())
                    .Returns(true);
 
         var response = await _sut.Delete(BuildRequest(), "client-001", "2024-10-10T10-00-00Z", CancellationToken.None);
@@ -63,18 +63,18 @@ public class SessionsDeleteTests
     [Fact]
     public async Task Delete_ExistingSession_CallsRepositoryWithCorrectKeys()
     {
-        _repository.DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _repository.DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
                    .Returns(true);
 
         await _sut.Delete(BuildRequest(), "client-001", "2024-10-10T10-00-00Z", CancellationToken.None);
 
-        await _repository.Received(1).DeleteAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<CancellationToken>());
+        await _repository.Received(1).DeleteAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Delete_SessionNotFound_Returns404()
     {
-        _repository.DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _repository.DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
                    .Returns(false);
 
         var response = await _sut.Delete(BuildRequest(), "client-001", "2024-10-10T10-00-00Z", CancellationToken.None);
@@ -88,7 +88,7 @@ public class SessionsDeleteTests
         var response = await _sut.Delete(BuildRequest(), "client-001", "2024-10-10", CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        await _repository.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -97,13 +97,13 @@ public class SessionsDeleteTests
         var response = await _sut.Delete(BuildRequest(), "", "2024-10-10T10-00-00Z", CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        await _repository.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Delete_RepositoryThrows_Returns500()
     {
-        _repository.DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _repository.DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
                    .Returns<bool>(_ => throw new Exception("Storage failure"));
 
         var response = await _sut.Delete(BuildRequest(), "client-001", "2024-10-10T10-00-00Z", CancellationToken.None);
@@ -163,7 +163,7 @@ public class SessionsDeleteTests
         var response = await sut.Delete(req, "client-001", "2024-10-10T10-00-00Z", CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        await _repository.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public class SessionsDeleteTests
         var sut = new SessionsDelete(_repository, AuthEnabledConfig, NullLoggerFactory.Instance, new NullAuditLogger());
         _repository.GetByClientIdAndDateAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<CancellationToken>())
             .Returns(BuildSession("Dr. Adams"));
-        _repository.DeleteAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<CancellationToken>()).Returns(true);
+        _repository.DeleteAsync("client-001", "2024-10-10T10-00-00Z", Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
 
         var req = BuildAuthenticatedRequest("Dr. Adams");
         var response = await sut.Delete(req, "client-001", "2024-10-10T10-00-00Z", CancellationToken.None);

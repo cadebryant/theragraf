@@ -13,6 +13,7 @@ using Microsoft.ApplicationInsights.WorkerService;
 using Microsoft.SemanticKernel;
 using OpenAI;
 using System.ClientModel;
+using Theragraf.Core.Models;
 using Theragraf.Core.Services;
 using Theragraf.Functions.Agents;
 using Theragraf.Functions.Configuration;
@@ -38,6 +39,11 @@ var host = new HostBuilder()
         var rateLimitConfig = new Theragraf.Functions.Configuration.RateLimitConfiguration();
         config.GetSection(Theragraf.Functions.Configuration.RateLimitConfiguration.Section).Bind(rateLimitConfig);
         services.AddSingleton(rateLimitConfig);
+
+        // Retention policy configuration for HIPAA compliance
+        var retentionPolicy = new Theragraf.Functions.Configuration.RetentionPolicyConfiguration();
+        config.GetSection(Theragraf.Functions.Configuration.RetentionPolicyConfiguration.Section).Bind(retentionPolicy);
+        services.AddSingleton<RetentionPolicy>(retentionPolicy);
 
         // Register rate limit service based on environment.
         // In Azure (production), use Cosmos DB for distributed rate limiting.
@@ -183,7 +189,8 @@ var host = new HostBuilder()
                     .GetAwaiter().GetResult();
             }
 
-            return new CosmosSessionRepository(cosmosClient, dbName, container, encryption);
+            var retentionPolicy = sp.GetRequiredService<RetentionPolicy>();
+            return new CosmosSessionRepository(cosmosClient, dbName, container, encryption, retentionPolicy);
         });
 
         services.AddSingleton<IGoalRepository>(sp =>
@@ -202,7 +209,8 @@ var host = new HostBuilder()
                     .GetAwaiter().GetResult();
             }
 
-            return new CosmosGoalRepository(cosmosClient, dbName, goalsContainer);
+            var retentionPolicy = sp.GetRequiredService<RetentionPolicy>();
+            return new CosmosGoalRepository(cosmosClient, dbName, goalsContainer, retentionPolicy);
         });
 
         services.AddSingleton<IClientRepository>(sp =>

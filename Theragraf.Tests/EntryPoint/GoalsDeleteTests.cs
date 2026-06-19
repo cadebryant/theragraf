@@ -93,7 +93,7 @@ public class GoalsDeleteTests
     [Fact]
     public async Task Delete_ExistingGoal_Returns204()
     {
-        _repository.DeleteAsync(OwnedClientId, GoalId, Arg.Any<CancellationToken>())
+        _repository.DeleteAsync(OwnedClientId, GoalId, Arg.Any<string>(), Arg.Any<CancellationToken>())
                    .Returns(true);
 
         var response = await _sut.Delete(BuildRequest(), OwnedClientId, GoalId, CancellationToken.None);
@@ -104,12 +104,12 @@ public class GoalsDeleteTests
     [Fact]
     public async Task Delete_CallsRepository_WithCorrectIds()
     {
-        _repository.DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _repository.DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
                    .Returns(true);
 
         await _sut.Delete(BuildRequest(), OwnedClientId, GoalId, CancellationToken.None);
 
-        await _repository.Received(1).DeleteAsync(OwnedClientId, GoalId, Arg.Any<CancellationToken>());
+        await _repository.Received(1).DeleteAsync(OwnedClientId, GoalId, Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     // ── Validation ────────────────────────────────────────────────────────────
@@ -120,7 +120,7 @@ public class GoalsDeleteTests
         var response = await _sut.Delete(BuildRequest(), "", GoalId, CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        await _repository.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public class GoalsDeleteTests
     [Fact]
     public async Task Delete_GoalNotFound_Returns404()
     {
-        _repository.DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _repository.DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
                    .Returns(false);
 
         var response = await _sut.Delete(BuildRequest(), OwnedClientId, GoalId, CancellationToken.None);
@@ -162,14 +162,14 @@ public class GoalsDeleteTests
         var response = await sut.Delete(BuildAuthenticatedRequest("other@example.com"), OwnedClientId, GoalId, CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        await _repository.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Delete_CorrectTherapist_Returns204()
     {
         var sut = new GoalsDelete(_repository, EnabledAuthConfig, NullLoggerFactory.Instance, new NullAuditLogger());
-        _repository.DeleteAsync(OwnedClientId, GoalId, Arg.Any<CancellationToken>()).Returns(true);
+        _repository.DeleteAsync(OwnedClientId, GoalId, Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
 
         var response = await sut.Delete(BuildAuthenticatedRequest(OwnerEmail), OwnedClientId, GoalId, CancellationToken.None);
 
@@ -181,7 +181,7 @@ public class GoalsDeleteTests
     [Fact]
     public async Task Delete_RepositoryThrows_Returns500()
     {
-        _repository.DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _repository.DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
                    .Returns<bool>(_ => throw new Exception("Cosmos failure"));
 
         var response = await _sut.Delete(BuildRequest(), OwnedClientId, GoalId, CancellationToken.None);

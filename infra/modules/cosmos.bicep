@@ -61,6 +61,7 @@ resource sessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/c
 		paths: [ '/clientId' ]
 		kind: 'Hash'
 	  }
+	  defaultTtl: -1  // Enable TTL without default expiration; per-document TimeToLive controls retention
 	  indexingPolicy: {
 		indexingMode: 'consistent'
 		includedPaths: [ { path: '/*' } ]
@@ -101,6 +102,7 @@ resource goalsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/cont
 		paths: [ '/clientId' ]
 		kind: 'Hash'
 	  }
+	  defaultTtl: -1  // Enable TTL without default expiration; per-document TimeToLive controls retention
 	  indexingPolicy: {
 		indexingMode: 'consistent'
 		includedPaths: [ { path: '/*' } ]
@@ -133,6 +135,7 @@ resource clientsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/co
 		paths: [ '/clientId' ]
 		kind: 'Hash'
 	  }
+	  defaultTtl: -1  // Enable TTL without default expiration; per-document TimeToLive controls retention
 	  indexingPolicy: {
 		indexingMode: 'consistent'
 		includedPaths: [ { path: '/*' } ]

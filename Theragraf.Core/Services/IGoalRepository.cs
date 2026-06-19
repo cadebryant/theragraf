@@ -33,9 +33,16 @@ public interface IGoalRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Deletes a goal. Returns <see langword="true"/> on success, <see langword="false"/>
-    /// if the goal did not exist.
+    /// Soft-deletes a goal by marking it as deleted rather than removing it from storage.
+    /// Returns <see langword="true"/> on success, <see langword="false"/> if the goal did not exist.
     /// </summary>
     Task<bool> DeleteAsync(
+        string clientId, string goalId, string deletedBy, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Restores a soft-deleted goal by clearing the deletion markers.
+    /// Returns true if the goal was found and restored, false if not found or already active.
+    /// </summary>
+    Task<bool> RestoreAsync(
         string clientId, string goalId, CancellationToken cancellationToken = default);
 }

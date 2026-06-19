@@ -10,11 +10,17 @@ using Theragraf.Core.Services;
 /// </summary>
 public class CosmosGoalRepository : IGoalRepository
 {
-    private readonly Container _container;
+    private readonly Container       _container;
+    private readonly RetentionPolicy _retentionPolicy;
 
-    public CosmosGoalRepository(CosmosClient cosmosClient, string databaseName, string containerName)
+    public CosmosGoalRepository(
+        CosmosClient     cosmosClient,
+        string           databaseName,
+        string           containerName,
+        RetentionPolicy  retentionPolicy)
     {
-        _container = cosmosClient.GetContainer(databaseName, containerName);
+        _container       = cosmosClient.GetContainer(databaseName, containerName);
+        _retentionPolicy = retentionPolicy;
     }
 
     // ── Read ──────────────────────────────────────────────────────────────────
@@ -23,7 +29,9 @@ public class CosmosGoalRepository : IGoalRepository
         string clientId, CancellationToken cancellationToken = default)
     {
         var query = new QueryDefinition(
-            "SELECT * FROM c WHERE c.clientId = @clientId ORDER BY c.createdAt DESC")
+            "SELECT * FROM c WHERE c.clientId = @clientId " +
+            "AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false) " +
+            "ORDER BY c.createdAt DESC")
             .WithParameter("@clientId", clientId);
 
         var options = new QueryRequestOptions { PartitionKey = new PartitionKey(clientId) };
@@ -48,7 +56,11 @@ public class CosmosGoalRepository : IGoalRepository
         {
             var response = await _container.ReadItemAsync<GoalDocument>(
                 goalId, new PartitionKey(clientId), cancellationToken: cancellationToken);
-            return MapToResponse(response.Resource);
+            var doc = response.Resource;
+            // Exclude soft-deleted documents
+            if (doc.IsDeleted)
+                return null;
+            return MapToResponse(doc);
         }
         catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -122,12 +134,68 @@ public class CosmosGoalRepository : IGoalRepository
     }
 
     public async Task<bool> DeleteAsync(
+        string clientId, string goalId, string deletedBy, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Read the document first
+            var response = await _container.ReadItemAsync<GoalDocument>(
+                goalId, new PartitionKey(clientId), cancellationToken: cancellationToken);
+
+            var doc = response.Resource;
+
+            // Mark as soft-deleted
+            doc.IsDeleted = true;
+            doc.DeletedAt = DateTimeOffset.UtcNow;
+            doc.DeletedBy = deletedBy;
+
+            // Calculate TTL if auto-purge is enabled
+            var purgeDate = _retentionPolicy.CalculatePurgeDate(doc.CreatedAt, doc.DeletedAt);
+            if (purgeDate.HasValue)
+            {
+                var secondsUntilPurge = (int)(purgeDate.Value - DateTimeOffset.UtcNow).TotalSeconds;
+                doc.TimeToLive = secondsUntilPurge > 0 ? secondsUntilPurge : 1;
+            }
+            else
+            {
+                doc.TimeToLive = null;
+            }
+
+            // Update the document
+            await _container.ReplaceItemAsync(doc, goalId, new PartitionKey(clientId), cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+    }
+
+    // ── Restore ───────────────────────────────────────────────────────────────
+
+    public async Task<bool> RestoreAsync(
         string clientId, string goalId, CancellationToken cancellationToken = default)
     {
         try
         {
-            await _container.DeleteItemAsync<GoalDocument>(
+            // Read the document
+            var response = await _container.ReadItemAsync<GoalDocument>(
                 goalId, new PartitionKey(clientId), cancellationToken: cancellationToken);
+
+            var doc = response.Resource;
+
+            // Only restore if currently deleted
+            if (!doc.IsDeleted)
+                return false;
+
+            // Clear deletion markers
+            doc.IsDeleted = false;
+            doc.DeletedAt = null;
+            doc.DeletedBy = null;
+            doc.TimeToLive = null;
+
+            // Update the document
+            await _container.ReplaceItemAsync(doc, goalId, new PartitionKey(clientId), cancellationToken: cancellationToken);
             return true;
         }
         catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)

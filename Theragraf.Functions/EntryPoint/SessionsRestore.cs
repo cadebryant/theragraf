@@ -9,14 +9,14 @@ using Theragraf.Core.Services;
 using Theragraf.Functions.Helpers;
 using Theragraf.Functions.Logging;
 
-public class SessionsDelete(ISessionRepository repository, IConfiguration config, ILoggerFactory loggerFactory, IAuditLogger auditLogger)
+public class SessionsRestore(ISessionRepository repository, IConfiguration config, ILoggerFactory loggerFactory, IAuditLogger auditLogger)
 {
-    private readonly ILogger _logger = loggerFactory.CreateLogger<SessionsDelete>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<SessionsRestore>();
 
-    /// <summary>DELETE /api/sessions/{clientId}/{sessionDate} — delete a specific session.</summary>
-    [Function("DeleteSession")]
-    public async Task<HttpResponseData> Delete(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "sessions/{clientId}/{sessionDate}")] HttpRequestData req,
+    /// <summary>POST /api/sessions/{clientId}/{sessionDate}/restore — restore a soft-deleted session.</summary>
+    [Function("RestoreSession")]
+    public async Task<HttpResponseData> Restore(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "sessions/{clientId}/{sessionDate}/restore")] HttpRequestData req,
         string clientId,
         string sessionDate,
         CancellationToken cancellationToken)
@@ -36,10 +36,10 @@ public class SessionsDelete(ISessionRepository repository, IConfiguration config
             return badRequest;
         }
 
-        _logger.LogInformation("DeleteSession called for clientId={ClientId} date={Date}", clientId, sessionDate);
+        _logger.LogInformation("RestoreSession called for clientId={ClientId} date={Date}", clientId, sessionDate);
 
-        // Ownership check — fetch the session and verify the JWT identity matches TherapistName.
-        // Demo records (TherapistName == Demo:TherapistName) are deletable by anyone.
+        // Ownership check — fetch the session (including deleted) and verify identity.
+        // For restore operations, we need to check against the original therapist who created it.
         var identity = ClaimsHelper.GetTherapistIdentity(req, config);
         if (identity is not null)
         {
@@ -49,38 +49,38 @@ public class SessionsDelete(ISessionRepository repository, IConfiguration config
                 && !ClaimsHelper.IsDemoRecord(existing.TherapistName, config))
             {
                 auditLogger.Log(AuditEvent.Failure(identity, AuditAction.AccessDenied, "Session",
-                    resourceId: $"{clientId}/{sessionDate}", detail: "Ownership check failed"));
+                    resourceId: $"{clientId}/{sessionDate}", detail: "Ownership check failed for restore"));
                 var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
-                await forbidden.WriteStringAsync("You are not authorised to delete this session.", cancellationToken);
+                await forbidden.WriteStringAsync("You are not authorised to restore this session.", cancellationToken);
                 return forbidden;
             }
         }
 
-        bool deleted;
+        bool restored;
         try
         {
-            deleted = await repository.DeleteAsync(clientId, sessionDate, identity ?? "anonymous", cancellationToken);
+            restored = await repository.RestoreAsync(clientId, sessionDate, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "DeleteSession failed for clientId={ClientId}", clientId);
-            auditLogger.Log(AuditEvent.Failure(identity ?? "anonymous", AuditAction.Delete, "Session",
-                resourceId: $"{clientId}/{sessionDate}", detail: ex.Message));
+            _logger.LogError(ex, "RestoreSession failed for clientId={ClientId}", clientId);
+            auditLogger.Log(AuditEvent.Failure(identity ?? "anonymous", AuditAction.Write, "Session",
+                resourceId: $"{clientId}/{sessionDate}", detail: $"Restore failed: {ex.Message}"));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await error.WriteStringAsync("An unexpected error occurred while deleting the session.", cancellationToken);
+            await error.WriteStringAsync("An unexpected error occurred while restoring the session.", cancellationToken);
             return error;
         }
 
-        if (!deleted)
+        if (!restored)
         {
             var notFound = req.CreateResponse(HttpStatusCode.NotFound);
             await notFound.WriteStringAsync(
-                $"No session found for client '{clientId}' at '{sessionDate}'.", cancellationToken);
+                $"No deleted session found for client '{clientId}' at '{sessionDate}', or the session is already active.", cancellationToken);
             return notFound;
         }
 
-        auditLogger.Log(AuditEvent.Success(identity ?? "anonymous", AuditAction.Delete, "Session",
-            resourceId: $"{clientId}/{sessionDate}"));
+        auditLogger.Log(AuditEvent.Success(identity ?? "anonymous", AuditAction.Write, "Session",
+            resourceId: $"{clientId}/{sessionDate}", detail: "Session restored from soft-delete"));
         return req.CreateResponse(HttpStatusCode.NoContent);
     }
 }

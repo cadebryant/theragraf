@@ -175,7 +175,7 @@ public class SeedFunction(
 
                 foreach (var session in page.Items)
                 {
-                    if (await sessionRepository.DeleteAsync(client.ClientId, session.SessionDate, cancellationToken))
+                    if (await sessionRepository.DeleteAsync(client.ClientId, session.SessionDate, "seed-cleanup", cancellationToken))
                         deleted++;
                 }
 

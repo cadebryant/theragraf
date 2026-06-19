@@ -17,7 +17,17 @@ public interface ISessionRepository
 
     Task<SessionResponse?> GetByClientIdAndDateAsync(string clientId, string rowKey, CancellationToken cancellationToken = default);
 
-    Task<bool> DeleteAsync(string clientId, string rowKey, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Soft-deletes a session by marking it as deleted rather than removing it from storage.
+    /// Returns true if the session was found and marked deleted, false if not found.
+    /// </summary>
+    Task<bool> DeleteAsync(string clientId, string rowKey, string deletedBy, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Restores a soft-deleted session by clearing the deletion markers.
+    /// Returns true if the session was found and restored, false if not found or already active.
+    /// </summary>
+    Task<bool> RestoreAsync(string clientId, string rowKey, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Applies a partial update to an existing session document.

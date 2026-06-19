@@ -25,8 +25,16 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
     // Each test class uses a unique client prefix so parallel runs don't clash.
     private readonly string _clientId = $"integration-{Guid.NewGuid():N}";
 
-    private CosmosSessionRepository CreateRepository() =>
-        new(cosmos.Client, CosmosFixture.DatabaseName, CosmosFixture.ContainerName, new NullRedactionMapEncryption());
+    private CosmosSessionRepository CreateRepository()
+    {
+        var retentionPolicy = new RetentionPolicy
+        {
+            RetentionYears = 6,
+            AutoPurgeEnabled = false,
+            RetentionStartsFrom = RetentionStartMode.CreatedAt
+        };
+        return new(cosmos.Client, CosmosFixture.DatabaseName, CosmosFixture.ContainerName, new NullRedactionMapEncryption(), retentionPolicy);
+    }
 
     // -- Helpers ---------------------------------------------------------------
 
@@ -327,16 +335,17 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
     // -- Delete ----------------------------------------------------------------
 
     [SkippableFact]
-    public async Task DeleteAsync_Removes_ExistingDocument()
+    public async Task DeleteAsync_SoftDeletes_ExistingDocument()
     {
         cosmos.SkipIfUnavailable();
         var repo   = CreateRepository();
         var rowKey = $"2025-07-01T10-00-00Z";
 
         await repo.SaveAsync(BuildRecord(rowKey));
-        var deleted = await repo.DeleteAsync(_clientId, rowKey);
+        var deleted = await repo.DeleteAsync(_clientId, rowKey, "test-therapist");
 
         deleted.Should().BeTrue();
+        // Soft-deleted documents are excluded from normal queries
         var result = await repo.GetByClientIdAndDateAsync(_clientId, rowKey);
         result.Should().BeNull();
     }
@@ -346,8 +355,53 @@ public class CosmosSessionRepositoryTests(CosmosFixture cosmos)
     {
         cosmos.SkipIfUnavailable();
         var repo    = CreateRepository();
-        var deleted = await repo.DeleteAsync(_clientId, "2099-01-01T00-00-00Z");
+        var deleted = await repo.DeleteAsync(_clientId, "2099-01-01T00-00-00Z", "test-therapist");
         deleted.Should().BeFalse();
+    }
+
+    [SkippableFact]
+    public async Task RestoreAsync_RestoresSoftDeletedDocument()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var rowKey = $"2025-07-02T10-00-00Z";
+
+        // Create and soft-delete
+        await repo.SaveAsync(BuildRecord(rowKey));
+        await repo.DeleteAsync(_clientId, rowKey, "test-therapist");
+
+        // Restore
+        var restored = await repo.RestoreAsync(_clientId, rowKey);
+        restored.Should().BeTrue();
+
+        // Verify it's accessible again
+        var result = await repo.GetByClientIdAndDateAsync(_clientId, rowKey);
+        result.Should().NotBeNull();
+        result!.TherapistName.Should().Be("Dr. Smith");
+    }
+
+    [SkippableFact]
+    public async Task RestoreAsync_ReturnsFalse_WhenDocumentNotDeleted()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo   = CreateRepository();
+        var rowKey = $"2025-07-03T10-00-00Z";
+
+        // Create but don't delete
+        await repo.SaveAsync(BuildRecord(rowKey));
+
+        // Try to restore a non-deleted document
+        var restored = await repo.RestoreAsync(_clientId, rowKey);
+        restored.Should().BeFalse();
+    }
+
+    [SkippableFact]
+    public async Task RestoreAsync_ReturnsFalse_WhenDocumentNotFound()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo     = CreateRepository();
+        var restored = await repo.RestoreAsync(_clientId, "2099-01-01T00-00-00Z");
+        restored.Should().BeFalse();
     }
 
     // -- SoapNote PII redaction round-trip -------------------------------------

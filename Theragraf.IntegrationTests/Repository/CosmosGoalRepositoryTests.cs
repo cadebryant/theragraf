@@ -19,8 +19,16 @@ public class CosmosGoalRepositoryTests(CosmosFixture cosmos)
     // Each test uses a unique clientId so parallel runs and test isolation are guaranteed.
     private readonly string _clientId = $"goals-integration-{Guid.NewGuid():N}";
 
-    private CosmosGoalRepository CreateRepository() =>
-        new(cosmos.Client, CosmosFixture.DatabaseName, CosmosFixture.GoalsContainerName);
+    private CosmosGoalRepository CreateRepository()
+    {
+        var retentionPolicy = new RetentionPolicy
+        {
+            RetentionYears = 6,
+            AutoPurgeEnabled = false,
+            RetentionStartsFrom = RetentionStartMode.CreatedAt
+        };
+        return new(cosmos.Client, CosmosFixture.DatabaseName, CosmosFixture.GoalsContainerName, retentionPolicy);
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -252,7 +260,7 @@ public class CosmosGoalRepositoryTests(CosmosFixture cosmos)
         var repo    = CreateRepository();
         var created = await repo.CreateAsync(_clientId, BasicRequest());
 
-        var deleted = await repo.DeleteAsync(_clientId, created.GoalId);
+        var deleted = await repo.DeleteAsync(_clientId, created.GoalId, "test-therapist");
 
         deleted.Should().BeTrue();
         var fetched = await repo.GetByIdAsync(_clientId, created.GoalId);
@@ -265,7 +273,7 @@ public class CosmosGoalRepositoryTests(CosmosFixture cosmos)
         cosmos.SkipIfUnavailable();
         var repo = CreateRepository();
 
-        var result = await repo.DeleteAsync(_clientId, Guid.NewGuid().ToString());
+        var result = await repo.DeleteAsync(_clientId, Guid.NewGuid().ToString(), "test-therapist");
 
         result.Should().BeFalse();
     }
@@ -278,10 +286,51 @@ public class CosmosGoalRepositoryTests(CosmosFixture cosmos)
         var goalA  = await repo.CreateAsync(_clientId, BasicRequest("A"));
         var goalB  = await repo.CreateAsync(_clientId, BasicRequest("B"));
 
-        await repo.DeleteAsync(_clientId, goalA.GoalId);
+        await repo.DeleteAsync(_clientId, goalA.GoalId, "test-therapist");
 
         var remaining = await repo.GetByClientIdAsync(_clientId);
         remaining.Should().HaveCount(1);
         remaining[0].GoalId.Should().Be(goalB.GoalId);
+    }
+
+    [SkippableFact]
+    public async Task RestoreAsync_RestoresSoftDeletedGoal()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo    = CreateRepository();
+        var created = await repo.CreateAsync(_clientId, BasicRequest());
+
+        // Soft-delete
+        await repo.DeleteAsync(_clientId, created.GoalId, "test-therapist");
+
+        // Restore
+        var restored = await repo.RestoreAsync(_clientId, created.GoalId);
+        restored.Should().BeTrue();
+
+        // Verify it's accessible again
+        var fetched = await repo.GetByIdAsync(_clientId, created.GoalId);
+        fetched.Should().NotBeNull();
+        fetched!.Title.Should().Be("Improve dressing");
+    }
+
+    [SkippableFact]
+    public async Task RestoreAsync_ReturnsFalse_WhenGoalNotDeleted()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo    = CreateRepository();
+        var created = await repo.CreateAsync(_clientId, BasicRequest());
+
+        // Try to restore a non-deleted goal
+        var restored = await repo.RestoreAsync(_clientId, created.GoalId);
+        restored.Should().BeFalse();
+    }
+
+    [SkippableFact]
+    public async Task RestoreAsync_ReturnsFalse_WhenGoalNotFound()
+    {
+        cosmos.SkipIfUnavailable();
+        var repo     = CreateRepository();
+        var restored = await repo.RestoreAsync(_clientId, Guid.NewGuid().ToString());
+        restored.Should().BeFalse();
     }
 }

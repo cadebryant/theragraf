@@ -54,7 +54,7 @@ public class GoalsDelete(
 
         try
         {
-            var deleted = await repository.DeleteAsync(clientId, goalId, cancellationToken);
+            var deleted = await repository.DeleteAsync(clientId, goalId, identity ?? "anonymous", cancellationToken);
             if (!deleted)
             {
                 var notFound = req.CreateResponse(HttpStatusCode.NotFound);

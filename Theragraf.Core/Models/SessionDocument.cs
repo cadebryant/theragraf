@@ -77,6 +77,25 @@ public class SessionDocument
     [JsonPropertyName("isSynthetic")]
     public bool IsSynthetic { get; set; }
 
+    /// <summary>True if this record has been soft-deleted.</summary>
+    [JsonPropertyName("isDeleted")]
+    public bool IsDeleted { get; set; }
+
+    /// <summary>Timestamp when this record was soft-deleted. Null if not deleted.</summary>
+    [JsonPropertyName("deletedAt")]
+    public DateTimeOffset? DeletedAt { get; set; }
+
+    /// <summary>Therapist who deleted this record. Null if not deleted.</summary>
+    [JsonPropertyName("deletedBy")]
+    public string? DeletedBy { get; set; }
+
+    /// <summary>
+    /// Unix timestamp (seconds since epoch) when this document should be auto-purged by Cosmos DB TTL.
+    /// Null when auto-purge is disabled. Maps to Cosmos DB's native TTL field.
+    /// </summary>
+    [JsonPropertyName("ttl")]
+    public int? TimeToLive { get; set; }
+
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; set; }
 }

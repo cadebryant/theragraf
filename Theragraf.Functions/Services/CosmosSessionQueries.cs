@@ -20,9 +20,9 @@ internal static class CosmosSessionQueries
 
     /// <summary>
     /// Starting point for the paged/filtered query. The <c>@clientId</c> parameter
-    /// must always be supplied.
+    /// must always be supplied. Excludes soft-deleted records by default.
     /// </summary>
-    internal const string BaseSelect = "SELECT * FROM c WHERE c.clientId = @clientId";
+    internal const string BaseSelect = "SELECT * FROM c WHERE c.clientId = @clientId AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)";
 
     // ── Optional WHERE fragments (appended only when the filter is active) ────
 
@@ -71,31 +71,37 @@ internal static class CosmosSessionQueries
     /// <summary>
     /// Projects only the fields required for stats aggregation — omits redactionMap
     /// and encryptedRedactionMap to avoid loading PHI unnecessarily.
+    /// Excludes soft-deleted records.
     /// Filter: <c>@therapistName</c>
     /// </summary>
     internal const string StatsProjectionByTherapist =
         "SELECT c.id, c.clientId, c.therapistName, c.discipline, c.setting, c.payer, " +
         "c.sessionDurationMinutes, c.suggestedCptCodes, c.suggestedIcdCodes " +
-        "FROM c WHERE c.therapistName = @therapistName";
+        "FROM c WHERE c.therapistName = @therapistName " +
+        "AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)";
 
     /// <summary>
     /// Returns one row per distinct client for the given therapist, with the most-recent
     /// session date, total session count, and synthetic flag. Ordered by lastSession descending.
+    /// Excludes soft-deleted records.
     /// Filter: <c>@therapistName</c>
     /// </summary>
     internal const string CaseloadByTherapist =
         "SELECT c.clientId, MAX(c.id) AS lastSession, COUNT(1) AS totalSessions, " +
         "MAX(c.isSynthetic ? 1 : 0) AS isSynthetic " +
         "FROM c WHERE c.therapistName = @therapistName " +
+        "AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false) " +
         "GROUP BY c.clientId";
 
     /// <summary>
     /// Projects only the fields required for stats aggregation — omits redactionMap
     /// and encryptedRedactionMap to avoid loading PHI unnecessarily.
+    /// Excludes soft-deleted records.
     /// Filter: <c>@clientId</c> (partition-key query).
     /// </summary>
     internal const string StatsProjectionByClient =
         "SELECT c.id, c.clientId, c.therapistName, c.discipline, c.setting, c.payer, " +
         "c.sessionDurationMinutes, c.suggestedCptCodes, c.suggestedIcdCodes, c.isSynthetic " +
-        "FROM c WHERE c.clientId = @clientId";
+        "FROM c WHERE c.clientId = @clientId " +
+        "AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)";
 }

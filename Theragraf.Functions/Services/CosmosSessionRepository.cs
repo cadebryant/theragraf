@@ -14,15 +14,18 @@ public class CosmosSessionRepository : ISessionRepository
 {
     private readonly Container                _container;
     private readonly IRedactionMapEncryption  _encryption;
+    private readonly RetentionPolicy          _retentionPolicy;
 
     public CosmosSessionRepository(
         CosmosClient            cosmosClient,
         string                  databaseName,
         string                  containerName,
-        IRedactionMapEncryption encryption)
+        IRedactionMapEncryption encryption,
+        RetentionPolicy         retentionPolicy)
     {
-        _container  = cosmosClient.GetContainer(databaseName, containerName);
-        _encryption = encryption;
+        _container       = cosmosClient.GetContainer(databaseName, containerName);
+        _encryption      = encryption;
+        _retentionPolicy = retentionPolicy;
     }
 
     // ── Write ─────────────────────────────────────────────────────────────────
@@ -103,7 +106,7 @@ public class CosmosSessionRepository : ISessionRepository
             .GetItemLinqQueryable<SessionDocument>(
                 requestOptions:       requestOptions,
                 linqSerializerOptions: _linqSerializerOptions)
-            .Where(d => d.ClientId == clientId)
+            .Where(d => d.ClientId == clientId && !d.IsDeleted)
             .OrderByDescending(d => d.Id)
             .ToFeedIterator();
 
@@ -117,7 +120,11 @@ public class CosmosSessionRepository : ISessionRepository
         {
             var response = await _container.ReadItemAsync<SessionDocument>(
                 rowKey, new PartitionKey(clientId), cancellationToken: cancellationToken);
-            return MapToResponse(response.Resource);
+            var doc = response.Resource;
+            // Exclude soft-deleted documents
+            if (doc.IsDeleted)
+                return null;
+            return MapToResponse(doc);
         }
         catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -184,12 +191,68 @@ public class CosmosSessionRepository : ISessionRepository
 
     // ── Delete ────────────────────────────────────────────────────────────────
 
-    public async Task<bool> DeleteAsync(string clientId, string rowKey, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(string clientId, string rowKey, string deletedBy, CancellationToken cancellationToken = default)
     {
         try
         {
-            await _container.DeleteItemAsync<SessionDocument>(
+            // Read the document first
+            var response = await _container.ReadItemAsync<SessionDocument>(
                 rowKey, new PartitionKey(clientId), cancellationToken: cancellationToken);
+
+            var doc = response.Resource;
+
+            // Mark as soft-deleted
+            doc.IsDeleted = true;
+            doc.DeletedAt = DateTimeOffset.UtcNow;
+            doc.DeletedBy = deletedBy;
+
+            // Calculate TTL if auto-purge is enabled
+            var purgeDate = _retentionPolicy.CalculatePurgeDate(doc.CreatedAt, doc.DeletedAt);
+            if (purgeDate.HasValue)
+            {
+                // Convert to Unix timestamp relative to current time for Cosmos TTL
+                var secondsUntilPurge = (int)(purgeDate.Value - DateTimeOffset.UtcNow).TotalSeconds;
+                doc.TimeToLive = secondsUntilPurge > 0 ? secondsUntilPurge : 1; // Minimum 1 second
+            }
+            else
+            {
+                doc.TimeToLive = null; // No auto-purge
+            }
+
+            // Update the document
+            await _container.ReplaceItemAsync(doc, rowKey, new PartitionKey(clientId), cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+    }
+
+    // ── Restore ───────────────────────────────────────────────────────────────
+
+    public async Task<bool> RestoreAsync(string clientId, string rowKey, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Read the document
+            var response = await _container.ReadItemAsync<SessionDocument>(
+                rowKey, new PartitionKey(clientId), cancellationToken: cancellationToken);
+
+            var doc = response.Resource;
+
+            // Only restore if currently deleted
+            if (!doc.IsDeleted)
+                return false;
+
+            // Clear deletion markers
+            doc.IsDeleted = false;
+            doc.DeletedAt = null;
+            doc.DeletedBy = null;
+            doc.TimeToLive = null; // Cancel auto-purge
+
+            // Update the document
+            await _container.ReplaceItemAsync(doc, rowKey, new PartitionKey(clientId), cancellationToken: cancellationToken);
             return true;
         }
         catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
