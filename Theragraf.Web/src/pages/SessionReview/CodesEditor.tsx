@@ -44,10 +44,10 @@ const useStyles = makeStyles({
     borderRadius: tokens.borderRadiusMedium,
   },
   rationalCell: {
-    maxWidth: '300px',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    maxWidth: '400px',
+    overflow: 'visible',
+    wordBreak: 'break-word',
+    whiteSpace: 'normal',
   },
 });
 

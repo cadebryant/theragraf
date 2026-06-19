@@ -22,8 +22,9 @@ const useStyles = makeStyles({
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
     gap: tokens.spacingHorizontalL,
+    rowGap: tokens.spacingVerticalL,
   },
 });
 

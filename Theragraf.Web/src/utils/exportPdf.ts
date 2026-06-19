@@ -131,7 +131,7 @@ export function exportSessionPdf(data: ExportData): void {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.text('CPT Codes', margin, y);
-  y += lineH * 1.2;
+  y += lineH * 1.5;  // Slightly more space after section title
 
   if (data.cptCodes.length === 0) {
     doc.setFont('helvetica', 'normal');
@@ -156,10 +156,10 @@ export function exportSessionPdf(data: ExportData): void {
     doc.text('Description', cptDescX, y);
     doc.text('Units',       cptUnitsX, y);
     doc.text('Rationale',   cptRatX, y);
-    y += lineH;
+    y += lineH + 2;  // Move past the header text
     doc.setDrawColor(200, 200, 200);
     doc.line(margin, y, pageWidth - margin, y);
-    y += 4;
+    y += lineH * 0.6;  // Space between line and first data row
 
     doc.setFont('helvetica', 'normal');
     for (const cpt of data.cptCodes) {
@@ -189,7 +189,7 @@ export function exportSessionPdf(data: ExportData): void {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.text('ICD-10 Diagnosis Codes', margin, y);
-  y += lineH * 1.2;
+  y += lineH * 1.5;  // Slightly more space after section title
 
   if (data.icdCodes.length === 0) {
     doc.setFont('helvetica', 'normal');
@@ -209,9 +209,9 @@ export function exportSessionPdf(data: ExportData): void {
     doc.text('Code',        icdCodeX, y);
     doc.text('Description', icdDescX, y);
     doc.text('Rationale',   icdRatX,  y);
-    y += lineH;
+    y += lineH + 2;  // Move past the header text
     doc.line(margin, y, pageWidth - margin, y);
-    y += 4;
+    y += lineH * 0.6;  // Space between line and first data row
 
     doc.setFont('helvetica', 'normal');
     for (const icd of data.icdCodes) {
