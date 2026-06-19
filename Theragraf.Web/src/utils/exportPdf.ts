@@ -139,13 +139,23 @@ export function exportSessionPdf(data: ExportData): void {
     doc.text('None', margin, y);
     y += lineH * 1.5;
   } else {
+    // Column definitions with proper widths that fit the page
+    const cptCodeX = margin;
+    const cptCodeWidth = 50;
+    const cptDescX = cptCodeX + cptCodeWidth + 10;
+    const cptDescWidth = 200;
+    const cptUnitsX = cptDescX + cptDescWidth + 10;
+    const cptUnitsWidth = 35;
+    const cptRatX = cptUnitsX + cptUnitsWidth + 10;
+    const cptRatWidth = contentWidth - (cptRatX - margin);  // Use remaining space
+
     // Column headers
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('Code',        margin,        y);
-    doc.text('Description', margin + 60,   y);
-    doc.text('Units',       margin + 360,  y);
-    doc.text('Rationale',   margin + 410,  y);
+    doc.text('Code',        cptCodeX, y);
+    doc.text('Description', cptDescX, y);
+    doc.text('Units',       cptUnitsX, y);
+    doc.text('Rationale',   cptRatX, y);
     y += lineH;
     doc.setDrawColor(200, 200, 200);
     doc.line(margin, y, pageWidth - margin, y);
@@ -153,20 +163,21 @@ export function exportSessionPdf(data: ExportData): void {
 
     doc.setFont('helvetica', 'normal');
     for (const cpt of data.cptCodes) {
-      const descLines = doc.splitTextToSize(cpt.description, 290) as string[];
-      const ratLines  = doc.splitTextToSize(cpt.rationale ?? '', 155) as string[];
+      const descLines = doc.splitTextToSize(cpt.description, cptDescWidth) as string[];
+      const ratLines  = doc.splitTextToSize(cpt.rationale ?? '', cptRatWidth) as string[];
       const rowLines  = Math.max(descLines.length, ratLines.length, 1);
 
-      doc.text(cpt.code,                  margin,       y);
-      doc.text(descLines,                 margin + 60,  y);
-      doc.text(String(cpt.billableUnits), margin + 360, y);
-      doc.text(ratLines,                  margin + 410, y);
-      y += rowLines * lineH + 4;
-
-      if (y > doc.internal.pageSize.getHeight() - margin * 2) {
+      // Check if we need a new page BEFORE printing
+      if (y + (rowLines * lineH) > doc.internal.pageSize.getHeight() - margin * 2) {
         doc.addPage();
         y = margin;
       }
+
+      doc.text(cpt.code,                  cptCodeX,  y);
+      doc.text(descLines,                 cptDescX,  y);
+      doc.text(String(cpt.billableUnits), cptUnitsX, y);
+      doc.text(ratLines,                  cptRatX,   y);
+      y += rowLines * lineH + 6;  // Add more vertical spacing between rows
     }
   }
 
@@ -185,30 +196,39 @@ export function exportSessionPdf(data: ExportData): void {
     doc.setFontSize(10);
     doc.text('None', margin, y);
   } else {
+    // Column definitions with proper widths
+    const icdCodeX = margin;
+    const icdCodeWidth = 50;
+    const icdDescX = icdCodeX + icdCodeWidth + 10;
+    const icdDescWidth = 220;
+    const icdRatX = icdDescX + icdDescWidth + 10;
+    const icdRatWidth = contentWidth - (icdRatX - margin);  // Use remaining space
+
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('Code',        margin,       y);
-    doc.text('Description', margin + 60,  y);
-    doc.text('Rationale',   margin + 310, y);
+    doc.text('Code',        icdCodeX, y);
+    doc.text('Description', icdDescX, y);
+    doc.text('Rationale',   icdRatX,  y);
     y += lineH;
     doc.line(margin, y, pageWidth - margin, y);
     y += 4;
 
     doc.setFont('helvetica', 'normal');
     for (const icd of data.icdCodes) {
-      const descLines = doc.splitTextToSize(icd.description, 240) as string[];
-      const ratLines  = doc.splitTextToSize(icd.rationale ?? '', 200) as string[];
+      const descLines = doc.splitTextToSize(icd.description, icdDescWidth) as string[];
+      const ratLines  = doc.splitTextToSize(icd.rationale ?? '', icdRatWidth) as string[];
       const rowLines  = Math.max(descLines.length, ratLines.length, 1);
 
-      doc.text(icd.code,    margin,       y);
-      doc.text(descLines,   margin + 60,  y);
-      doc.text(ratLines,    margin + 310, y);
-      y += rowLines * lineH + 4;
-
-      if (y > doc.internal.pageSize.getHeight() - margin * 2) {
+      // Check if we need a new page BEFORE printing
+      if (y + (rowLines * lineH) > doc.internal.pageSize.getHeight() - margin * 2) {
         doc.addPage();
         y = margin;
       }
+
+      doc.text(icd.code,    icdCodeX, y);
+      doc.text(descLines,   icdDescX, y);
+      doc.text(ratLines,    icdRatX,  y);
+      y += rowLines * lineH + 6;  // Add more vertical spacing between rows
     }
   }
 
