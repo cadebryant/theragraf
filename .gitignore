@@ -494,3 +494,10 @@ runtimes/
 /ReviewAuditLogQuery.txt
 /TheraGraf System Overview.pdf
 /docs
+
+# Playwright E2E Test Artifacts
+Theragraf.Web/test-results/
+Theragraf.Web/playwright-report/
+Theragraf.Web/tests/e2e/.auth/
+Theragraf.Web/.env.test
+Theragraf.Web/playwright/.cache/

@@ -333,6 +333,7 @@ Theragraf.Web/              — React + TypeScript + Vite SPA
 
 Theragraf.Tests/            — xUnit unit test suite (endpoints, helpers, agents, orchestration)
 Theragraf.IntegrationTests/ — xUnit integration tests against Cosmos DB Emulator (sessions, goals, client demographics)
+Theragraf.Web/tests/e2e/    — Playwright E2E tests covering full-stack user workflows
 
 infra/                      — Bicep IaC for all Azure resources
   main.bicep
@@ -341,6 +342,85 @@ infra/                      — Bicep IaC for all Azure resources
 
 postman/                    — Postman collection for manual API testing
 ```
+
+---
+
+## Testing
+
+TheraGraf includes a comprehensive test suite at three levels:
+
+### Unit Tests (.NET)
+
+Located in `Theragraf.Tests/`, xUnit tests cover:
+- HTTP endpoint logic
+- Orchestration workflows
+- AI agent prompts and parsing
+- Helper utilities
+- Domain models
+
+Run unit tests:
+```powershell
+dotnet test Theragraf.Tests
+```
+
+### Integration Tests (.NET)
+
+Located in `Theragraf.IntegrationTests/`, tests against Cosmos DB Emulator:
+- Session repository CRUD operations
+- Goal repository operations
+- Client demographics repository
+- Query builders and filtering
+- Soft-delete and restore workflows
+
+**Prerequisites:** Cosmos DB Emulator must be running (auto-starts via MSBuild target)
+
+Run integration tests:
+```powershell
+dotnet test Theragraf.IntegrationTests
+```
+
+### End-to-End Tests (Playwright)
+
+Located in `Theragraf.Web/tests/e2e/`, Playwright tests cover full-stack user workflows:
+- **Authentication:** Real Azure AD authentication flow
+- **Session Creation:** Complete workflow from recording to AI processing to approval
+- **Dashboard:** Statistics, charts, caseload table, search, navigation
+- **Client Profiles:** Demographics, goals CRUD, AI goal suggestions, session history
+- **Session Review:** SOAP/DAP note editing, CPT/ICD code management, approval workflow
+
+**Prerequisites:**
+1. All services running (Frontend, Backend, Cosmos DB)
+2. Test user credentials configured in `.env.test`
+3. Playwright browsers installed
+
+Run E2E tests:
+```powershell
+cd Theragraf.Web
+npm install
+npx playwright install
+npm run test:e2e
+```
+
+For interactive testing and debugging:
+```powershell
+npm run test:e2e:ui        # Run tests in UI mode
+npm run test:e2e:debug     # Run tests with debugger
+npm run test:e2e:report    # View test results report
+```
+
+**Documentation:** See [Theragraf.Web/tests/e2e/README.md](Theragraf.Web/tests/e2e/README.md) for complete E2E testing guide including:
+- Environment setup
+- Configuration options
+- Writing new tests
+- Troubleshooting
+- CI/CD integration
+
+**Test Coverage:**
+- 3 test projects (unit, integration, E2E)
+- Full-stack workflow validation
+- Multi-browser testing (Chromium, Firefox, WebKit)
+- Real authentication with Azure AD
+- Automated test data cleanup
 
 ---
 
