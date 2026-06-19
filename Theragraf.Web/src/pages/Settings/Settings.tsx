@@ -83,9 +83,27 @@ const useStyles = makeStyles({
   },
   fieldRow: {
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: tokens.spacingHorizontalM,
+    paddingTop: tokens.spacingVerticalS,
+    paddingBottom: tokens.spacingVerticalS,
+  },
+  fieldRowContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+    flex: 1,
+  },
+  fieldRowLabel: {
+    fontWeight: tokens.fontWeightSemibold,
+    fontSize: tokens.fontSizeBase300,
+    color: tokens.colorNeutralForeground1,
+  },
+  fieldRowDescription: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground3,
+    lineHeight: tokens.lineHeightBase300,
   },
   actions: {
     display: 'flex',
@@ -265,9 +283,9 @@ export default function Settings() {
         </div>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="showSynthetic">Show Synthetic Data by Default</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Show Synthetic Data by Default</Text>
+            <Text className={styles.fieldRowDescription}>
               Display AI-generated practice data on dashboard
             </Text>
           </div>
@@ -364,9 +382,9 @@ export default function Settings() {
         </div>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="autoFill">Auto-fill Last Used Values</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Auto-fill Last Used Values</Text>
+            <Text className={styles.fieldRowDescription}>
               Automatically populate fields with your most recent selections
             </Text>
           </div>
@@ -386,9 +404,9 @@ export default function Settings() {
         </Text>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="sessionReminders">Session Reminders</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Session Reminders</Text>
+            <Text className={styles.fieldRowDescription}>
               Notify me about sessions with missing documentation
             </Text>
           </div>
@@ -416,9 +434,9 @@ export default function Settings() {
         <Divider />
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="notifyApprovalRequired">Approval Required Notifications</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Approval Required Notifications</Text>
+            <Text className={styles.fieldRowDescription}>
               Notify me when my notes need approval
             </Text>
           </div>
@@ -430,9 +448,9 @@ export default function Settings() {
         </div>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="notifyApprovalReceived">Approval Received Notifications</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Approval Received Notifications</Text>
+            <Text className={styles.fieldRowDescription}>
               Notify me when my notes are approved
             </Text>
           </div>
@@ -446,9 +464,9 @@ export default function Settings() {
         <Divider />
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="goalWarning">Goal Expiration Warning</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Goal Expiration Warning</Text>
+            <Text className={styles.fieldRowDescription}>
               Warn me when client goals are approaching expiration
             </Text>
           </div>
@@ -476,9 +494,9 @@ export default function Settings() {
         <Divider />
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="browserNotifications">Browser Notifications</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Browser Notifications</Text>
+            <Text className={styles.fieldRowDescription}>
               Show desktop notifications when the app is in the background
             </Text>
           </div>
@@ -490,9 +508,9 @@ export default function Settings() {
         </div>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="notificationSound">Notification Sound</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Notification Sound</Text>
+            <Text className={styles.fieldRowDescription}>
               Play sound for notifications
             </Text>
           </div>
@@ -512,9 +530,9 @@ export default function Settings() {
         </Text>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="screenReader">Screen Reader Optimization</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Screen Reader Optimization</Text>
+            <Text className={styles.fieldRowDescription}>
               Enhance experience for screen reader users
             </Text>
           </div>
@@ -526,9 +544,9 @@ export default function Settings() {
         </div>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="highContrast">High Contrast Mode</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>High Contrast Mode</Text>
+            <Text className={styles.fieldRowDescription}>
               Increase contrast for better visibility
             </Text>
           </div>
@@ -540,9 +558,9 @@ export default function Settings() {
         </div>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="largeText">Large Text</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Large Text</Text>
+            <Text className={styles.fieldRowDescription}>
               Increase base font size throughout the app
             </Text>
           </div>
@@ -554,9 +572,9 @@ export default function Settings() {
         </div>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="reducedMotion">Reduced Motion</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Reduced Motion</Text>
+            <Text className={styles.fieldRowDescription}>
               Minimize animations and transitions
             </Text>
           </div>
@@ -568,9 +586,9 @@ export default function Settings() {
         </div>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="keyboardHints">Keyboard Navigation Hints</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Keyboard Navigation Hints</Text>
+            <Text className={styles.fieldRowDescription}>
               Show visual indicators for keyboard-focused elements
             </Text>
           </div>
@@ -582,9 +600,9 @@ export default function Settings() {
         </div>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="keyboardShortcuts">Show Keyboard Shortcuts</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Show Keyboard Shortcuts</Text>
+            <Text className={styles.fieldRowDescription}>
               Display keyboard shortcuts in tooltips and menus
             </Text>
           </div>
@@ -604,9 +622,9 @@ export default function Settings() {
         </Text>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="offlineCache">Enable Offline Cache</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Enable Offline Cache</Text>
+            <Text className={styles.fieldRowDescription}>
               Cache data locally for faster loading (HIPAA-compliant encryption)
             </Text>
           </div>
@@ -618,9 +636,9 @@ export default function Settings() {
         </div>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="clearCache">Clear Cache on Logout</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Clear Cache on Logout</Text>
+            <Text className={styles.fieldRowDescription}>
               Automatically clear local cache when you log out
             </Text>
           </div>
@@ -645,9 +663,9 @@ export default function Settings() {
         </div>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="confirmDelete">Confirm Before Delete</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Confirm Before Delete</Text>
+            <Text className={styles.fieldRowDescription}>
               Require confirmation before deleting items
             </Text>
           </div>
@@ -659,9 +677,9 @@ export default function Settings() {
         </div>
 
         <div className={styles.fieldRow}>
-          <div>
-            <Label htmlFor="auditLog">Show My Audit Log</Label>
-            <Text style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Show My Audit Log</Text>
+            <Text className={styles.fieldRowDescription}>
               Display my activity history in session details
             </Text>
           </div>
