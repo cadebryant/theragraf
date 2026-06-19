@@ -120,6 +120,7 @@ public class CosmosClientRepository(
             Sex:                  sex,
             PriorDiagnoses:       doc.PriorDiagnoses,
             FunctionalLimitations: doc.FunctionalLimitations,
-            UpdatedAt:            doc.UpdatedAt);
+            UpdatedAt:            doc.UpdatedAt,
+            IsSynthetic:          doc.IsSynthetic);
     }
 }

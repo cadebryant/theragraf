@@ -47,7 +47,8 @@ public record GoalResponse(
     DateTimeOffset              CreatedAt,
     DateTimeOffset?             TargetDate,
     DateTimeOffset?             ResolvedAt,
-    IReadOnlyList<GoalProgressNote> ProgressNotes
+    IReadOnlyList<GoalProgressNote> ProgressNotes,
+    bool                        IsSynthetic
 );
 
 // ── Write request models ──────────────────────────────────────────────────────

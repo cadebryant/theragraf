@@ -104,7 +104,7 @@ public class ClientDemographicsUpsertTests
         new(DateOfBirth: null, Sex: BiologicalSex.Female, PriorDiagnoses: null, FunctionalLimitations: null);
 
     private static ClientDemographicsResponse SampleResponse(string clientId) =>
-        new(clientId, 35, BiologicalSex.Female, null, null, DateTimeOffset.UtcNow);
+        new(clientId, 35, BiologicalSex.Female, null, null, DateTimeOffset.UtcNow, false);
 
     // ── Tests ─────────────────────────────────────────────────────────────────
 

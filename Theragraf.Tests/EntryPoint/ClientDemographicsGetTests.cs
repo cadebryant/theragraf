@@ -92,7 +92,7 @@ public class ClientDemographicsGetTests
     }
 
     private static ClientDemographicsResponse SampleRecord(string clientId) =>
-        new(clientId, 42, BiologicalSex.Female, "T2DM", "Limited ROM right shoulder", DateTimeOffset.UtcNow);
+        new(clientId, 42, BiologicalSex.Female, "T2DM", "Limited ROM right shoulder", DateTimeOffset.UtcNow, false);
 
     // ── Tests ─────────────────────────────────────────────────────────────────
 

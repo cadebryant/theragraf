@@ -106,7 +106,8 @@ public class GoalsGetTests
             CreatedAt:     DateTimeOffset.UtcNow,
             TargetDate:    DateTimeOffset.UtcNow.AddDays(28),
             ResolvedAt:    null,
-            ProgressNotes: []
+            ProgressNotes: [],
+            IsSynthetic:   false
         )
     ];
 

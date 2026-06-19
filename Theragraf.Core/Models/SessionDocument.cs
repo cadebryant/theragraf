@@ -73,6 +73,10 @@ public class SessionDocument
     [JsonPropertyName("approvedAt")]
     public DateTimeOffset? ApprovedAt { get; set; }
 
+    /// <summary>True if this is synthetic/demo data, false for real patient data.</summary>
+    [JsonPropertyName("isSynthetic")]
+    public bool IsSynthetic { get; set; }
+
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; set; }
 }

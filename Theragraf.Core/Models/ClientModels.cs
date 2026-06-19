@@ -46,7 +46,8 @@ public record ClientDemographicsResponse(
     BiologicalSex           Sex,
     string?                 PriorDiagnoses,
     string?                 FunctionalLimitations,
-    DateTimeOffset          UpdatedAt
+    DateTimeOffset          UpdatedAt,
+    bool                    IsSynthetic
 );
 
 // ── Upsert request ────────────────────────────────────────────────────────────

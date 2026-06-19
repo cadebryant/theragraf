@@ -243,6 +243,7 @@ public class SeedFunction(
                 return JsonSerializer.Serialize(codes);
             })
             .RuleFor(r => r.RedactionMapJson, _ => "{}")
+            .RuleFor(r => r.IsSynthetic, _ => true)
             .FinishWith((f, r) =>
             {
                 // RowKey is derived from CreatedAt — unique per client per minute.

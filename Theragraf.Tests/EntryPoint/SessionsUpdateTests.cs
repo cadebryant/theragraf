@@ -84,7 +84,8 @@ public class SessionsUpdateTests
         CreatedAt:              DateTimeOffset.UtcNow,
         IsApproved:             false,
         ApprovedBy:             null,
-        ApprovedAt:             null
+        ApprovedAt:             null,
+        IsSynthetic:            false
     );
 
     // ── Validation ────────────────────────────────────────────────────────────

@@ -36,7 +36,8 @@ public class SessionsGetTests
         CreatedAt: new DateTimeOffset(2024, 10, 10, 10, 0, 0, TimeSpan.Zero),
         IsApproved: false,
         ApprovedBy: null,
-        ApprovedAt: null
+        ApprovedAt: null,
+        IsSynthetic: false
     );
 
     private static readonly IConfiguration DisabledAuthConfig =

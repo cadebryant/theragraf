@@ -32,6 +32,10 @@ public class GoalDocument
     [JsonPropertyName("resolvedAt")]
     public DateTimeOffset? ResolvedAt { get; set; }
 
+    /// <summary>True if this is synthetic/demo data, false for real patient data.</summary>
+    [JsonPropertyName("isSynthetic")]
+    public bool IsSynthetic { get; set; }
+
     [JsonPropertyName("progressNotes")]
     public List<GoalProgressNoteDocument> ProgressNotes { get; set; } = [];
 }

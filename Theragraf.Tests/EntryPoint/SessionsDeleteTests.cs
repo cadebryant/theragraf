@@ -150,7 +150,7 @@ public class SessionsDeleteTests
         new("client-001", "2024-10-10T10-00-00Z", therapistName, "PT", "Soap", "Outpatient", "Medicare", 45,
             new SoapNote("S", "O", "A", "P"),
             new List<CptCode>(), new List<IcdCode>(),
-            DateTimeOffset.UtcNow, false, null, null);
+            DateTimeOffset.UtcNow, false, null, null, false);
 
     [Fact]
     public async Task Delete_WrongTherapist_Returns403()

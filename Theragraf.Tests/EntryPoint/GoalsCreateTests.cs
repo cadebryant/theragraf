@@ -96,7 +96,7 @@ public class GoalsCreateTests
 
     private GoalResponse SampleGoal(string title = "Improve dressing") =>
         new(Guid.NewGuid().ToString(), OwnedClientId, title, "Desc", GoalStatus.Active,
-            DateTimeOffset.UtcNow, null, null, []);
+            DateTimeOffset.UtcNow, null, null, [], false);
 
     // ── Happy path ────────────────────────────────────────────────────────────
 

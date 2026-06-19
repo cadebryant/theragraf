@@ -20,5 +20,6 @@ public record SessionResponse(
     DateTimeOffset CreatedAt,
     bool IsApproved,
     string? ApprovedBy,
-    DateTimeOffset? ApprovedAt
+    DateTimeOffset? ApprovedAt,
+    bool IsSynthetic
 );

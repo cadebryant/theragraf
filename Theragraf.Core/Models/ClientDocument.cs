@@ -42,6 +42,10 @@ public class ClientDocument
     [JsonPropertyName("functionalLimitations")]
     public string? FunctionalLimitations { get; set; }
 
+    /// <summary>True if this is synthetic/demo data, false for real patient data.</summary>
+    [JsonPropertyName("isSynthetic")]
+    public bool IsSynthetic { get; set; }
+
     [JsonPropertyName("updatedAt")]
     public DateTimeOffset UpdatedAt { get; set; }
 }

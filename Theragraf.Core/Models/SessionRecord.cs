@@ -36,5 +36,8 @@ public class SessionRecord
     public string? ApprovedBy { get; set; }
     public DateTimeOffset? ApprovedAt { get; set; }
 
+    /// <summary>True if this is synthetic/demo data, false for real patient data.</summary>
+    public bool IsSynthetic { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

@@ -369,7 +369,8 @@ public class CosmosSessionRepository : ISessionRepository
             CreatedAt:              doc.CreatedAt,
             IsApproved:             doc.IsApproved,
             ApprovedBy:             doc.ApprovedBy,
-            ApprovedAt:             doc.ApprovedAt
+            ApprovedAt:             doc.ApprovedAt,
+            IsSynthetic:            doc.IsSynthetic
         );
     }
 

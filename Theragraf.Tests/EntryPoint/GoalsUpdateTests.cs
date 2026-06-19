@@ -95,7 +95,7 @@ public class GoalsUpdateTests
 
     private static GoalResponse SampleGoal(GoalStatus status = GoalStatus.Active) =>
         new(GoalId, OwnedClientId, "Improve dressing", "Desc", status,
-            DateTimeOffset.UtcNow, null, null, []);
+            DateTimeOffset.UtcNow, null, null, [], false);
 
     // ── Happy path ────────────────────────────────────────────────────────────
 

@@ -156,7 +156,8 @@ public class CosmosGoalRepository : IGoalRepository
             ProgressNotes: doc.ProgressNotes
                 .OrderBy(n => n.RecordedAt)
                 .Select(n => new GoalProgressNote(n.NoteId, n.RecordedAt, n.Note))
-                .ToList()
+                .ToList(),
+            IsSynthetic:   doc.IsSynthetic
         );
     }
 }
