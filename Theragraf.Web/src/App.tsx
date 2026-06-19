@@ -6,6 +6,7 @@ import NewSession from '@/pages/NewSession/NewSession';
 import SessionReview from '@/pages/SessionReview/SessionReview';
 import ClientProfile from '@/pages/ClientProfile/ClientProfile';
 import SessionDetail from '@/pages/SessionDetail/SessionDetail';
+import Settings from '@/pages/Settings/Settings';
 
 export default function App() {
   return (
@@ -49,6 +50,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <SessionDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             }
           />

@@ -19,6 +19,7 @@ import {
   Add24Regular,
   Grid24Regular,
   SignOut24Regular,
+  Settings24Regular,
 } from '@fluentui/react-icons';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 import { useFirstVisit } from '@/hooks/useFirstVisit';
@@ -115,6 +116,14 @@ export default function AppLayout() {
               icon={<Grid24Regular />}
               style={{ color: 'white' }}
               onClick={() => navigate('/')}
+            />
+          </Tooltip>
+          <Tooltip content="Settings" relationship="label">
+            <Button
+              appearance="subtle"
+              icon={<Settings24Regular />}
+              style={{ color: 'white' }}
+              onClick={() => navigate('/settings')}
             />
           </Tooltip>
           {!isNewSession && (
