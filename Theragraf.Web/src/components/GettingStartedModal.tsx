@@ -18,7 +18,7 @@ import {
   MicrophoneChat24Regular,
   DocumentBulletList24Regular,
   Target24Regular,
-  ArrowRight24Regular,
+  Settings24Regular,
   CheckmarkCircle24Regular,
 } from '@fluentui/react-icons';
 
@@ -115,10 +115,10 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
           <DialogContent>
             <div className={styles.content}>
               <Text className={styles.intro}>
-                TheraGraf uses AI to generate SOAP notes, CPT billing codes, and ICD-10 diagnoses
-                from recorded therapy session transcripts. Build client profiles with intake data
-                and track SMART treatment goals — so you can spend less time on paperwork and more
-                time with patients.
+                TheraGraf uses AI to generate SOAP/DAP notes, CPT billing codes, and ICD-10
+                diagnoses from recorded therapy sessions. Build client profiles, track SMART goals,
+                and customize your experience — spend less time on paperwork, more time with
+                patients.
               </Text>
 
               <div className={styles.stepList}>
@@ -127,10 +127,9 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
                   <div className={styles.stepText}>
                     <Text className={styles.stepTitle}>1. Record a session</Text>
                     <Text className={styles.stepDesc}>
-                      Click <strong>New Session</strong>, fill in the session details, then press
-                      Record. TheraGraf transcribes the conversation in real time with speaker
-                      labels. When multiple speakers are detected, you'll assign roles (Therapist
-                      or Client) after recording ends.
+                      Click <strong>New Session</strong>, fill in details, then press Record.
+                      TheraGraf transcribes with speaker labels. Assign roles (Therapist/Client)
+                      after recording.
                     </Text>
                   </div>
                 </div>
@@ -139,10 +138,9 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
                   <div className={styles.stepText}>
                     <Text className={styles.stepTitle}>2. Generate &amp; review documentation</Text>
                     <Text className={styles.stepDesc}>
-                      Press <strong>Generate Documentation</strong>. The AI produces a SOAP or DAP
-                      note (DAP is selected automatically for Psychotherapy; you can override in
-                      Session Details), suggested CPT codes, and ICD-10 diagnoses. The session is
-                      marked as an <strong>AI Draft</strong> until you review and approve it.
+                      Press <strong>Generate Documentation</strong>. AI produces a SOAP or DAP note
+                      (DAP auto-selected for Psychotherapy), CPT codes, and ICD-10 diagnoses.
+                      Sessions are marked as <strong>AI Draft</strong> until you approve.
                     </Text>
                   </div>
                 </div>
@@ -151,9 +149,8 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
                   <div className={styles.stepText}>
                     <Text className={styles.stepTitle}>3. Attest &amp; approve</Text>
                     <Text className={styles.stepDesc}>
-                      Edit the AI-generated content as needed, then check the attestation box to
-                      confirm clinical accuracy. Click <strong>Verify &amp; Approve</strong> to
-                      finalize the session. Editing content after approval clears the approval
+                      Edit AI content as needed, check the attestation box, then click{' '}
+                      <strong>Verify &amp; Approve</strong>. Editing after approval clears the
                       status, ensuring accountability.
                     </Text>
                   </div>
@@ -163,20 +160,19 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
                   <div className={styles.stepText}>
                     <Text className={styles.stepTitle}>4. Build client profiles &amp; track goals</Text>
                     <Text className={styles.stepDesc}>
-                      Open a client's profile to add intake information (age, sex, prior diagnoses)
-                      and manage SMART treatment goals. Intake data enriches ICD-10 suggestions;
-                      date of birth is encrypted and never shared with the AI.
+                      Add intake information (age, sex, diagnoses) and manage SMART treatment goals.
+                      Intake data enriches ICD-10 suggestions; DOB is encrypted and never shared
+                      with AI.
                     </Text>
                   </div>
                 </div>
                 <div className={styles.step}>
-                  <ArrowRight24Regular className={styles.stepIcon} />
+                  <Settings24Regular className={styles.stepIcon} />
                   <div className={styles.stepText}>
-                    <Text className={styles.stepTitle}>5. Export approved sessions</Text>
+                    <Text className={styles.stepTitle}>5. Customize your experience</Text>
                     <Text className={styles.stepDesc}>
-                      Once a session is approved, export as PDF for your EMR or download an X12
-                      837P file for direct billing submission. Exports are disabled for unapproved
-                      drafts to ensure quality control.
+                      Click the Settings icon to configure display preferences, documentation
+                      defaults, notifications, accessibility options, and privacy controls.
                     </Text>
                   </div>
                 </div>

@@ -32,8 +32,11 @@ import type {
   NotificationSettings,
   AccessibilitySettings,
   PrivacySettings,
-} from '@/types/settings';
-import type { TherapyDiscipline, ClinicalSetting, PayerType, NoteFormat } from '@/types';
+  TherapyDiscipline,
+  ClinicalSetting,
+  PayerType,
+  NoteFormat,
+} from '@/types';
 
 const useStyles = makeStyles({
   container: {

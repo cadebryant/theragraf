@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
-import type { UserSettings } from '@/types/settings';
-import { DEFAULT_SETTINGS } from '@/types/settings';
+import type { UserSettings } from '@/types';
+import { DEFAULT_SETTINGS } from '@/types';
 
 const STORAGE_KEY = 'theragraf_user_settings';
 

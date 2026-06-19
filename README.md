@@ -77,6 +77,7 @@ Theragraf.Web/
     SessionReview/     — Orchestration status polling, SOAP/DAP note editing with format-appropriate field labels, CPT/ICD editing, AI draft banner, attestation workflow, Verify & Approve button
     ClientProfile/     — Per-client stats, demographics/intake panel, SMART goal tracking (with AI suggestions), and session history
     SessionDetail/     — Single session view and edit, approval status badge, conditional export access
+    Settings/          — User preferences (display, documentation defaults, notifications, accessibility, privacy), retention policy remains admin-only configuration
 ```
 
 The SPA authenticates via **MSAL** (Microsoft Authentication Library) and acquires an access token scoped to the Function App's Entra ID registration before every API call. It is hosted on **Azure Static Web Apps (Standard)** with the Function App linked as the API backend — no CORS configuration is required.
@@ -326,8 +327,9 @@ Theragraf.Web/              — React + TypeScript + Vite SPA
     api/                    — Typed fetch wrappers (sessions, stats, speech token, goals, clients/demographics)
     auth/                   — MSAL configuration and singleton instance
     components/             — AppLayout, ProtectedRoute, GettingStartedModal
-    pages/                  — Dashboard, NewSession, SessionReview, ClientProfile (with GoalsPanel), SessionDetail
-    types.ts                — TypeScript mirrors of all backend models
+    hooks/                  — useSettings (localStorage-based user preferences with cross-tab sync)
+    pages/                  — Dashboard, NewSession, SessionReview, ClientProfile (with GoalsPanel), SessionDetail, Settings
+    types.ts                — TypeScript mirrors of all backend models plus user settings types
 
 Theragraf.Tests/            — xUnit unit test suite (endpoints, helpers, agents, orchestration)
 Theragraf.IntegrationTests/ — xUnit integration tests against Cosmos DB Emulator (sessions, goals, client demographics)
