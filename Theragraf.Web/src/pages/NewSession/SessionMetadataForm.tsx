@@ -22,9 +22,18 @@ const useStyles = makeStyles({
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: tokens.spacingHorizontalL,
+    gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))',
+    gap: tokens.spacingHorizontalXL,
     rowGap: tokens.spacingVerticalL,
+    '@media (min-width: 1400px)': {
+      gridTemplateColumns: 'repeat(3, 1fr)',
+    },
+    '@media (min-width: 1000px) and (max-width: 1399px)': {
+      gridTemplateColumns: 'repeat(2, 1fr)',
+    },
+    '@media (max-width: 999px)': {
+      gridTemplateColumns: '1fr',
+    },
   },
 });
 
