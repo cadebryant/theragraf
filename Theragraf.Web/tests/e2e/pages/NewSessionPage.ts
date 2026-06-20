@@ -16,7 +16,8 @@ export class NewSessionPage extends BasePage {
    * Navigate to the new session page
    */
   async goto() {
-    await super.goto('/sessions/new');
+    // Add testMode query parameter to enable test transcript input
+    await super.goto('/sessions/new?testMode=true');
 
     // Wait for network to be idle after navigation
     await this.page.waitForLoadState('networkidle');
@@ -165,11 +166,16 @@ export class NewSessionPage extends BasePage {
   }
 
   get transcriptTextarea(): Locator {
-    return this.page.locator('textarea, [contenteditable="true"]').first();
+    // In test mode, this is the test transcript input
+    return this.page.getByTestId('test-transcript-input');
+  }
+
+  get transcriptSubmitButton(): Locator {
+    return this.page.getByTestId('test-transcript-submit');
   }
 
   get submitButton(): Locator {
-    return this.page.getByRole('button', { name: /submit|process/i });
+    return this.page.getByRole('button', { name: /generate documentation|submit|process/i });
   }
 
   get cancelButton(): Locator {
@@ -215,6 +221,9 @@ export class NewSessionPage extends BasePage {
 
   async enterTranscript(text: string) {
     await this.transcriptTextarea.fill(text);
+    await this.transcriptSubmitButton.click();
+    // Wait for transcript to be processed and preview to appear
+    await this.page.waitForTimeout(1000);
   }
 
   async submitSession() {

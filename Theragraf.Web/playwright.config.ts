@@ -116,7 +116,7 @@ export default defineConfig({
 
   // Run local dev server before starting tests
   webServer: {
-    command: 'npm run dev',
+    command: 'cross-env VITE_E2E_TEST_MODE=true npm run dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

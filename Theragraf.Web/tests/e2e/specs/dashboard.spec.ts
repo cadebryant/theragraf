@@ -115,7 +115,7 @@ test.describe('Dashboard', () => {
     await dashboard.clickNewSession();
 
     // Verify navigation
-    await expect(page).toHaveURL(/\/session\/new/);
+    await expect(page).toHaveURL(/\/sessions\/new/);
 
     console.log('✅ Navigated to New Session page');
   });
@@ -138,12 +138,13 @@ test.describe('Dashboard', () => {
       return;
     }
 
-    // Click first row
+    // Click "View" button in first row
     const firstRow = dashboard.caseloadRows.first();
-    await firstRow.click();
+    const viewButton = firstRow.getByRole('button', { name: /view/i });
+    await viewButton.click();
 
-    // Verify navigation to client profile
-    await expect(page).toHaveURL(/\/client\/[\w-]+/);
+    // Verify navigation to client profile (route is /sessions/:clientId)
+    await expect(page).toHaveURL(/\/sessions\/[\w-]+$/);
 
     console.log('✅ Navigated to client profile');
   });

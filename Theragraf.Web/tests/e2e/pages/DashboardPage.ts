@@ -26,15 +26,16 @@ export class DashboardPage extends BasePage {
   }
 
   get statsCards(): Locator {
-    return this.page.locator('[class*="statCard"], [data-testid^="stat-"]');
+    // Stats cards contain labels like "TOTAL SESSIONS", "ACTIVE CLIENTS", etc.
+    return this.page.locator(':has-text("TOTAL SESSIONS"), :has-text("ACTIVE CLIENTS"), :has-text("BILLABLE UNITS")');
   }
 
   get totalSessionsCard(): Locator {
-    return this.page.locator('[data-testid="stat-total-sessions"], :has-text("Total Sessions")').first();
+    return this.page.locator(':has-text("TOTAL SESSIONS"), :has-text("Total Sessions")').first();
   }
 
   get activeClientsCard(): Locator {
-    return this.page.locator('[data-testid="stat-active-clients"], :has-text("Active Clients")').first();
+    return this.page.locator(':has-text("ACTIVE CLIENTS"), :has-text("Active Clients")').first();
   }
 
   get charts(): Locator {
@@ -54,7 +55,9 @@ export class DashboardPage extends BasePage {
   }
 
   get newSessionButton(): Locator {
-    return this.page.getByRole('button', { name: /new session/i });
+    // Use the header button (not the table row buttons)
+    // The header button has both icon and text, and is in the nav area
+    return this.page.locator('nav').getByRole('button', { name: /new session/i });
   }
 
   get dashboardNavButton(): Locator {
@@ -82,13 +85,20 @@ export class DashboardPage extends BasePage {
 
   async clickNewSession() {
     await this.newSessionButton.click();
-    await this.page.waitForURL(/\/session\/new/);
+    await this.page.waitForURL(/\/sessions\/new/);
+
+    // Ensure testMode query parameter is added
+    const currentUrl = new URL(this.page.url());
+    if (!currentUrl.searchParams.has('testMode')) {
+      await this.page.goto(`${currentUrl.pathname}?testMode=true`);
+    }
   }
 
   async openClientProfile(clientId: string) {
     const clientRow = this.caseloadRows.filter({ hasText: clientId });
-    await clientRow.click();
-    await this.page.waitForURL(/\/client\//);
+    const viewButton = clientRow.getByRole('button', { name: /view/i });
+    await viewButton.click();
+    await this.page.waitForURL(/\/sessions\/.+/);
   }
 
   async getStatValue(statName: string): Promise<string> {

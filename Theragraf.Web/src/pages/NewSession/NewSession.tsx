@@ -19,9 +19,17 @@ import { stripClientIdPrefix } from '@/utils/clientId';
 import { toDateTimeLocalValue } from '@/utils/dateFormat';
 import { formatErrorMessage } from '@/utils/errorMessages';
 import AudioRecorder from './AudioRecorder';
+import TestTranscriptInput from './TestTranscriptInput';
 import { startDocumentation, toSessionDateKey } from '@/api/sessions';
 import { getClientDemographics } from '@/api/clients';
 import type { TranscriptInput, TherapyDiscipline } from '@/types';
+
+// Check if we're in E2E test mode
+// Enable test mode via environment variable or URL query parameter (?testMode=true)
+const isTestMode = 
+  import.meta.env.VITE_E2E_TEST_MODE === 'true' || 
+  import.meta.env.MODE === 'test' ||
+  new URLSearchParams(window.location.search).get('testMode') === 'true';
 
 const useStyles = makeStyles({
   page: {
@@ -256,7 +264,11 @@ export default function NewSession() {
         onClientIdBlur={() => setCommittedClientId(metadata.clientId.trim())}
       />
 
-      <AudioRecorder onTranscriptReady={handleTranscriptReady} phraseHints={buildPhraseHints(metadata.clientId, accounts[0], metadata.discipline)} />
+      {isTestMode ? (
+        <TestTranscriptInput onTranscriptReady={handleTranscriptReady} />
+      ) : (
+        <AudioRecorder onTranscriptReady={handleTranscriptReady} phraseHints={buildPhraseHints(metadata.clientId, accounts[0], metadata.discipline)} />
+      )}
 
       {rawTranscript && (
         <>

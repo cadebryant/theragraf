@@ -28,7 +28,7 @@ export class SessionReviewPage extends BasePage {
   }
 
   get aiDraftBanner(): Locator {
-    return this.page.locator('[data-testid="ai-draft-banner"], :has-text("AI-generated")');
+    return this.page.getByRole('group').filter({ hasText: /AI-generated/i }).first();
   }
 
   // SOAP/DAP Note Elements
@@ -50,16 +50,18 @@ export class SessionReviewPage extends BasePage {
 
   // CPT Codes
   get cptCodesSection(): Locator {
-    return this.page.locator(':has-text("CPT Codes")').locator('..').locator('table, [role="table"]');
+    // Find the card/section that contains "CPT Codes" text, then find its table
+    return this.page.locator(':has-text("CPT Codes")').locator('..').getByRole('table').first();
   }
 
   get addCptCodeButton(): Locator {
-    return this.page.getByRole('button', { name: /add.*cpt/i });
+    return this.page.getByRole('button', { name: /add.*code|add cpt/i });
   }
 
   // ICD-10 Codes
   get icd10CodesSection(): Locator {
-    return this.page.locator(':has-text("ICD-10")').locator('..').locator('table, [role="table"]');
+    // Find the card/section that contains "ICD-10 Codes" text, then find its table
+    return this.page.locator(':has-text("ICD-10 Codes")').locator('..').getByRole('table').first();
   }
 
   get addIcd10CodeButton(): Locator {
@@ -67,12 +69,20 @@ export class SessionReviewPage extends BasePage {
   }
 
   // Action Buttons
+  get attestationCheckbox(): Locator {
+    return this.page.locator('input[type="checkbox"]').filter({ 
+      hasText: /reviewed.*draft.*accept.*responsibility|clinical accuracy/i 
+    }).or(
+      this.page.locator('label:has-text("reviewed")').locator('input[type="checkbox"]')
+    );
+  }
+
   get verifyAndApproveButton(): Locator {
     return this.page.getByRole('button', { name: /verify.*approve|approve/i });
   }
 
   get saveButton(): Locator {
-    return this.page.getByRole('button', { name: /^save$/i });
+    return this.page.getByRole('button', { name: /save.*draft|save/i });
   }
 
   get rejectButton(): Locator {
@@ -143,20 +153,30 @@ export class SessionReviewPage extends BasePage {
   }
 
   async approveSession() {
+    // First, check the attestation checkbox
+    const checkbox = this.page.locator('input[type="checkbox"]').first();
+    await checkbox.check();
+
+    // Wait a moment for the button to become enabled
+    await this.page.waitForTimeout(500);
+
+    // Then click the approve button
     await this.verifyAndApproveButton.click();
 
-    // Wait for navigation or success message
+    // Wait for navigation to the session detail page or for approval confirmation
     await Promise.race([
-      this.page.waitForURL(/\/session\/\w+$/, { timeout: 15000 }),
-      this.page.locator(':has-text("approved")').waitFor({ timeout: 15000 }),
+      this.page.waitForURL(/\/sessions\/.+\/.+/, { timeout: 15000 }),
+      this.page.locator(':has-text("approved"), :has-text("Approved")').waitFor({ timeout: 15000 }),
     ]);
   }
 
   async saveChanges() {
+    const currentUrl = this.page.url();
     await this.saveButton.click();
 
-    // Wait for save confirmation
-    await this.page.locator(':has-text("saved")').waitFor({ timeout: 10000 });
+    // Save causes a navigation to the session detail page (same URL)
+    // Wait for the saving state to complete
+    await this.page.waitForTimeout(1000);
   }
 
   // Assertions
