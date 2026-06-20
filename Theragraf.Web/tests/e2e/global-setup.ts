@@ -1,7 +1,12 @@
 import { chromium, FullConfig } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
+import { fileURLToPath } from 'url';
 import { validateTestEnvironment, verifyFullStackServices } from './fixtures/environment';
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Global setup runs once before all tests.
@@ -16,7 +21,7 @@ async function globalSetup(config: FullConfig) {
   console.log('='.repeat(60) + '\n');
 
   // Validate environment configuration
-  const { valid, errors } = validateTestEnvironment();
+  const { valid, errors, warnings } = validateTestEnvironment();
   if (!valid) {
     throw new Error(`Test environment validation failed:\n${errors.join('\n')}`);
   }
@@ -38,7 +43,15 @@ async function globalSetup(config: FullConfig) {
 
   console.log('🔐 Setting up authentication...');
 
-  const browser = await chromium.launch();
+  // Check if we have test credentials
+  const testEmail = process.env.TEST_USER_EMAIL;
+  const testPassword = process.env.TEST_USER_PASSWORD;
+  const hasCredentials = !!(testEmail && testPassword);
+
+  // Launch browser (headful if no credentials for manual login)
+  const browser = await chromium.launch({
+    headless: hasCredentials, // Show browser if manual login needed
+  });
   const context = await browser.newContext();
   const page = await context.newPage();
 
@@ -59,14 +72,18 @@ async function globalSetup(config: FullConfig) {
     }
 
     // Perform Azure AD login
-    const testEmail = process.env.TEST_USER_EMAIL;
-    const testPassword = process.env.TEST_USER_PASSWORD;
+    if (!hasCredentials) {
+      console.log('\n⚠️  No test credentials found in .env.test');
+      console.log('🖱️  A browser window will open - please log in manually...\n');
+      console.log('   The test suite will wait up to 2 minutes for you to complete the login.\n');
 
-    if (!testEmail || !testPassword) {
-      throw new Error(
-        'TEST_USER_EMAIL and TEST_USER_PASSWORD must be set in .env.test file. ' +
-        'See .env.test.template for configuration details.'
-      );
+      // Wait for user to complete login manually (up to 2 minutes)
+      await page.waitForURL(/localhost:5173/, { timeout: 120000 });
+
+      console.log('✅ Manual login completed!');
+      await context.storageState({ path: authFile });
+      await browser.close();
+      return;
     }
 
     console.log(`🔑 Logging in as ${testEmail}...`);
@@ -97,9 +114,14 @@ async function globalSetup(config: FullConfig) {
     // Wait for app to fully load
     await page.waitForSelector('[data-testid="app-layout"], h1, nav', { timeout: 15000 });
 
+    // Dismiss the "Getting Started" modal by setting localStorage flag
+    await page.evaluate(() => {
+      localStorage.setItem('theragraf:onboardingSeen:v2', 'true');
+    });
+
     console.log('✅ Authentication successful');
 
-    // Save authentication state
+    // Save authentication state (including localStorage)
     await context.storageState({ path: authFile });
 
   } catch (error) {

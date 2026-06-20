@@ -15,17 +15,19 @@ async function checkService(url: string, name: string): Promise<boolean> {
       headers: { 'Accept': 'application/json' },
     });
 
-    const isHealthy = response.ok || response.status === 401; // 401 is okay (auth required)
+    // Accept any response (even 404) as long as we get a response
+    // 401, 403, 404 all mean the service is running, just not this exact endpoint
+    const isHealthy = response.status < 500;
 
     if (isHealthy) {
-      console.log(`✅ ${name} is running at ${url}`);
+      console.log(`✅ ${name} is running at ${url} (status: ${response.status})`);
     } else {
       console.warn(`⚠️ ${name} returned status ${response.status}`);
     }
 
     return isHealthy;
   } catch (error) {
-    console.error(`❌ ${name} is not running at ${url}:`, error);
+    console.error(`❌ ${name} is not reachable at ${url}:`, error instanceof Error ? error.message : error);
     return false;
   }
 }
@@ -44,7 +46,8 @@ export async function verifyFullStackServices(): Promise<{
   const backendUrl = process.env.TEST_API_URL || 'http://localhost:7071';
 
   const frontend = await checkService(frontendUrl, 'Frontend (Vite)');
-  const backend = await checkService(`${backendUrl}/api/health`, 'Backend (Azure Functions)');
+  // Use /api/sessions which exists and returns 401 without auth (proves service is running)
+  const backend = await checkService(`${backendUrl}/api/sessions`, 'Backend (Azure Functions)');
 
   const allHealthy = frontend && backend;
 
@@ -109,24 +112,24 @@ export function getTestConfig() {
 /**
  * Validate that required environment variables are set
  */
-export function validateTestEnvironment(): { valid: boolean; errors: string[] } {
+export function validateTestEnvironment(): { valid: boolean; errors: string[]; warnings: string[] } {
   const errors: string[] = [];
+  const warnings: string[] = [];
   const config = getTestConfig();
 
-  if (!config.testUserEmail) {
-    errors.push('TEST_USER_EMAIL is not set in .env.test');
+  // Check for Azure AD configuration (required)
+  if (!process.env.VITE_AZURE_AD_CLIENT_ID) {
+    errors.push('VITE_AZURE_AD_CLIENT_ID is not set (should be loaded from .env.development)');
   }
 
-  if (!config.testUserPassword) {
-    errors.push('TEST_USER_PASSWORD is not set in .env.test');
+  if (!process.env.VITE_AZURE_AD_TENANT_ID) {
+    errors.push('VITE_AZURE_AD_TENANT_ID is not set (should be loaded from .env.development)');
   }
 
-  if (!process.env.VITE_AZURE_CLIENT_ID) {
-    errors.push('VITE_AZURE_CLIENT_ID is not set in .env.test');
-  }
-
-  if (!process.env.VITE_AZURE_TENANT_ID) {
-    errors.push('VITE_AZURE_TENANT_ID is not set in .env.test');
+  // Test user credentials are optional for local dev (can reuse existing session)
+  if (!config.testUserEmail || !config.testUserPassword) {
+    warnings.push('⚠️  TEST_USER_EMAIL/PASSWORD not set - tests will attempt to reuse existing browser session');
+    warnings.push('   Make sure you are logged in to http://localhost:5173 before running tests');
   }
 
   const valid = errors.length === 0;
@@ -134,10 +137,14 @@ export function validateTestEnvironment(): { valid: boolean; errors: string[] } 
   if (!valid) {
     console.error('❌ Test environment validation failed:\n');
     errors.forEach(error => console.error(`  - ${error}`));
-    console.error('\nPlease copy .env.test.template to .env.test and configure all required values.\n');
+    console.error('\nPlease ensure .env.development contains your Azure AD configuration.\n');
   } else {
     console.log('✅ Test environment validated\n');
+    if (warnings.length > 0) {
+      warnings.forEach(warning => console.log(warning));
+      console.log('');
+    }
   }
 
-  return { valid, errors };
+  return { valid, errors, warnings };
 }

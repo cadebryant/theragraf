@@ -12,7 +12,42 @@ export class BasePage {
    * Navigate to a specific path
    */
   async goto(path: string = '/') {
-    await this.page.goto(path);
+    console.log(`🔗 Navigating to: ${path}`);
+    await this.page.goto(path, { waitUntil: 'domcontentloaded' });
+
+    // Wait for network to settle
+    await this.page.waitForLoadState('networkidle').catch(() => {
+      console.warn('⚠️  Network did not go idle, continuing anyway');
+    });
+
+    // Check if we got redirected (e.g., to login)
+    const currentUrl = this.page.url();
+    if (currentUrl.includes('login.microsoftonline.com')) {
+      throw new Error('❌ Redirected to Azure AD login - auth state not working!');
+    }
+
+    console.log(`✅ Loaded: ${currentUrl}`);
+
+    // Dismiss modal if it appears
+    await this.dismissGettingStartedModal();
+  }
+
+  /**
+   * Dismiss the "Getting Started" modal if it appears
+   */
+  async dismissGettingStartedModal() {
+    try {
+      // Wait briefly for modal to appear
+      const modal = this.page.getByRole('dialog');
+      const closeButton = modal.getByRole('button', { name: /understand.*get started|got it|close|dismiss/i });
+
+      if (await closeButton.isVisible({ timeout: 2000 })) {
+        await closeButton.click();
+        await modal.waitFor({ state: 'hidden', timeout: 3000 });
+      }
+    } catch {
+      // Modal didn't appear or already dismissed - that's fine
+    }
   }
 
   /**

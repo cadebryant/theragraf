@@ -16,11 +16,15 @@ test.describe('Client Profile', () => {
   let clientId: string;
   let clientProfile: ClientProfilePage;
 
-  test.beforeAll(async ({ browser }) => {
+  test.beforeAll(async ({ browser }, testInfo) => {
     // Create a test client with a session for profile testing
     clientId = TestData.generateClientId();
 
-    const page = await browser.newPage();
+    // Create page with auth state (must load storageState manually in beforeAll)
+    const context = await browser.newContext({
+      storageState: 'tests/e2e/.auth/user.json'
+    });
+    const page = await context.newPage();
     const newSession = new NewSessionPage(page);
 
     try {
@@ -40,8 +44,9 @@ test.describe('Client Profile', () => {
       console.log(`✅ Created test client: ${clientId}`);
     } catch (error) {
       console.error('❌ Failed to create test client:', error);
+      throw error; // Re-throw to fail the setup
     } finally {
-      await page.close();
+      await context.close();
     }
   });
 

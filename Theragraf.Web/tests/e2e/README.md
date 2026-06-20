@@ -2,13 +2,80 @@
 
 This document explains how to run and maintain the E2E test suite for Theragraf.
 
+## 🚀 Quick Start
+
+### Authentication Setup
+
+The E2E suite supports **two authentication modes**:
+
+#### **Option 1: Manual Login (Local Development)** ⭐ Recommended for passkey users
+
+No setup required! The tests will open a visible browser where you complete authentication manually:
+
+```powershell
+cd Theragraf.Web
+npm install
+npx playwright install
+
+# Start services
+# Terminal 1: Functions backend
+cd Theragraf.Functions
+func start
+
+# Terminal 2: Frontend dev server
+cd Theragraf.Web
+npm run dev
+
+# Terminal 3: Run tests (browser opens for manual login)
+npm run test:e2e
+```
+
+**First run:**
+1. Browser opens automatically
+2. Complete your passkey/biometric/MFA authentication
+3. Session is saved for future runs (no need to re-authenticate)
+
+**Subsequent runs:**
+- Tests use the saved session automatically
+- Re-authenticate only if session expires
+
+---
+
+#### **Option 2: Automated Login (CI/CD)** 🤖 Required for pipelines
+
+Create a dedicated test user **without passkey/MFA**:
+
+1. **Create test user in Azure AD:**
+   - Azure Portal → Azure Active Directory → Users → New user
+   - Username: `e2e-test@yourdomain.com`
+   - Password: Set a strong password (don't enable MFA/passkey)
+   - Grant appropriate roles/permissions
+
+2. **Configure credentials:**
+   ```powershell
+   # Copy template and add credentials
+   cd Theragraf.Web
+   cp .env.test.template .env.test
+
+   # Edit .env.test and uncomment:
+   # TEST_USER_EMAIL=e2e-test@yourdomain.com
+   # TEST_USER_PASSWORD=YourSecurePassword123!
+   ```
+
+3. **Run tests:**
+   ```powershell
+   npm run test:e2e  # Fully automated, no manual login
+   ```
+
+---
+
 ## Overview
 
 The E2E tests use [Playwright](https://playwright.dev/) to test the full application stack:
 - **Frontend**: React app (Vite dev server)
 - **Backend**: Azure Functions
 - **Database**: Cosmos DB (emulator or cloud)
-- **Authentication**: Azure AD (real authentication with test user)
+- **Authentication**: Azure AD with real authentication
 
 ## Prerequisites
 
@@ -31,24 +98,26 @@ npm run dev
 
 ### 2. Test Environment Configuration
 
-1. Copy the environment template:
-   ```powershell
-   cp Theragraf.Web/.env.test.template Theragraf.Web/.env.test
+**For Local Development (Manual Login):**
+
+No `.env.test` configuration needed! Just run the tests and authenticate when prompted.
+
+**For CI/CD (Automated Login):**
+
+1. Copy `.env.test.template` to `.env.test`
+2. Add test user credentials (see Authentication Setup above)
+3. Run tests: `npm run test:e2e`
+
+**For CI/CD or Dedicated Test User:**
+
+Edit `.env.test` and add credentials:
+```env
+# Create a dedicated test user in Azure AD
+TEST_USER_EMAIL=test-therapist@yourdomain.com
+TEST_USER_PASSWORD=YourSecureTestPassword123!
    ```
 
-2. Edit `.env.test` and configure:
-
-   **Required Settings:**
-   ```env
-   # Test user credentials (create a dedicated test user in Azure AD)
-   TEST_USER_EMAIL=test-therapist@yourdomain.com
-   TEST_USER_PASSWORD=YourSecureTestPassword123!
-
-   # Azure AD application settings (from Azure Portal app registration)
-   VITE_AZURE_CLIENT_ID=your-client-id-here
-   VITE_AZURE_TENANT_ID=your-tenant-id-here
-   VITE_AZURE_REDIRECT_URI=http://localhost:5173
-   ```
+   > **Note:** Azure AD config (`VITE_AZURE_CLIENT_ID`, etc.) is automatically loaded from `.env.development`, so you don't need to duplicate it here.
 
    **Optional Settings:**
    ```env

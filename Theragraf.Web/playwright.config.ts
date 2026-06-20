@@ -1,7 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 import * as dotenv from 'dotenv';
 
-// Load test environment variables
+// Load development environment variables first (for VITE_* config)
+dotenv.config({ path: '.env.development' });
+
+// Then load test-specific variables (overrides development if same key)
 dotenv.config({ path: '.env.test' });
 
 /**
@@ -52,7 +55,7 @@ export default defineConfig({
   },
 
   // Global setup for authentication
-  globalSetup: require.resolve('./tests/e2e/global-setup'),
+  globalSetup: './tests/e2e/global-setup.ts',
 
   // Configure projects for major browsers
   projects: [
