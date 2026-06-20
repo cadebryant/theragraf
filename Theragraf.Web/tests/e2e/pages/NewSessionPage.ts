@@ -131,25 +131,20 @@ export class NewSessionPage extends BasePage {
     return this.page.getByLabel(/client id/i);
   }
 
-  private getFormSelect(labelText: string | RegExp): Locator {
-    // Find the Field containing the label, then find the select within it
-    return this.page.locator('div').filter({ has: this.page.getByText(labelText, { exact: false }) }).locator('select');
-  }
-
   get disciplineSelect(): Locator {
-    return this.getFormSelect('Discipline');
+    return this.page.getByLabel('Discipline*');
   }
 
   get noteFormatSelect(): Locator {
-    return this.getFormSelect('Note Format');
+    return this.page.getByLabel('Note Format*');
   }
 
   get settingSelect(): Locator {
-    return this.getFormSelect('Setting');
+    return this.page.getByLabel('Setting*');
   }
 
   get payerSelect(): Locator {
-    return this.getFormSelect('Payer');
+    return this.page.getByLabel('Payer*');
   }
 
   get sessionDateInput(): Locator {

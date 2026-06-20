@@ -164,31 +164,56 @@ async function performManualLogin(page: any) {
   console.log('   (You have 3 minutes)');
 
   try {
-    // Set up a listener for the "Stay signed in?" dialog
+    // Set up continuous monitoring for the "Stay signed in?" dialog
     // This runs in parallel with waiting for the user to authenticate
-    const handleStaySignedIn = async () => {
-      try {
-        // Wait for the "Stay signed in?" dialog to appear
-        const yesButton = page.locator('button:has-text("Yes"), input[type="submit"][value="Yes"]');
-        const isVisible = await yesButton.isVisible({ timeout: 5000 }).catch(() => false);
+    let dialogHandled = false;
+    const monitorDialog = async () => {
+      console.log('🔍 Starting dialog monitor...');
+      let checkCount = 0;
+      while (!dialogHandled) {
+        try {
+          checkCount++;
 
-        if (isVisible) {
-          console.log('🔘 Auto-clicking "Stay signed in? Yes"...');
-          await yesButton.click();
+          // Check multiple possible selectors for the "Yes" button
+          const yesButton = page.locator(
+            'input[type="submit"][value="Yes"],' +
+            'button:has-text("Yes"),' +
+            'input[value="Yes"]'
+          ).first();
+
+          const isVisible = await yesButton.isVisible({ timeout: 1000 }).catch(() => false);
+
+          if (isVisible) {
+            console.log('🔘 "Stay signed in?" dialog detected, auto-clicking "Yes"...');
+            await yesButton.click();
+            dialogHandled = true;
+            console.log('✅ Dialog dismissed');
+            break;
+          }
+
+          // Log every 10 checks (every 5 seconds)
+          if (checkCount % 10 === 0) {
+            console.log(`   Still monitoring for dialog (${checkCount} checks)...`);
+          }
+        } catch (err) {
+          // Continue monitoring
         }
-      } catch {
-        // Dialog didn't appear or was already handled
+
+        // Small delay before checking again
+        await page.waitForTimeout(500);
       }
+      console.log('🛑 Dialog monitor stopped');
     };
 
-    // Start monitoring for the dialog
-    const dialogHandler = handleStaySignedIn();
+    // Start monitoring in the background
+    const dialogMonitor = monitorDialog();
 
     // Wait for user to complete login and redirect back to app
     await page.waitForURL(/localhost:5173/, { timeout: 180000 }); // 3 minutes
 
-    // Ensure dialog handler completes
-    await dialogHandler;
+    // Stop monitoring
+    dialogHandled = true;
+    await dialogMonitor.catch(() => {}); // Ignore any errors from background monitor
 
     console.log('✅ Manual login completed');
   } catch (error) {

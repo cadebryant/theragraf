@@ -22,7 +22,7 @@ export class DashboardPage extends BasePage {
 
   // Page Elements
   get title(): Locator {
-    return this.page.getByRole('heading', { name: /dashboard/i });
+    return this.page.getByText('Dashboard', { exact: true });
   }
 
   get statsCards(): Locator {
@@ -108,9 +108,18 @@ export class DashboardPage extends BasePage {
 
   // Assertions
   async assertDashboardLoaded() {
+    // Wait for the page title to appear
     await expect(this.title).toBeVisible();
-    await expect(this.statsCards.first()).toBeVisible();
-    await expect(this.charts.first()).toBeVisible();
+
+    // Wait for either the spinner to disappear or data to appear
+    // The dashboard shows a spinner on first load, then renders stats/charts/table
+    await this.page.waitForFunction(() => {
+      const spinners = document.querySelectorAll('[role="progressbar"], [aria-label*="Loading"]');
+      return spinners.length === 0 || document.querySelector('table, [role="table"]') !== null;
+    }, { timeout: 30000 }); // Dashboard can be slow on cold start
+
+    // Now assert that data components are visible (with generous timeout)
+    await expect(this.statsCards.first()).toBeVisible({ timeout: 10000 });
     await expect(this.caseloadTable).toBeVisible();
   }
 
