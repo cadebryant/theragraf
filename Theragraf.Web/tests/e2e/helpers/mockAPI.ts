@@ -12,7 +12,7 @@ import type {
   SessionResponse,
   CptCode,
   IcdCode,
-} from '@/types';
+} from '../../../src/types';
 
 // ── Mock Data Templates ───────────────────────────────────────────────────────
 
