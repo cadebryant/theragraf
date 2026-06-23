@@ -88,6 +88,20 @@ const useStyles = makeStyles({
     lineHeight: tokens.lineHeightBase300,
     color: tokens.colorNeutralForeground1,
   },
+  hipaaNotice: {
+    backgroundColor: tokens.colorPaletteRedBackground2,
+    border: `2px solid ${tokens.colorPaletteRedBorder2}`,
+    borderRadius: tokens.borderRadiusMedium,
+    padding: tokens.spacingVerticalS,
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+  },
+  hipaaNoticeText: {
+    fontSize: tokens.fontSizeBase300,
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorPaletteRedForeground2,
+  },
   footer: {
     display: 'flex',
     alignItems: 'center',
@@ -114,11 +128,18 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
           <DialogTitle>Welcome to TheraGraf</DialogTitle>
           <DialogContent>
             <div className={styles.content}>
+              <div className={styles.hipaaNotice} role="alert">
+                <ShieldCheckmark24Regular />
+                <Text className={styles.hipaaNoticeText}>
+                  ⚠️ Please read the HIPAA responsibilities section at the bottom before proceeding
+                </Text>
+              </div>
+
               <Text className={styles.intro}>
                 TheraGraf uses AI to generate SOAP/DAP notes, CPT billing codes, and ICD-10
                 diagnoses from recorded therapy sessions. Build client profiles, track SMART goals,
                 and customize your experience — spend less time on paperwork, more time with
-                patients.
+                patients. The application is fully accessible and meets WCAG 2.1 Level AA standards.
               </Text>
 
               <div className={styles.stepList}>
@@ -173,6 +194,8 @@ export default function GettingStartedModal({ open, onDismiss }: Props) {
                     <Text className={styles.stepDesc}>
                       Click the Settings icon to configure display preferences, documentation
                       defaults, notifications, accessibility options, and privacy controls.
+                      TheraGraf is fully keyboard accessible - press Tab to navigate, or use
+                      the skip link to jump to main content.
                     </Text>
                   </div>
                 </div>
