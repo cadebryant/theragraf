@@ -7,7 +7,6 @@ import {
   makeStyles,
   tokens,
   Button,
-  Text,
   Divider,
   MessageBar,
   MessageBarBody,
