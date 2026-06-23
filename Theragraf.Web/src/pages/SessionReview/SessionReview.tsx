@@ -182,22 +182,24 @@ export default function SessionReview() {
   return (
     <div className={styles.page}>
       <div className={styles.headerRow}>
-        <Text className={styles.title}>Review Documentation</Text>
+        <h1 className={styles.title}>Review Documentation</h1>
         <Text style={{ color: tokens.colorNeutralForeground3 }}>
           Client: <strong>{state.clientId}</strong>
         </Text>
       </div>
 
-      <PipelineStatus runtimeStatus={runtimeStatus} activeStageIndex={activeStage} />
+      <div role="status" aria-live="polite" aria-atomic="true">
+        <PipelineStatus runtimeStatus={runtimeStatus} activeStageIndex={activeStage} />
+      </div>
 
       {pollError && (
-        <MessageBar intent="error">
+        <MessageBar intent="error" role="alert" aria-live="assertive">
           <MessageBarBody>{formatErrorMessage(pollError, 'polling orchestration status')}</MessageBarBody>
         </MessageBar>
       )}
 
       {isFailed && (
-        <MessageBar intent="error">
+        <MessageBar intent="error" role="alert" aria-live="assertive">
           <MessageBarBody>
             The documentation pipeline failed. Please go back and try again.
           </MessageBarBody>
@@ -205,7 +207,7 @@ export default function SessionReview() {
       )}
 
       {!isComplete && !isFailed && (
-        <div className={styles.center}>
+        <div className={styles.center} role="status" aria-live="polite" aria-busy="true">
           <Spinner label="Generating documentation — this usually takes 15–30 seconds…" size="large" />
         </div>
       )}
@@ -222,14 +224,14 @@ export default function SessionReview() {
           <IcdCodesEditor codes={icdCodes} onChange={setIcdCodes} />
 
           {saveError && (
-            <MessageBar intent="error">
+            <MessageBar intent="error" role="alert" aria-live="assertive">
               <MessageBarBody>{saveError}</MessageBarBody>
             </MessageBar>
           )}
 
           {/* Approval success message */}
           {isApproved && (
-            <MessageBar intent="success">
+            <MessageBar intent="success" role="status" aria-live="polite">
               <MessageBarBody>
                 ✓ Session approved by {approvedBy ?? 'therapist'} {approvedAt ? `on ${formatTimestamp(approvedAt)}` : ''}. Exports are now enabled.
               </MessageBarBody>

@@ -256,7 +256,7 @@ export default function NewSession() {
 
   return (
     <div className={styles.page}>
-      <Text className={styles.title}>New Session</Text>
+      <h1 className={styles.title}>New Session</h1>
 
       <SessionMetadataForm
         value={metadata}
@@ -273,18 +273,18 @@ export default function NewSession() {
       {rawTranscript && (
         <>
           <Divider>Transcript Preview</Divider>
-          <div className={styles.transcript}>{rawTranscript}</div>
+          <div className={styles.transcript} role="log" aria-label="Session transcript">{rawTranscript}</div>
         </>
       )}
 
       {submitError && (
-        <MessageBar intent="error">
+        <MessageBar intent="error" role="alert" aria-live="assertive">
           <MessageBarBody>{submitError}</MessageBarBody>
         </MessageBar>
       )}
 
       <div className={styles.actions}>
-        <Button appearance="secondary" onClick={() => navigate('/')}>
+        <Button appearance="secondary" onClick={() => navigate('/')} aria-label="Cancel and return to dashboard">
           Cancel
         </Button>
         <Button
@@ -292,6 +292,8 @@ export default function NewSession() {
           icon={submitting ? <Spinner size="tiny" /> : <DocumentBulletList24Regular />}
           onClick={() => void handleGenerate()}
           disabled={!canGenerate || submitting}
+          aria-label={submitting ? "Generating documentation, please wait" : "Generate documentation from transcript"}
+          aria-busy={submitting}
         >
           Generate Documentation
         </Button>

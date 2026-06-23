@@ -60,7 +60,7 @@ export default function Dashboard() {
 
   if (nothingYet) {
     return (
-      <div className={styles.center}>
+      <div className={styles.center} role="status" aria-live="polite" aria-busy="true">
         <Spinner label="Loading dashboard…" size="large" />
       </div>
     );
@@ -68,18 +68,20 @@ export default function Dashboard() {
 
   if (error && !statsQuery.data && !caseloadQuery.data) {
     return (
-      <Text className={styles.error}>
-        {formatErrorMessage(error, 'loading dashboard')}
-      </Text>
+      <div role="alert" aria-live="assertive">
+        <Text className={styles.error}>
+          {formatErrorMessage(error, 'loading dashboard')}
+        </Text>
+      </div>
     );
   }
 
   return (
     <div className={styles.page}>
-      <Text className={styles.pageTitle}>Dashboard</Text>
+      <h1 className={styles.pageTitle}>Dashboard</h1>
 
       {statsQuery.isLoading
-        ? <Spinner label="Loading stats…" size="small" />
+        ? <div role="status" aria-live="polite"><Spinner label="Loading stats…" size="small" /></div>
         : statsQuery.data && <StatsCards stats={statsQuery.data} overdueCount={overdueCount} />}
 
       <Divider />
@@ -89,7 +91,7 @@ export default function Dashboard() {
       <Divider />
 
       {caseloadQuery.isLoading
-        ? <Spinner label="Loading caseload…" size="small" />
+        ? <div role="status" aria-live="polite"><Spinner label="Loading caseload…" size="small" /></div>
         : caseloadQuery.data && <CaseloadTable caseload={caseloadQuery.data} />}
     </div>
   );

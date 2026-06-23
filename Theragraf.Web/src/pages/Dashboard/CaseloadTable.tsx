@@ -198,20 +198,44 @@ export default function CaseloadTable({ caseload }: Props) {
         </Text>
       ) : (
         <>
-          <Table>
+          <Table aria-label="Client caseload">
+            <caption style={{ 
+              position: 'absolute', 
+              left: '-10000px', 
+              width: '1px', 
+              height: '1px', 
+              overflow: 'hidden' 
+            }}>
+              Client caseload showing {sorted.length} client{sorted.length !== 1 ? 's' : ''} with session information
+            </caption>
             <TableHeader>
               <TableRow>
-                <TableHeaderCell onClick={() => handleSort('clientId')}>
+                <TableHeaderCell 
+                  onClick={() => handleSort('clientId')}
+                  aria-sort={sortKey === 'clientId' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  role="columnheader"
+                  aria-label={`Client ID, sortable column, currently ${sortKey === 'clientId' ? (sortDir === 'asc' ? 'sorted ascending' : 'sorted descending') : 'not sorted'}`}
+                >
                   <div className={styles.sortableHeader}>
                     Client ID <SortIcon col="clientId" />
                   </div>
                 </TableHeaderCell>
-                <TableHeaderCell onClick={() => handleSort('lastSessionDate')}>
+                <TableHeaderCell 
+                  onClick={() => handleSort('lastSessionDate')}
+                  aria-sort={sortKey === 'lastSessionDate' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  role="columnheader"
+                  aria-label={`Last Session, sortable column, currently ${sortKey === 'lastSessionDate' ? (sortDir === 'asc' ? 'sorted ascending' : 'sorted descending') : 'not sorted'}`}
+                >
                   <div className={styles.sortableHeader}>
                     Last Session <SortIcon col="lastSessionDate" />
                   </div>
                 </TableHeaderCell>
-                <TableHeaderCell onClick={() => handleSort('totalSessions')}>
+                <TableHeaderCell 
+                  onClick={() => handleSort('totalSessions')}
+                  aria-sort={sortKey === 'totalSessions' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  role="columnheader"
+                  aria-label={`Total Sessions, sortable column, currently ${sortKey === 'totalSessions' ? (sortDir === 'asc' ? 'sorted ascending' : 'sorted descending') : 'not sorted'}`}
+                >
                   <div className={styles.sortableHeader}>
                     Total Sessions <SortIcon col="totalSessions" />
                   </div>

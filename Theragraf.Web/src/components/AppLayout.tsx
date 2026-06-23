@@ -23,6 +23,7 @@ import {
 } from '@fluentui/react-icons';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 import { useFirstVisit } from '@/hooks/useFirstVisit';
+import { useFocusOnNavigate } from '@/hooks/useFocusOnNavigate';
 import GettingStartedModal from '@/components/GettingStartedModal';
 
 const useStyles = makeStyles({
@@ -31,6 +32,19 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     minHeight: '100vh',
     backgroundColor: tokens.colorNeutralBackground2,
+  },
+  skipLink: {
+    position: 'absolute',
+    left: '-9999px',
+    zIndex: 999,
+    padding: tokens.spacingVerticalS,
+    backgroundColor: tokens.colorBrandBackground,
+    color: tokens.colorNeutralForegroundOnBrand,
+    textDecoration: 'none',
+    ':focus': {
+      left: '0',
+      top: '0',
+    },
   },
   header: {
     display: 'flex',
@@ -86,6 +100,9 @@ export default function AppLayout() {
   const [showIdleWarning, setShowIdleWarning] = useState(false);
   const { open: showGettingStarted, dismiss: dismissGettingStarted } = useFirstVisit();
 
+  // Focus management for navigation
+  useFocusOnNavigate();
+
   const { resetTimer } = useIdleTimeout({
     onWarning: useCallback(() => setShowIdleWarning(true), []),
     onReset:   useCallback(() => setShowIdleWarning(false), []),
@@ -104,18 +121,22 @@ export default function AppLayout() {
 
   return (
     <div className={styles.shell}>
-      <header className={styles.header}>
-        <div className={styles.brand} onClick={() => navigate('/')}>
+      <a href="#main-content" className={styles.skipLink}>
+        Skip to main content
+      </a>
+      <header className={styles.header} role="banner">
+        <div className={styles.brand} onClick={() => navigate('/')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/'); }}>
           <Text className={styles.brandName}>TheraGraf</Text>
         </div>
 
-        <nav className={styles.nav}>
+        <nav className={styles.nav} aria-label="Main navigation">
           <Tooltip content="Dashboard" relationship="label">
             <Button
               appearance="subtle"
               icon={<Grid24Regular />}
               style={{ color: 'white' }}
               onClick={() => navigate('/')}
+              aria-label="Go to Dashboard"
             />
           </Tooltip>
           <Tooltip content="Settings" relationship="label">
@@ -124,6 +145,7 @@ export default function AppLayout() {
               icon={<Settings24Regular />}
               style={{ color: 'white' }}
               onClick={() => navigate('/settings')}
+              aria-label="Go to Settings"
             />
           </Tooltip>
           {!isNewSession && (
@@ -131,18 +153,20 @@ export default function AppLayout() {
               appearance="secondary"
               icon={<Add24Regular />}
               onClick={() => navigate('/sessions/new')}
+              aria-label="Create new session"
             >
               New Session
             </Button>
           )}
         </nav>
 
-        <div className={styles.userArea}>
+        <div className={styles.userArea} role="region" aria-label="User account">
           <Text className={styles.userName}>{account?.name ?? account?.username}</Text>
           <Avatar
             name={account?.name ?? account?.username}
             size={32}
             color="brand"
+            aria-label={`User avatar for ${account?.name ?? account?.username}`}
           />
           <Tooltip content="Sign out" relationship="label">
             <Button
@@ -150,12 +174,13 @@ export default function AppLayout() {
               icon={<SignOut24Regular />}
               style={{ color: 'white' }}
               onClick={handleSignOut}
+              aria-label="Sign out"
             />
           </Tooltip>
         </div>
       </header>
 
-      <main className={styles.main}>
+      <main id="main-content" className={styles.main} role="main">
         <Outlet />
       </main>
 
