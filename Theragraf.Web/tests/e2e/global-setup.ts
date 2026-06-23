@@ -26,10 +26,15 @@ async function globalSetup(config: FullConfig) {
     throw new Error(`Test environment validation failed:\n${errors.join('\n')}`);
   }
 
-  // Verify all services are running
-  const services = await verifyFullStackServices();
-  if (!services.allHealthy) {
-    throw new Error('Not all required services are healthy. Please start all services before running E2E tests.');
+  // Verify all services are running (skip backend check if using mocks)
+  const useMockBackend = process.env.USE_MOCK_BACKEND === 'true';
+  if (!useMockBackend) {
+    const services = await verifyFullStackServices();
+    if (!services.allHealthy) {
+      throw new Error('Not all required services are healthy. Please start all services before running E2E tests.');
+    }
+  } else {
+    console.log('✅ Using mock backend - skipping service health checks\n');
   }
 
   const { baseURL } = config.projects[0].use;

@@ -55,7 +55,9 @@ export class SessionReviewPage extends BasePage {
   }
 
   get addCptCodeButton(): Locator {
-    return this.page.getByRole('button', { name: /add.*code|add cpt/i });
+    // Scope to CPT Codes section to avoid ambiguity with ICD-10's "Add Code" button
+    // Use .first() to get the CPT section's button (appears before ICD-10 section)
+    return this.page.locator(':has-text("CPT Codes")').locator('..').getByRole('button', { name: /add.*code/i }).first();
   }
 
   // ICD-10 Codes
@@ -118,15 +120,19 @@ export class SessionReviewPage extends BasePage {
   }
 
   async addCptCode(code: string, description: string, units: number = 1) {
+    // The CPT section has always-visible input fields at the bottom
+    // Find them by scoping to the CPT Codes section and targeting input elements
+    const cptCard = this.page.locator(':has-text("CPT Codes")').locator('..');
+
+    await cptCard.locator('input[placeholder="97110"]').fill(code);
+    await cptCard.locator('input[placeholder*="Therapeutic"]').fill(description);
+    await cptCard.locator('input[type="number"]').last().fill(units.toString());
+
+    // Click "Add Code" button to add the entry
     await this.addCptCodeButton.click();
 
-    // Fill in the new CPT code form
-    await this.page.getByLabel(/^code$/i).last().fill(code);
-    await this.page.getByLabel(/description/i).last().fill(description);
-    await this.page.getByLabel(/units/i).last().fill(units.toString());
-
-    // Click add/save button
-    await this.page.getByRole('button', { name: /^add$/i }).last().click();
+    // Wait a moment for the table to update
+    await this.page.waitForTimeout(500);
   }
 
   async addIcd10Code(code: string, description: string) {
@@ -142,8 +148,12 @@ export class SessionReviewPage extends BasePage {
 
   async removeCptCode(code: string) {
     const row = this.cptCodesSection.locator(`tr:has-text("${code}")`);
-    const deleteButton = row.getByRole('button', { name: /delete|remove/i });
+    // Delete button has only an icon, no text label
+    const deleteButton = row.locator('button[aria-label*="Delete"], button:has(svg)').first();
     await deleteButton.click();
+
+    // Wait for the row to be removed
+    await this.page.waitForTimeout(500);
   }
 
   async removeIcd10Code(code: string) {
@@ -191,7 +201,8 @@ export class SessionReviewPage extends BasePage {
   }
 
   async assertCptCodePresent(code: string) {
-    await expect(this.cptCodesSection.locator(`:has-text("${code}")`)).toBeVisible();
+    // Use .first() to avoid strict mode when the code appears in multiple elements (tbody, tr, td, span)
+    await expect(this.cptCodesSection.locator(`:has-text("${code}")`).first()).toBeVisible();
   }
 
   async assertIcd10CodePresent(code: string) {

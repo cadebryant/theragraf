@@ -52,6 +52,52 @@ const MOCK_ICD_CODES: IcdCode[] = [
  * Call this in test beforeEach or per-test as needed.
  */
 export async function setupMockSessionAPI(page: Page) {
+  // Mock the caseload endpoint for dashboard
+  await page.route('**/api/caseload', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        therapistName: 'Test Therapist',
+        totalSessions: 0,
+        totalClients: 0,
+        clients: [],
+      }),
+    });
+  });
+
+  // Mock the stats endpoint for dashboard
+  await page.route('**/api/stats/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        totalSessions: 0,
+        totalClients: 0,
+        billableUnits: 0,
+        sessionsByDate: [],
+        sessionsByDiscipline: [],
+      }),
+    });
+  });
+
+  // Mock the sessions list endpoint for dashboard
+  await page.route('**/api/sessions', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sessions: [],
+          totalCount: 0,
+        }),
+      });
+    } else {
+      // Let POST requests through to the orchestration mock
+      await route.continue();
+    }
+  });
+
   // Mock the documentation orchestration start endpoint
   await page.route('**/api/DocumentationStart', async (route) => {
     const request = route.request();
@@ -138,8 +184,40 @@ export async function setupMockSessionAPI(page: Page) {
         contentType: 'application/json',
         body: JSON.stringify(mockSession),
       });
+    } else if (route.request().method() === 'GET') {
+      // Mock GET requests for dashboard/caseload
+      const url = new URL(route.request().url());
+
+      // Check if it's a caseload request (no client ID in path)
+      if (url.pathname.endsWith('/sessions') || url.pathname.match(/\/sessions$/)) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            clients: [],
+            total: 0,
+          }),
+        });
+      } else {
+        // Let other GET requests pass through or mock as needed
+        // Mock individual client retrieval
+        if (route.request().url().includes('/api/clients/')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              id: 'test-client',
+              name: 'Test Client',
+              dateOfBirth: '1990-01-01',
+              therapistId: 'test-therapist',
+            }),
+          });
+        } else {
+          await route.continue();
+        }
+      }
     } else {
-      // Let GET requests pass through to real backend
+      // Let other methods pass through
       await route.continue();
     }
   });
