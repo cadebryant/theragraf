@@ -157,6 +157,7 @@ export default function AppLayout() {
               style={{ color: 'white' }}
               onClick={() => navigate('/settings')}
               aria-label="Go to Settings"
+              data-tour="settings-link"
             />
           </Tooltip>
           {!isNewSession && (
