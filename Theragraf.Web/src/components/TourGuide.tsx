@@ -92,9 +92,12 @@ export default function TourGuide({ run, onComplete }: TourGuideProps) {
           padding: 0,
           boxShadow: tokens.shadow28,
           maxWidth: '420px',
+          backgroundColor: tokens.colorNeutralBackground1,
+          border: `1px solid ${tokens.colorNeutralStroke1}`,
         },
         tooltipContainer: {
           textAlign: 'left',
+          backgroundColor: tokens.colorNeutralBackground1,
         },
         tooltipTitle: {
           fontSize: tokens.fontSizeBase400,
@@ -107,6 +110,8 @@ export default function TourGuide({ run, onComplete }: TourGuideProps) {
           padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalL}`,
           fontSize: tokens.fontSizeBase300,
           lineHeight: tokens.lineHeightBase300,
+          color: tokens.colorNeutralForeground1,
+          backgroundColor: tokens.colorNeutralBackground1,
         },
         tooltipFooter: {
           marginTop: 0,
@@ -115,6 +120,7 @@ export default function TourGuide({ run, onComplete }: TourGuideProps) {
           paddingLeft: tokens.spacingHorizontalL,
           paddingRight: tokens.spacingHorizontalL,
           borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+          backgroundColor: tokens.colorNeutralBackground1,
         },
         buttonPrimary: {
           backgroundColor: tokens.colorBrandBackground,
