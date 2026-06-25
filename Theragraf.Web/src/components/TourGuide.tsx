@@ -12,6 +12,8 @@ interface TourGuideProps {
  * Fully accessible with keyboard navigation and screen reader support.
  */
 export default function TourGuide({ run, onComplete }: TourGuideProps) {
+  console.log('TourGuide render:', { run });
+
   const steps: Step[] = [
     {
       target: '[data-tour="new-session-button"]',

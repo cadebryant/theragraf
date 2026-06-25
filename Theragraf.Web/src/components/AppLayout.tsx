@@ -107,6 +107,9 @@ export default function AppLayout() {
   // Tour will only run if user hasn't completed it before
   const shouldRunTour = !showGettingStarted && runTour;
 
+  // Debug logging
+  console.log('Tour Debug:', { showGettingStarted, runTour, shouldRunTour });
+
   // Focus management for navigation
   useFocusOnNavigate();
 
