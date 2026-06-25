@@ -24,7 +24,9 @@ import {
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 import { useFirstVisit } from '@/hooks/useFirstVisit';
 import { useFocusOnNavigate } from '@/hooks/useFocusOnNavigate';
+import { useTourGuide } from '@/hooks/useTourGuide';
 import GettingStartedModal from '@/components/GettingStartedModal';
+import TourGuide from '@/components/TourGuide';
 
 const useStyles = makeStyles({
   shell: {
@@ -99,6 +101,11 @@ export default function AppLayout() {
 
   const [showIdleWarning, setShowIdleWarning] = useState(false);
   const { open: showGettingStarted, dismiss: dismissGettingStarted } = useFirstVisit();
+  const { run: runTour, completeTour } = useTourGuide();
+
+  // Start tour after Getting Started modal is dismissed
+  // Tour will only run if user hasn't completed it before
+  const shouldRunTour = !showGettingStarted && runTour;
 
   // Focus management for navigation
   useFocusOnNavigate();
@@ -137,6 +144,7 @@ export default function AppLayout() {
               style={{ color: 'white' }}
               onClick={() => navigate('/')}
               aria-label="Go to Dashboard"
+              data-tour="dashboard-link"
             />
           </Tooltip>
           <Tooltip content="Settings" relationship="label">
@@ -154,6 +162,7 @@ export default function AppLayout() {
               icon={<Add24Regular />}
               onClick={() => navigate('/sessions/new')}
               aria-label="Create new session"
+              data-tour="new-session-button"
             >
               New Session
             </Button>
@@ -185,6 +194,8 @@ export default function AppLayout() {
       </main>
 
       <GettingStartedModal open={showGettingStarted} onDismiss={(alwaysShow) => dismissGettingStarted(alwaysShow)} />
+
+      <TourGuide run={shouldRunTour} onComplete={completeTour} />
 
       <Dialog open={showIdleWarning} modalType="alert">
         <DialogSurface>

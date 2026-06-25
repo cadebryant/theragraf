@@ -263,11 +263,13 @@ export default function NewSession() {
         onClientIdBlur={() => setCommittedClientId(metadata.clientId.trim())}
       />
 
-      {isTestMode ? (
-        <TestTranscriptInput onTranscriptReady={handleTranscriptReady} />
-      ) : (
-        <AudioRecorder onTranscriptReady={handleTranscriptReady} phraseHints={buildPhraseHints(metadata.clientId, accounts[0], metadata.discipline)} />
-      )}
+      <div data-tour="record-section">
+        {isTestMode ? (
+          <TestTranscriptInput onTranscriptReady={handleTranscriptReady} />
+        ) : (
+          <AudioRecorder onTranscriptReady={handleTranscriptReady} phraseHints={buildPhraseHints(metadata.clientId, accounts[0], metadata.discipline)} />
+        )}
+      </div>
 
       {rawTranscript && (
         <>

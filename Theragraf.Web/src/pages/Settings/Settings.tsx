@@ -21,6 +21,7 @@ import {
   DismissCircle24Filled,
 } from '@fluentui/react-icons';
 import { useSettings } from '@/hooks/useSettings';
+import { useTourGuide } from '@/hooks/useTourGuide';
 import type {
   Theme,
   DefaultView,
@@ -117,6 +118,7 @@ const useStyles = makeStyles({
 export default function Settings() {
   const styles = useStyles();
   const { settings, updateSettings, resetSettings } = useSettings();
+  const { resetTour } = useTourGuide();
 
   // Local state for editing
   const [display, setDisplay] = useState<DisplaySettings>(settings.display);
@@ -611,6 +613,26 @@ export default function Settings() {
             checked={accessibility.showKeyboardShortcuts}
             onChange={(_, data) => setAccessibility({ ...accessibility, showKeyboardShortcuts: data.checked })}
           />
+        </div>
+
+        <Divider />
+
+        <div className={styles.fieldRow}>
+          <div className={styles.fieldRowContent}>
+            <Text className={styles.fieldRowLabel}>Product Tour</Text>
+            <Text className={styles.fieldRowDescription}>
+              Restart the interactive walkthrough guide to learn key features
+            </Text>
+          </div>
+          <Button
+            appearance="secondary"
+            onClick={() => {
+              resetTour();
+              alert('Product tour restarted! Navigate to the dashboard to begin.');
+            }}
+          >
+            Restart Tour
+          </Button>
         </div>
       </Card>
 
