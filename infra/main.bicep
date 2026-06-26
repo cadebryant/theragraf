@@ -82,6 +82,9 @@ param staticWebAppLocation string = 'eastus2'
 @description('Therapist name used for demo/seed records. Leave blank to disable demo mode in production.')
 param demoTherapistName string = ''
 
+@description('Optional custom domain for the Static Web App (e.g., app.theragraf.com). Leave empty to skip.')
+param customDomain string = ''
+
 // -- Shared naming suffix ------------------------------------------------------
 
 var suffix = toLower(environmentName)
@@ -267,6 +270,7 @@ module staticWebApp 'modules/staticWebApp.bicep' = {
     suffix: suffix
     staticWebAppName: staticWebAppName
     functionAppResourceId: functionApp.outputs.resourceId
+    customDomain: customDomain
   }
 }
 

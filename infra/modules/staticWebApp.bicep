@@ -15,6 +15,9 @@ param staticWebAppName string = 'theragraf-web-${suffix}'
 @description('Resource ID of the Function App to link as the API backend.')
 param functionAppResourceId string
 
+@description('Optional custom domain (e.g., app.theragraf.com). Leave empty to skip.')
+param customDomain string = ''
+
 resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
   name: staticWebAppName
   location: location
@@ -38,6 +41,14 @@ resource linkedBackend 'Microsoft.Web/staticSites/linkedBackends@2023-12-01' = {
 	backendResourceId: functionAppResourceId
 	region: location
   }
+}
+
+// Add custom domain if provided.
+// Azure automatically provisions a free SSL certificate once DNS is validated.
+resource customDomainBinding 'Microsoft.Web/staticSites/customDomains@2023-12-01' = if (customDomain != '') {
+  parent: staticWebApp
+  name: customDomain
+  properties: {}
 }
 
 output staticWebAppName string = staticWebApp.name
