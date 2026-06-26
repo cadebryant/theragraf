@@ -124,6 +124,9 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
 
   const transcriberRef = useRef<SpeechSDK.ConversationTranscriber | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tokenRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const speechConfigRef = useRef<SpeechSDK.SpeechConfig | null>(null);
+  const regionRef = useRef<string>('');
   const speakerOrderRef = useRef<string[]>([]);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
@@ -146,6 +149,38 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
       timerRef.current = null;
     }
   }, []);
+
+  const stopTokenRefresh = useCallback(() => {
+    if (tokenRefreshIntervalRef.current) {
+      clearInterval(tokenRefreshIntervalRef.current);
+      tokenRefreshIntervalRef.current = null;
+    }
+  }, []);
+
+  const refreshToken = useCallback(async () => {
+    try {
+      console.log('Refreshing speech token...');
+      const { token, region } = await getSpeechToken();
+
+      if (speechConfigRef.current) {
+        speechConfigRef.current.authorizationToken = token;
+        regionRef.current = region;
+        console.log('Speech token refreshed successfully');
+      }
+    } catch (err) {
+      console.error('Failed to refresh speech token:', err);
+      // Don't throw - we'll continue with the old token and try again next interval
+      // Recording continues uninterrupted even if one refresh fails
+    }
+  }, []);
+
+  // Clean up intervals on unmount
+  useEffect(() => {
+    return () => {
+      stopTimer();
+      stopTokenRefresh();
+    };
+  }, [stopTimer, stopTokenRefresh]);
 
   const startRecording = useCallback(async () => {
     setError(null);
@@ -195,6 +230,8 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
       const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
       const transcriber = new SpeechSDK.ConversationTranscriber(speechConfig, audioConfig);
       transcriberRef.current = transcriber;
+      speechConfigRef.current = speechConfig;
+      regionRef.current = region;
       speakerOrderRef.current = [];
 
       if (phraseHints && phraseHints.length > 0) {
@@ -259,13 +296,20 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
         elapsedRef.current = next;
         return next;
       }), 1000);
+
+      // Proactively refresh speech token every 8 minutes to prevent mid-session expiry
+      // Azure Speech tokens typically expire after 10 minutes, so this provides a safety margin
+      tokenRefreshIntervalRef.current = setInterval(() => {
+        refreshToken();
+      }, 8 * 60 * 1000); // 8 minutes in milliseconds
+
       window.dispatchEvent(new CustomEvent('theragraf:recording-start'));
     } catch (err) {
       setError(formatErrorMessage(err, 'starting recording'));
     } finally {
       setInitializing(false);
     }
-  }, [stopTimer]);
+  }, [stopTimer, refreshToken]);
 
   const stopRecording = useCallback(() => {
     const transcriber = transcriberRef.current;
@@ -276,6 +320,7 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
     ).then(() => {
       setRecording(false);
       stopTimer();
+      stopTokenRefresh();
       window.dispatchEvent(new CustomEvent('theragraf:recording-stop'));
 
       // Show role assignment UI if we have multiple speakers
@@ -286,7 +331,7 @@ export default function AudioRecorder({ onTranscriptReady, phraseHints }: Props)
         finalizeTranscript('Therapist');
       }
     });
-  }, [stopTimer, onTranscriptReady]);
+  }, [stopTimer, stopTokenRefresh, onTranscriptReady]);
 
   const finalizeTranscript = useCallback((speaker1Role: 'Therapist' | 'Client') => {
     // Read from refs — these always hold the latest values

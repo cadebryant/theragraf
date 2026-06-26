@@ -72,15 +72,17 @@ All routes enforce **JWT ownership checks** � therapists can only read and mod
 ```
 Theragraf.Web/
   pages/
-    Dashboard/         � Therapist stats, legend-labeled charts, searchable/sortable caseload table with overdue-note alerts
-    NewSession/        � Diarized audio recording with speaker diarization, explicit role assignment (Therapist/Client), metadata form (with SOAP/DAP note format selector), transcript submission
-    SessionReview/     � Orchestration status polling, SOAP/DAP note editing with format-appropriate field labels, CPT/ICD editing, AI draft banner, attestation workflow, Verify & Approve button
-    ClientProfile/     � Per-client stats, demographics/intake panel, SMART goal tracking (with AI suggestions), and session history
-    SessionDetail/     � Single session view and edit, approval status badge, conditional export access
-    Settings/          � User preferences (display, documentation defaults, notifications, accessibility, privacy), retention policy remains admin-only configuration
+    Dashboard/         – Therapist stats, legend-labeled charts, searchable/sortable caseload table with overdue-note alerts
+    NewSession/        – Diarized audio recording with speaker diarization, explicit role assignment (Therapist/Client), metadata form (with SOAP/DAP note format selector), transcript submission
+    SessionReview/     – Orchestration status polling, SOAP/DAP note editing with format-appropriate field labels, CPT/ICD editing, AI draft banner, attestation workflow, Verify & Approve button
+    ClientProfile/     – Per-client stats, demographics/intake panel, SMART goal tracking (with AI suggestions), and session history
+    SessionDetail/     – Single session view and edit, approval status badge, conditional export access
+    Settings/          – User preferences (display, documentation defaults, notifications, accessibility, privacy), retention policy remains admin-only configuration
 ```
 
-The SPA authenticates via **MSAL** (Microsoft Authentication Library) and acquires an access token scoped to the Function App's Entra ID registration before every API call. It is hosted on **Azure Static Web Apps (Standard)** with the Function App linked as the API backend � no CORS configuration is required.
+**Onboarding:** New users are greeted with a Getting Started modal explaining the privacy-first philosophy and documentation workflow. After dismissal, an interactive product tour (built with react-joyride) guides users through the four key workflow areas: New Session, recording controls, Dashboard, and Settings. The tour can be restarted at any time from the Settings page.
+
+The SPA authenticates via **MSAL** (Microsoft Authentication Library) and acquires an access token scoped to the Function App's Entra ID registration before every API call. It is hosted on **Azure Static Web Apps (Standard)** with the Function App linked as the API backend – no CORS configuration is required.
 
 **Accessibility:** TheraGraf meets WCAG 2.1 Level AA standards with:
 - Full keyboard navigation (Tab, Enter, Escape, arrow keys)
@@ -453,6 +455,15 @@ npm run test:e2e:report    # View test results report
 ---
 
 ## Recent Enhancements
+
+### Speech Token Reliability (June 2026)
+TheraGraf now implements **proactive speech token refresh** to support long therapy sessions:
+- 🔄 Automatic token renewal every 8 minutes during recording
+- 🛡️ Graceful error handling - recording continues even if a refresh fails
+- ⏱️ Supports the full 45-minute default session duration without interruption
+- 📊 Console logging for token refresh events to aid debugging
+
+Azure Speech tokens typically expire after 10 minutes. Without proactive refresh, sessions longer than 10 minutes would experience transcription failures. The 8-minute refresh interval provides a safety margin while ensuring uninterrupted real-time transcription for extended clinical sessions.
 
 ### Accessibility (June 2026)
 TheraGraf now meets **WCAG 2.1 Level AA** accessibility standards:
