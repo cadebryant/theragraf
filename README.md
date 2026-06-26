@@ -440,17 +440,19 @@ npm run test:e2e:report    # View test results report
 
 ## Security notes
 
-- `local.settings.json` is excluded from git via `.gitignore` � **never commit it**
+- `local.settings.json` is excluded from git via `.gitignore` – **never commit it**
 - Use `local.settings.template.json` as the shareable reference for required config values
-- In Azure, all service-to-service authentication uses Managed Identity � no API keys are stored in app settings
+- In Azure, all service-to-service authentication uses Managed Identity – no API keys are stored in app settings
 - **PII Protection:** PII is redacted before any AI model processes the transcript; the redaction map is encrypted with a Key Vault-managed key and stored alongside the session record
 - **Prompt Hardening:** All user-supplied text (transcripts, demographics, prompts) is sanitized via `PromptInputHardeningService` to prevent prompt injection attacks
 - **Rate Limiting:** Middleware-based HTTP rate limiting with pluggable backends (in-memory for dev, Cosmos for production) protects against abuse
 - **Approval Workflow:** AI-generated documentation is clearly labeled as a draft. Sessions require explicit therapist attestation and approval before export. Editing clinical content automatically clears approval status.
 - **Encrypted Sensitive Data:** Client date of birth is stored AES-GCM encrypted at rest and is never returned through the API; only a computed age range is forwarded to the AI pipeline
-- **Access Control:** All HTTP endpoints enforce JWT ownership � therapists cannot read or modify another therapist's sessions, goals, or client records
+- **Access Control:** All HTTP endpoints enforce JWT ownership – therapists cannot read or modify another therapist's sessions, goals, or client records
 - **Client ID Namespacing:** Client IDs are transparently namespaced server-side using a hash of the therapist's email address; the raw client-visible name is stripped from API responses and never stored without the prefix
 - The React SPA contains only public, non-sensitive Entra configuration values
+
+**📋 Security Audit:** A comprehensive security and compliance scan was performed on June 23, 2026. See [docs/security-scan-2026-06-23.md](docs/security-scan-2026-06-23.md) for the full report (Grade: **A** overall, HIPAA-ready). Quick reference checklist available at [docs/security-scan-quickref.md](docs/security-scan-quickref.md).
 
 ---
 
