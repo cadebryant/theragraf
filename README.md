@@ -497,3 +497,10 @@ Run tests with `npm run test:e2e` or in UI mode with `npm run test:e2e:ui`. See 
 - Export functions (PDF, 837P) only available for approved sessions
 
 ---
+
+## License
+
+TheraGraf is free software licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See the [LICENSE](LICENSE) file for the full license text.
+
+A summary of copyright and license notices is provided in the [NOTICE](NOTICE) file.
+

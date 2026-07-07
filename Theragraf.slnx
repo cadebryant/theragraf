@@ -22,6 +22,8 @@
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="docs/copilot-handoff.md" />
+    <File Path="LICENSE" />
+    <File Path="NOTICE" />
   </Folder>
   <Folder Name="/Theragraf.Web/">
     <File Path="Theragraf.Web/index.html" />
