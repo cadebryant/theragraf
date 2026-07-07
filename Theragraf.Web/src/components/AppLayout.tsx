@@ -14,6 +14,7 @@ import {
   DialogBody,
   DialogContent,
   DialogActions,
+  Link,
 } from '@fluentui/react-components';
 import {
   Add24Regular,
@@ -89,6 +90,24 @@ const useStyles = makeStyles({
     width: '100%',
     marginLeft: 'auto',
     marginRight: 'auto',
+  },
+  footer: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: tokens.spacingHorizontalM,
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalXL}`,
+    backgroundColor: tokens.colorNeutralBackground3,
+    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+    flexShrink: 0,
+  },
+  footerText: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground3,
+  },
+  footerSeparator: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground4,
   },
 });
 
@@ -196,6 +215,18 @@ export default function AppLayout() {
       <main id="main-content" className={styles.main} role="main">
         <Outlet />
       </main>
+
+      <footer className={styles.footer} role="contentinfo">
+        <Text className={styles.footerText}>TheraGraf &copy; 2026 Cade Bryant</Text>
+        <Text className={styles.footerSeparator}>&middot;</Text>
+        <Link href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" className={styles.footerText}>
+          AGPL-3.0 License
+        </Link>
+        <Text className={styles.footerSeparator}>&middot;</Text>
+        <Link href="https://github.com/cadebryant/theragraf" target="_blank" rel="noopener noreferrer" className={styles.footerText}>
+          Source Code
+        </Link>
+      </footer>
 
       <GettingStartedModal open={showGettingStarted} onDismiss={(alwaysShow) => dismissGettingStarted(alwaysShow)} />
 
