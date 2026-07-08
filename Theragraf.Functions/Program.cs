@@ -235,4 +235,27 @@ var host = new HostBuilder()
     })
     .Build();
 
+// ── HITECH Production Guards ──────────────────────────────────────────────────
+// These checks run once at startup and crash the host immediately if a
+// security-critical misconfiguration is detected. Failing fast in the deployment
+// pipeline is far safer than silently running without authentication or encryption.
+var env    = host.Services.GetRequiredService<IHostEnvironment>();
+var config = host.Services.GetRequiredService<IConfiguration>();
+
+if (!env.IsDevelopment())
+{
+    // Guard 1: Authentication must never be disabled outside of local dev.
+    if (config.GetValue<bool>("Auth:Disabled"))
+        throw new InvalidOperationException(
+            "HITECH guard: Auth:Disabled=true is not permitted outside the Development environment. " +
+            "Remove or set Auth:Disabled=false in your production configuration.");
+
+    // Guard 2: Redaction-map encryption must be active outside of local dev.
+    var encryption = host.Services.GetRequiredService<IRedactionMapEncryption>();
+    if (!encryption.IsEnabled)
+        throw new InvalidOperationException(
+            "HITECH guard: Redaction-map encryption is disabled (KeyVault:VaultUri is not configured). " +
+            "Set KeyVault:VaultUri to your Azure Key Vault URI in production configuration.");
+}
+
 host.Run();

@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
+using Theragraf.Core.Helpers;
 using Theragraf.Functions.Helpers;
 using Theragraf.Functions.Logging;
 using Theragraf.Functions.Services;
@@ -99,8 +100,12 @@ public class ClientDemographicsUpsert(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "UpsertClientDemographics failed for clientId={ClientId}", clientId);
+            var correlationId = SafeErrorHelper.GenerateCorrelationId();
+            _logger.LogError(ex, SafeErrorHelper.GetInternalLogDetail(ex, correlationId));
+            auditLogger.Log(AuditEvent.Failure(identity ?? "dev", AuditAction.Write, "ClientDemographics",
+                resourceId: clientId, detail: SafeErrorHelper.GetAuditLogDetail(ex, correlationId)));
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
+            error.Headers.Add("X-Correlation-ID", correlationId);
             await error.WriteStringAsync("An unexpected error occurred.", cancellationToken);
             return error;
         }

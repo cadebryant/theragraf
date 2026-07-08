@@ -480,7 +480,9 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
-/Theragraf.Functions/local.settings.json
+# Azure Functions local settings — contains API keys, never commit.
+# Covers all projects in the repo, not just Theragraf.Functions.
+**/local.settings.json
 
 # Azurite local storage emulator data
 .azurite/
