@@ -51,13 +51,13 @@ public class DocumentationOrchestrator
             logger.LogInformation("Stage: BillingSuggestion");
             var cptCodes = await context.CallActivityAsync<IReadOnlyList<CptCode>>(
                 "BillingActivity",
-                new BillingActivityInput(finalized.RestoredNote, input!.Discipline, input.SessionDurationMinutes, input.Setting, input.Payer),
+                new BillingActivityInput(compliance, input!.Discipline, input.SessionDurationMinutes, input.Setting, input.Payer),
                 RetryOptions);
 
             logger.LogInformation("Stage: Icd10Coding");
             var icdCodes = await context.CallActivityAsync<IReadOnlyList<IcdCode>>(
                 "Icd10Activity",
-                new Icd10ActivityInput(finalized.RestoredNote, input.Discipline, input.Demographics),
+                new Icd10ActivityInput(compliance, input.Discipline, input.Demographics),
                 RetryOptions);
 
             var result = finalized with { SuggestedCptCodes = cptCodes, SuggestedIcdCodes = icdCodes };

@@ -133,19 +133,19 @@ public class DocumentationOrchestratorTests
     }
 
     [Fact]
-    public async Task RunOrchestrator_PassesRestoredNoteAndDisciplineToBillingActivity()
+    public async Task RunOrchestrator_PassesComplianceNoteAndDisciplineToBillingActivity()
     {
-        var input    = BuildTranscriptInput();
-        var finalized = BuildFinalizeResult("_final");
+        var input         = BuildTranscriptInput();
+        var complianceNote = BuildSoapNote("_compliant");
         _context.GetInput<TranscriptInput>().Returns(input);
-        ConfigureActivityStubs(finalizeResult: finalized);
+        ConfigureActivityStubs(complianceNote: complianceNote);
 
         await _sut.RunOrchestrator(_context);
 
         await _context.Received(1).CallActivityAsync<IReadOnlyList<CptCode>>(
             "BillingActivity",
             Arg.Is<BillingActivityInput>(b =>
-                b.Note == finalized.RestoredNote &&
+                b.Note == complianceNote &&
                 b.Discipline == input.Discipline &&
                 b.SessionDurationMinutes == input.SessionDurationMinutes &&
                 b.Setting == input.Setting &&
@@ -154,19 +154,19 @@ public class DocumentationOrchestratorTests
     }
 
     [Fact]
-    public async Task RunOrchestrator_PassesRestoredNoteAndDisciplineToIcd10Activity()
+    public async Task RunOrchestrator_PassesComplianceNoteAndDisciplineToIcd10Activity()
     {
-        var input    = BuildTranscriptInput();
-        var finalized = BuildFinalizeResult("_final");
+        var input          = BuildTranscriptInput();
+        var complianceNote = BuildSoapNote("_compliant");
         _context.GetInput<TranscriptInput>().Returns(input);
-        ConfigureActivityStubs(finalizeResult: finalized);
+        ConfigureActivityStubs(complianceNote: complianceNote);
 
         await _sut.RunOrchestrator(_context);
 
         await _context.Received(1).CallActivityAsync<IReadOnlyList<IcdCode>>(
             "Icd10Activity",
             Arg.Is<Icd10ActivityInput>(i =>
-                i.Note == finalized.RestoredNote &&
+                i.Note == complianceNote &&
                 i.Discipline == input.Discipline),
             Arg.Any<TaskOptions?>());
     }
