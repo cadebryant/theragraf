@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Theragraf.Core.Models;
 using Theragraf.Core.Services;
 using Theragraf.Functions.Helpers;
+using Theragraf.Functions.Logging;
 
 /// <summary>
 /// Demo data management endpoints.
@@ -23,7 +24,8 @@ public class SeedFunction(
     IGoalRepository    goalRepository,
     CosmosClient       cosmosClient,
     IConfiguration     config,
-    ILoggerFactory     loggerFactory)
+    ILoggerFactory     loggerFactory,
+    IAuditLogger       auditLogger)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<SeedFunction>();
     private static readonly JsonSerializerOptions JsonOptions = JsonConfig.Web;
@@ -113,6 +115,14 @@ public class SeedFunction(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "seed")] HttpRequestData req,
         CancellationToken cancellationToken)
     {
+        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
+        if (identity is null && !config.GetValue<bool>("Auth:Disabled"))
+        {
+            var unauth = req.CreateResponse(HttpStatusCode.Unauthorized);
+            await unauth.WriteStringAsync("Authentication is required.", cancellationToken);
+            return unauth;
+        }
+
         var demoTherapist = config["Demo:TherapistName"];
         if (string.IsNullOrWhiteSpace(demoTherapist))
         {
@@ -132,6 +142,8 @@ public class SeedFunction(
         await Task.WhenAll(tasks);
 
         _logger.LogInformation("Seeded {Count} demo records for therapist '{TherapistName}'", count, demoTherapist);
+        auditLogger.Log(AuditEvent.Success(identity ?? "dev", AuditAction.Write, "SeedData",
+            detail: $"Seeded {count} synthetic records for demo therapist"));
 
         var ok = req.CreateResponse(HttpStatusCode.OK);
         ok.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -151,6 +163,14 @@ public class SeedFunction(
         [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "seed")] HttpRequestData req,
         CancellationToken cancellationToken)
     {
+        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
+        if (identity is null && !config.GetValue<bool>("Auth:Disabled"))
+        {
+            var unauth = req.CreateResponse(HttpStatusCode.Unauthorized);
+            await unauth.WriteStringAsync("Authentication is required.", cancellationToken);
+            return unauth;
+        }
+
         var demoTherapist = config["Demo:TherapistName"];
         if (string.IsNullOrWhiteSpace(demoTherapist))
         {
@@ -185,6 +205,8 @@ public class SeedFunction(
         }
 
         _logger.LogInformation("Deleted {Count} demo records for therapist '{TherapistName}'", deleted, demoTherapist);
+        auditLogger.Log(AuditEvent.Success(identity ?? "dev", AuditAction.Delete, "SeedData",
+            detail: $"Deleted {deleted} synthetic records for demo therapist"));
 
         var ok = req.CreateResponse(HttpStatusCode.OK);
         ok.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -283,6 +305,14 @@ public class SeedFunction(
         [HttpTrigger(AuthorizationLevel.Anonymous, "patch", Route = "seed/mark-synthetic")] HttpRequestData req,
         CancellationToken cancellationToken)
     {
+        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
+        if (identity is null && !config.GetValue<bool>("Auth:Disabled"))
+        {
+            var unauth = req.CreateResponse(HttpStatusCode.Unauthorized);
+            await unauth.WriteStringAsync("Authentication is required.", cancellationToken);
+            return unauth;
+        }
+
         var demoTherapist = config["Demo:TherapistName"];
         if (string.IsNullOrWhiteSpace(demoTherapist))
         {
@@ -362,6 +392,8 @@ public class SeedFunction(
         _logger.LogInformation(
             "Marked {Sessions} sessions, {Clients} clients, and {Goals} goals as synthetic",
             sessionsUpdated, clientsUpdated, goalsUpdated);
+        auditLogger.Log(AuditEvent.Success(identity ?? "dev", AuditAction.Write, "SeedMigration",
+            detail: $"Marked {sessionsUpdated + clientsUpdated + goalsUpdated} records as synthetic"));
 
         var ok = req.CreateResponse(HttpStatusCode.OK);
         ok.Headers.Add("Content-Type", "application/json; charset=utf-8");
