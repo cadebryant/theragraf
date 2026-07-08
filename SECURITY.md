@@ -26,6 +26,8 @@ production deployment.
 | §164.308(a)(4) Minimum Necessary | Only age (not DOB) forwarded to AI agents; raw DOB encrypted before storage in client demographics | ✅ |
 | §164.308(a)(7) Contingency Plan | Soft-delete + restore on all session records; configurable 6-year retention policy (`RetentionPolicy`) | ✅ |
 | §164.308(a)(8) Evaluation | Rate limiting on all endpoints via `RateLimitMiddleware` (distributed Cosmos backend in prod) | ✅ |
+| §164.308(a)(3) Workforce Security | Demo/seed endpoints (`SeedData`, `DeleteSeedData`, `MarkAllSynthetic`) require authentication; all three emit audit events | ✅ |
+| §164.524 Right of Access | `GET /api/clients/{clientId}/export` returns a complete ePHI bundle (demographics, sessions, goals) for a given client; auth + ownership enforced; audit logged | ✅ |
 | HITECH §13402 Breach Notification | Audit trail in Application Insights enables breach scope determination — see §3 below | ⚠️ Partial |
 
 ---
@@ -131,8 +133,11 @@ first detection layer.
 
 ## 4. Out of Scope
 
-- **Patient right-of-access requests (45 CFR §164.524)** — must be handled via
-  a manual process; no self-service portal is implemented.
+- **Patient self-service right-of-access portal** — `GET /api/clients/{clientId}/export`
+  provides a complete ePHI bundle that therapists can use to respond to patient
+  access requests. A dedicated patient-facing UI button is not yet implemented but
+  is not required for initial HIPAA compliance (the obligation falls on the covered
+  entity, not the business associate).
 - **Business Associate sub-agreements** — if you share ePHI with downstream
   processors (e.g. billing clearinghouses), a BAA is required with each.
 - **Physical safeguards (§164.310)** — workstation and device policies are outside
