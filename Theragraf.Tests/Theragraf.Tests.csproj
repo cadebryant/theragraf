@@ -25,6 +25,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Exclude SeedFunction tests from Release to mirror EntryPoint\SeedFunction.cs exclusion in Theragraf.Functions -->
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <Compile Remove="EntryPoint\SeedFunctionTests.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Theragraf.Core\Theragraf.Core.csproj" />
     <ProjectReference Include="..\Theragraf.Functions\Theragraf.Functions.csproj" />

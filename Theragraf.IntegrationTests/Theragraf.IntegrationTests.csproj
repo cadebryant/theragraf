@@ -27,8 +27,8 @@
 	<ProjectReference Include="..\Theragraf.Functions\Theragraf.Functions.csproj" />
   </ItemGroup>
 
-  <!-- Auto-start Cosmos DB Emulator before building/running integration tests -->
-  <Target Name="StartCosmosEmulator" BeforeTargets="Build">
+  <!-- Auto-start Cosmos DB Emulator before building/running integration tests (Windows-only; emulator is not available on Linux) -->
+  <Target Name="StartCosmosEmulator" BeforeTargets="Build" Condition="'$(OS)' == 'Windows_NT'">
 	<Message Text="Starting Azure Cosmos DB Emulator..." Importance="high" />
 	<Exec Command="powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\tools\Start-CosmosEmulator.ps1&quot;" ContinueOnError="true" ConsoleToMSBuild="true" />
   </Target>
