@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
@@ -11,6 +12,7 @@ using Theragraf.Core.Services;
 using Theragraf.Core.Models;
 using Theragraf.Functions.EntryPoint;
 using Theragraf.Functions.Logging;
+using CosmosDatabase = Microsoft.Azure.Cosmos.Database;
 
 namespace Theragraf.Tests.EntryPoint;
 
@@ -20,6 +22,8 @@ public class SeedFunctionTests
     private readonly IClientRepository  _clientRepository;
     private readonly IGoalRepository    _goalRepository;
     private readonly CosmosClient       _cosmosClient;
+    private readonly CosmosDatabase     _mockDatabase;
+    private readonly Container          _mockContainer;
 
     private const string DemoTherapist = "Demo Therapist";
 
@@ -56,6 +60,37 @@ public class SeedFunctionTests
         _clientRepository  = Substitute.For<IClientRepository>();
         _goalRepository    = Substitute.For<IGoalRepository>();
         _cosmosClient      = Substitute.For<CosmosClient>();
+
+        // Wire CosmosClient → Database → Container chain used by WipeAllContainersAsync,
+        // SeedProviderAsync, and SeedTherapistProfilesAsync.
+        _mockDatabase  = Substitute.For<CosmosDatabase>();
+        _mockContainer = Substitute.For<Container>();
+
+        _cosmosClient.GetDatabase(Arg.Any<string>()).Returns(_mockDatabase);
+        _mockDatabase.GetContainer(Arg.Any<string>()).Returns(_mockContainer);
+
+        // GetItemQueryIterator returns an empty iterator so WipeAllContainersAsync exits without iterating.
+        var emptyIterator = Substitute.For<FeedIterator<JsonElement>>();
+        emptyIterator.HasMoreResults.Returns(false);
+        _mockContainer
+            .GetItemQueryIterator<JsonElement>(Arg.Any<QueryDefinition>())
+            .Returns(emptyIterator);
+
+        // goalRepository.CreateAsync must return a non-null GoalResponse so the seeder
+        // can access created.GoalId without a NullReferenceException.
+        _goalRepository
+            .CreateAsync(Arg.Any<string>(), Arg.Any<CreateGoalRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new GoalResponse(
+                GoalId:        Guid.NewGuid().ToString(),
+                ClientId:      "seed-client",
+                Title:         "Test goal",
+                Description:   "Test description",
+                Status:        GoalStatus.Active,
+                CreatedAt:     DateTimeOffset.UtcNow,
+                TargetDate:    null,
+                ResolvedAt:    null,
+                ProgressNotes: [],
+                IsSynthetic:   true));
     }
 
     private SeedFunction BuildSut(IConfiguration config) =>
@@ -85,7 +120,7 @@ public class SeedFunctionTests
         return request;
     }
 
-    // ── Seed — auth ───────────────────────────────────────────────────────────
+    // ── Seed ──────────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Seed_NoJwtAndAuthEnabled_Returns401()
@@ -101,7 +136,7 @@ public class SeedFunctionTests
     public async Task Seed_AuthDisabledAndDemoEnabled_Seeds()
     {
         var sut      = BuildSut(AuthDisabledWithDemo);
-        var response = await sut.Seed(BuildRequest("https://localhost/api/seed?count=1"), CancellationToken.None);
+        var response = await sut.Seed(BuildRequest(), CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         await _sessionRepository.Received().SaveAsync(Arg.Any<SessionRecord>(), Arg.Any<CancellationToken>());
@@ -116,7 +151,7 @@ public class SeedFunctionTests
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    // ── DeleteSeed — auth ─────────────────────────────────────────────────────
+    // ── DeleteSeed ────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task DeleteSeed_NoJwtAndAuthEnabled_Returns401()
@@ -130,14 +165,11 @@ public class SeedFunctionTests
     [Fact]
     public async Task DeleteSeed_AuthDisabledAndDemoEnabled_Deletes()
     {
-        _sessionRepository
-            .GetCaseloadAsync(DemoTherapist, Arg.Any<CancellationToken>())
-            .Returns(new Theragraf.Core.Models.CaseloadSummary(DemoTherapist, []));
-
         var sut      = BuildSut(AuthDisabledWithDemo);
         var response = await sut.DeleteSeed(BuildRequest(), CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _cosmosClient.Received().GetDatabase(Arg.Any<string>());
     }
 
     [Fact]
@@ -149,7 +181,7 @@ public class SeedFunctionTests
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    // ── MarkAllSynthetic — auth ───────────────────────────────────────────────
+    // ── MarkAllSynthetic ──────────────────────────────────────────────────────
 
     [Fact]
     public async Task MarkAllSynthetic_NoJwtAndAuthEnabled_Returns401()
