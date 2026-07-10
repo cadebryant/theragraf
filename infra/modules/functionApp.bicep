@@ -30,6 +30,16 @@ param appServicePlanName string = '${functionAppName}-plan'
 @description('Therapist name used for demo/seed records. Leave blank to disable demo mode.')
 param demoTherapistName string = ''
 
+@description('Secret key required in the X-Migration-Key header to invoke the partition-key migration endpoint. Leave blank to disable the endpoint.')
+@secure()
+param migrationKey string = ''
+
+@description('JWT claim type that carries the tenant identifier. Use "tid" for standard Entra ID; override for Entra External ID custom attributes (e.g. "extension_tenantId").')
+param tenantIdClaimType string = 'tid'
+
+@description('Display name for the synthetic self-hosted tenant shown in logs. Defaults to "Self-Hosted".')
+param syntheticTenantName string = 'Self-Hosted'
+
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' existing = {
   name: appServicePlanName
 }
@@ -126,6 +136,41 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 		{
 		  name: 'Demo__TherapistName'
 		  value: demoTherapistName
+		}
+		// ── Cosmos DB — additional container names ───────────────────────────
+		{
+		  name: 'CosmosDb__GoalsContainerName'
+		  value: 'goals'
+		}
+		{
+		  name: 'CosmosDb__ClientsContainerName'
+		  value: 'clients'
+		}
+		{
+		  name: 'CosmosDb__TenantsContainerName'
+		  value: 'tenants'
+		}
+		{
+		  name: 'CosmosDb__TherapistProfilesContainerName'
+		  value: 'therapist-profiles'
+		}
+		{
+		  name: 'CosmosDb__ProvidersContainerName'
+		  value: 'providers'
+		}
+		// ── Multi-tenancy ────────────────────────────────────────────────────
+		{
+		  name: 'MultiTenant__TenantIdClaimType'
+		  value: tenantIdClaimType
+		}
+		{
+		  name: 'MultiTenant__SyntheticTenantName'
+		  value: syntheticTenantName
+		}
+		// ── Admin / migration ────────────────────────────────────────────────
+		{
+		  name: 'Admin__MigrationKey'
+		  value: migrationKey
 		}
 	  ]
 	}

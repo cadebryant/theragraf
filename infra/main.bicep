@@ -82,6 +82,16 @@ param staticWebAppLocation string = 'eastus2'
 @description('Therapist name used for demo/seed records. Leave blank to disable demo mode in production.')
 param demoTherapistName string = ''
 
+@description('Secret key required in the X-Migration-Key header to invoke the partition-key migration endpoint. Leave blank (default) to keep the endpoint disabled.')
+@secure()
+param migrationKey string = ''
+
+@description('JWT claim type that carries the tenant identifier. Use "tid" (default) for standard Entra ID; override for Entra External ID custom attributes.')
+param tenantIdClaimType string = 'tid'
+
+@description('Display name for the synthetic self-hosted tenant shown in logs.')
+param syntheticTenantName string = 'Self-Hosted'
+
 @description('Optional custom domain for the Static Web App (e.g., app.theragraf.com). Leave empty to skip.')
 param customDomain string = ''
 
@@ -165,6 +175,9 @@ module functionApp 'modules/functionApp.bicep' = {
     keyVaultUri: keyVault.outputs.vaultUri
     speechRegion: speech.outputs.region
     demoTherapistName: demoTherapistName
+    migrationKey: migrationKey
+    tenantIdClaimType: tenantIdClaimType
+    syntheticTenantName: syntheticTenantName
   }
 }
 
