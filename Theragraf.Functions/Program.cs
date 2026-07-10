@@ -64,7 +64,7 @@ var host = new HostBuilder()
                     new ContainerProperties
                     {
                         Id = CosmosRateLimitService.ContainerName,
-                        PartitionKeyPaths = ["/tenantId", "/userId"],
+                        PartitionKeyPath = "/userId",
                         DefaultTimeToLive = 60  // Automatically delete rate limit documents after 60 seconds
                     })
                     .GetAwaiter().GetResult();
@@ -189,7 +189,7 @@ var host = new HostBuilder()
                     new ContainerProperties
                     {
                         Id = container,
-                        PartitionKeyPaths = ["/tenantId", "/clientId"]
+                        PartitionKeyPath = "/clientId"
                     })
                     .GetAwaiter().GetResult();
             }
@@ -213,7 +213,7 @@ var host = new HostBuilder()
                     new ContainerProperties
                     {
                         Id = goalsContainer,
-                        PartitionKeyPaths = ["/tenantId", "/clientId"]
+                        PartitionKeyPath = "/clientId"
                     })
                     .GetAwaiter().GetResult();
             }
@@ -238,7 +238,7 @@ var host = new HostBuilder()
                     new ContainerProperties
                     {
                         Id = clientsContainer,
-                        PartitionKeyPaths = ["/tenantId", "/clientId"]
+                        PartitionKeyPath = "/clientId"
                     })
                     .GetAwaiter().GetResult();
             }
