@@ -71,9 +71,8 @@ resource sessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/c
 	resource: {
 	  id: 'sessions'
 	  partitionKey: {
-		paths: [ '/tenantId', '/clientId' ]
-		kind: 'MultiHash'
-		version: 2
+		paths: [ '/clientId' ]
+		kind: 'Hash'
 	  }
 	  defaultTtl: -1  // Enable TTL without default expiration; per-document TimeToLive controls retention
 	  indexingPolicy: {
@@ -113,9 +112,8 @@ resource goalsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/cont
 	resource: {
 	  id: 'goals'
 	  partitionKey: {
-		paths: [ '/tenantId', '/clientId' ]
-		kind: 'MultiHash'
-		version: 2
+		paths: [ '/clientId' ]
+		kind: 'Hash'
 	  }
 	  defaultTtl: -1  // Enable TTL without default expiration; per-document TimeToLive controls retention
 	  indexingPolicy: {
@@ -147,9 +145,8 @@ resource clientsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/co
 	resource: {
 	  id: 'clients'
 	  partitionKey: {
-		paths: [ '/tenantId', '/clientId' ]
-		kind: 'MultiHash'
-		version: 2
+		paths: [ '/clientId' ]
+		kind: 'Hash'
 	  }
 	  defaultTtl: -1  // Enable TTL without default expiration; per-document TimeToLive controls retention
 	  indexingPolicy: {
@@ -171,9 +168,8 @@ resource rateLimitsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases
 	resource: {
 	  id: 'rate-limits'
 	  partitionKey: {
-		paths: [ '/tenantId', '/userId' ]
-		kind: 'MultiHash'
-		version: 2
+		paths: [ '/userId' ]
+		kind: 'Hash'
 	  }
 	  defaultTtl: 60  // Automatically delete rate limit documents after 60 seconds (matches time window)
 	  indexingPolicy: {
