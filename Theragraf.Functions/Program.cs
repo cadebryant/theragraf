@@ -25,6 +25,7 @@ var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults(workerApp =>
     {
         workerApp.UseMiddleware<JwtAuthMiddleware>();
+        workerApp.UseMiddleware<TenantResolutionMiddleware>();
         workerApp.UseMiddleware<RateLimitMiddleware>();
     })
     .ConfigureServices((context, services) =>
@@ -63,7 +64,7 @@ var host = new HostBuilder()
                     new ContainerProperties
                     {
                         Id = CosmosRateLimitService.ContainerName,
-                        PartitionKeyPath = "/userId",
+                        PartitionKeyPaths = ["/tenantId", "/userId"],
                         DefaultTimeToLive = 60  // Automatically delete rate limit documents after 60 seconds
                     })
                     .GetAwaiter().GetResult();
@@ -185,7 +186,11 @@ var host = new HostBuilder()
             {
                 var db = cosmosClient.CreateDatabaseIfNotExistsAsync(dbName).GetAwaiter().GetResult();
                 db.Database.CreateContainerIfNotExistsAsync(
-                    new ContainerProperties { Id = container, PartitionKeyPath = "/clientId" })
+                    new ContainerProperties
+                    {
+                        Id = container,
+                        PartitionKeyPaths = ["/tenantId", "/clientId"]
+                    })
                     .GetAwaiter().GetResult();
             }
 
@@ -205,7 +210,11 @@ var host = new HostBuilder()
             {
                 var db = cosmosClient.CreateDatabaseIfNotExistsAsync(dbName).GetAwaiter().GetResult();
                 db.Database.CreateContainerIfNotExistsAsync(
-                    new ContainerProperties { Id = goalsContainer, PartitionKeyPath = "/clientId" })
+                    new ContainerProperties
+                    {
+                        Id = goalsContainer,
+                        PartitionKeyPaths = ["/tenantId", "/clientId"]
+                    })
                     .GetAwaiter().GetResult();
             }
 
@@ -226,11 +235,57 @@ var host = new HostBuilder()
             {
                 var db = cosmosClient.CreateDatabaseIfNotExistsAsync(dbName).GetAwaiter().GetResult();
                 db.Database.CreateContainerIfNotExistsAsync(
-                    new ContainerProperties { Id = clientsContainer, PartitionKeyPath = "/clientId" })
+                    new ContainerProperties
+                    {
+                        Id = clientsContainer,
+                        PartitionKeyPaths = ["/tenantId", "/clientId"]
+                    })
                     .GetAwaiter().GetResult();
             }
 
             return new CosmosClientRepository(cosmosClient, dbName, clientsContainer, encryption);
+        });
+
+        services.AddSingleton<ITenantRepository>(sp =>
+        {
+            var cosmosClient        = sp.GetRequiredService<CosmosClient>();
+            var dbName              = config["CosmosDb:DatabaseName"] ?? "theragraf";
+            var tenantsContainer    = config["CosmosDb:TenantsContainerName"] ?? "tenants";
+            var profilesContainer   = config["CosmosDb:TherapistProfilesContainerName"] ?? "therapist-profiles";
+            var providersContainer  = config["CosmosDb:ProvidersContainerName"] ?? "providers";
+            var logger              = sp.GetRequiredService<ILogger<CosmosTenantRepository>>();
+
+            // Auto-provision tenant-related containers locally. In Azure, Bicep owns provisioning.
+            var endpoint = config["CosmosDb:AccountEndpoint"];
+            if (string.IsNullOrWhiteSpace(endpoint))
+            {
+                var db = cosmosClient.CreateDatabaseIfNotExistsAsync(dbName).GetAwaiter().GetResult();
+
+                // tenants — single-level partition key (tenantId IS the top-level entity)
+                db.Database.CreateContainerIfNotExistsAsync(
+                    new ContainerProperties { Id = tenantsContainer, PartitionKeyPath = "/tenantId" })
+                    .GetAwaiter().GetResult();
+
+                // therapist-profiles — hierarchical: /tenantId + /therapistId
+                db.Database.CreateContainerIfNotExistsAsync(
+                    new ContainerProperties
+                    {
+                        Id = profilesContainer,
+                        PartitionKeyPaths = ["/tenantId", "/therapistId"]
+                    })
+                    .GetAwaiter().GetResult();
+
+                // providers — hierarchical: /tenantId + /providerId
+                db.Database.CreateContainerIfNotExistsAsync(
+                    new ContainerProperties
+                    {
+                        Id = providersContainer,
+                        PartitionKeyPaths = ["/tenantId", "/providerId"]
+                    })
+                    .GetAwaiter().GetResult();
+            }
+
+            return new CosmosTenantRepository(cosmosClient, dbName, tenantsContainer, logger);
         });
     })
     .Build();

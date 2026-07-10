@@ -5,6 +5,8 @@ using System.Security.Claims;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Configuration;
+using Theragraf.Core.Models;
+using Theragraf.Functions.Middleware;
 
 /// <summary>
 /// Extracts the therapist identity from the validated <see cref="ClaimsPrincipal"/>
@@ -69,4 +71,22 @@ internal static class ClaimsHelper
         return !string.IsNullOrWhiteSpace(demoName)
             && string.Equals(therapistName, demoName, StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// Returns the resolved <see cref="TenantDocument"/> injected by
+    /// <see cref="TenantResolutionMiddleware"/>, or <see langword="null"/> if not present.
+    /// </summary>
+    internal static TenantDocument? GetTenant(FunctionContext context)
+    {
+        return context.Items.TryGetValue(TenantResolutionMiddleware.TenantContextKey, out var raw)
+            && raw is TenantDocument tenant
+                ? tenant
+                : null;
+    }
+
+    /// <summary>
+    /// Returns the <c>tenantId</c> from the resolved <see cref="TenantDocument"/>,
+    /// or <see langword="null"/> if the tenant has not been resolved.
+    /// </summary>
+    internal static string? GetTenantId(FunctionContext context) => GetTenant(context)?.TenantId;
 }
