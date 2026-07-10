@@ -16,11 +16,17 @@
     "CosmosDb__ContainerName": "sessions",
     "CosmosDb__GoalsContainerName": "goals",
     "CosmosDb__ClientsContainerName": "clients",
+    "CosmosDb__TenantsContainerName": "tenants",
+    "CosmosDb__TherapistProfilesContainerName": "therapist-profiles",
+    "CosmosDb__ProvidersContainerName": "providers",
     "Auth__Disabled": "false",
     "AzureAd__TenantId": "<your-entra-tenant-id>",
     "AzureAd__ClientId": "<theragraf-api-app-registration-client-id>",
     "AzureSpeech__Region": "<your-speech-service-region e.g. eastus>",
     "AzureSpeech__ApiKey": "<your-speech-service-api-key>",
-    "Demo__TherapistName": ""
+    "Demo__TherapistName": "",
+    "MultiTenant__TenantIdClaimType": "tid",
+    "MultiTenant__SyntheticTenantName": "Self-Hosted",
+    "Admin__MigrationKey": "<leave-blank-to-disable-or-set-a-secret-to-enable-migration-endpoint>"
   }
 }
