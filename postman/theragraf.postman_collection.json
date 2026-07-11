@@ -964,7 +964,7 @@
                                                                          "type":  "text"
                                                                      }
                                                                  ],
-                                                      "url":  "{{liveBaseUrl}}/api/admin/migrate-partitions",
+                                                      "url":  "{{liveBaseUrl}}/api/manage/migrate-partitions",
                                                       "description":  "One-time partition key migration. Append ?dryRun=true to preview without writing. Requires migrationKey collection variable."
                                                   },
                                       "response":  [
@@ -975,3 +975,4 @@
                  }
              ]
 }
+
