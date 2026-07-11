@@ -39,6 +39,16 @@ internal static class ClaimsHelper
     }
 
     /// <summary>
+    /// Returns <see langword="true"/> when a validated <see cref="ClaimsPrincipal"/> is present
+    /// in the function context, regardless of which claims it carries. Accepts both user tokens
+    /// and app-only (client credentials) tokens.
+    /// </summary>
+    internal static bool IsAuthenticated(HttpRequestData req) =>
+        req.FunctionContext.Items.TryGetValue("ClaimsPrincipal", out var raw)
+        && raw is ClaimsPrincipal principal
+        && principal.Identity?.IsAuthenticated == true;
+
+    /// <summary>
     /// Extracts the user identity from the FunctionContext.Items dictionary.
     /// Used by rate limiting and other middleware to identify the current user.
     /// Returns null if no ClaimsPrincipal is present.
