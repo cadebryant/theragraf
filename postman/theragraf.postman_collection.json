@@ -1,853 +1,977 @@
-{
-  "info": {
-    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "name": "Theragraf - Documentation Pipeline",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "variable": [
-    {
-      "key": "aoaiEndpoint",
-      "value": "https://cadehbryant-theragraf-resource.cognitiveservices.azure.com"
-    },
-    {
-      "key": "aoaiDeployment",
-      "value": "gpt-4o-mini"
-    },
-    {
-      "key": "aoaiApiVersion",
-      "value": "2024-12-01-preview"
-    },
-    {
-      "key": "aoaiApiKey",
-      "value": "YOUR_AOAI_KEY"
-    },
-    {
-      "key": "instanceId",
-      "value": ""
-    },
-    {
-      "key": "statusCode",
-      "value": ""
-    },
-    {
-      "key": "generatedTranscript",
-      "value": ""
-    },
-    {
-      "key": "therapistName",
-      "value": ""
-    },
-    {
-      "key": "sessionDate",
-      "value": ""
-    },
-    {
-      "key": "requestBody",
-      "value": ""
-    },
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:7071"
-    },
-    {
-      "key": "durableCode",
-      "value": "YOUR_LOCAL_DURABLE_CODE"
-    },
-    {
-      "key": "liveBaseUrl",
-      "value": "https://theragraf-functions.azurewebsites.net"
-    },
-    {
-      "key": "liveDurableCode",
-      "value": "YOUR_LIVE_DURABLE_CODE"
-    },
-    {
-      "key": "accessToken",
-      "value": ""
-    },
-    {
-      "key": "deviceCode",
-      "value": ""
-    },
-    {
-      "key": "tenantId",
-      "value": "9525f140-7768-4f65-8ebb-54bd5151f7cb"
-    },
-    {
-      "key": "apiClientId",
-      "value": "d84a7ccd-aaa1-4adf-8211-7c03fa3d319a"
-    },
-    {
-      "key": "clientSecret",
-      "value": "YOUR_CLIENT_SECRET"
-    },
-    {
-      "key": "clientId",
-      "value": ""
-    }
-  ],
-  "item": [
-    {
-      "name": "Local",
-      "item": [
-        {
-          "name": "1 - Generate Synthetic OT Transcript",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const json = pm.response.json();",
-                  "const raw = json.choices[0].message.content;",
-                  "let parsed;",
-                  "try {",
-                  "    const clean = raw.replace(/^```(?:json)?\\s*/i, '').replace(/```\\s*$/,'').trim();",
-                  "    parsed = JSON.parse(clean);",
-                  "} catch (e) {",
-                  "    throw new Error('Step 1 response was not valid JSON. Raw content: ' + raw.substring(0, 300));",
-                  "}",
-                  "pm.collectionVariables.set('generatedTranscript', parsed.transcript);",
-                  "pm.collectionVariables.set('therapistName', parsed.therapistName);",
-                  "pm.test('Transcript generated', () => { pm.expect(parsed.transcript).to.be.a('string').and.have.length.greaterThan(100); });",
-                  "pm.test('Therapist name extracted', () => { pm.expect(parsed.therapistName).to.be.a('string').and.have.length.greaterThan(0); });",
-                  "console.log('Therapist name:', parsed.therapistName);",
-                  "console.log('Generated transcript:', parsed.transcript);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "api-key",
-                "value": "{{aoaiApiKey}}"
-              }
-            ],
-            "url": "{{aoaiEndpoint}}/openai/deployments/{{aoaiDeployment}}/chat/completions?api-version={{aoaiApiVersion}}",
-            "body": {
-              "mode": "raw",
-              "raw": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are generating realistic synthetic occupational therapy session transcripts for software testing purposes. Always use clearly fictional names. Include natural dialogue, OT-specific assessments, and functional goals. The transcript should feel like a real 20-minute session with back-and-forth conversation. You must respond with valid JSON only - no markdown, no code fences, no extra text. The JSON must have exactly two fields: therapistName (string, the full name of the therapist in the transcript) and transcript (string, the full transcript text).\"},{\"role\":\"user\",\"content\":\"Generate a realistic 20-minute occupational therapy session transcript. Use random seed {{$randomInt}} to ensure variety. Randomly pick one of these scenarios: (1) stroke patient relearning ADLs such as dressing and grooming, (2) pediatric patient with fine motor delays working on handwriting and scissor skills, (3) adult with TBI working on cognitive rehabilitation including memory and executive function, (4) elderly patient recovering from hip replacement focusing on safe transfers and home modifications, (5) child with sensory processing disorder working on sensory integration, (6) adult with hand injury doing range of motion and strengthening exercises. Use completely different fictional patient and therapist names each time. Include functional assessments with specific scores or measurements, detailed patient responses showing progress or struggle, therapist clinical reasoning, home exercise program discussion, and a plan for the next session. Return only a JSON object with fields therapistName and transcript.\"}],\"temperature\":1.2,\"max_tokens\":2500}"
-            }
-          }
-        },
-        {
-          "name": "2 - Start Documentation",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const transcript = pm.collectionVariables.get('generatedTranscript');",
-                  "const therapistName = pm.collectionVariables.get('therapistName');",
-                  "if (!transcript) { throw new Error('No transcript found. Run step 1 first.'); }",
-                  "if (!therapistName) { throw new Error('No therapist name found. Run step 1 first.'); }",
-                  "const names = ['alex','blake','casey','dana','drew','jamie','morgan','parker','quinn','riley','sage','taylor'];",
-                  "const name = names[Math.floor(Math.random() * names.length)];",
-                  "const suffix = Math.random().toString(36).slice(2, 6);",
-                  "const clientId = 'client-' + name + '-' + suffix;",
-                  "pm.collectionVariables.set('clientId', clientId);",
-                  "const body = JSON.stringify({ clientId, therapistName, sessionDate: new Date().toISOString(), discipline: 0, sessionDurationMinutes: 45, setting: 0, payer: 0, rawTranscript: transcript });",
-                  "pm.collectionVariables.set('requestBody', body);",
-                  "console.log('Client ID:', clientId);",
-                  "console.log('Therapist name:', therapistName);"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const json = pm.response.json();",
-                  "pm.collectionVariables.set('instanceId', json.instanceId);",
-                  "pm.collectionVariables.set('statusQueryGetUri', json.statusQueryGetUri);",
-                  "pm.test('Orchestration started', () => { pm.expect(json.instanceId).to.be.a('string'); });",
-                  "console.log('Instance ID:', json.instanceId);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/api/DocumentationStart",
-            "body": {
-              "mode": "raw",
-              "raw": "{{requestBody}}"
-            }
-          }
-        },
-        {
-          "name": "3 - Poll for Completion",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const json = pm.response.json();",
-                  "pm.collectionVariables.set('statusCode', json.runtimeStatus);",
-                  "pm.test('Status received', () => { pm.expect(['Running', 'Completed', 'Failed']).to.include(json.runtimeStatus); });",
-                  "console.log('Status:', json.runtimeStatus);",
-                  "if (json.runtimeStatus === 'Completed') {",
-                  "    pm.test('SOAP note has Subjective', () => pm.expect(json.output.RestoredNote.Subjective).to.be.a('string'));",
-                  "    pm.test('SOAP note has Objective',  () => pm.expect(json.output.RestoredNote.Objective).to.be.a('string'));",
-                  "    pm.test('SOAP note has Assessment', () => pm.expect(json.output.RestoredNote.Assessment).to.be.a('string'));",
-                  "    pm.test('SOAP note has Plan',       () => pm.expect(json.output.RestoredNote.Plan).to.be.a('string'));",
-                  "    pm.test('CPT codes present', () => pm.expect(json.output.SuggestedCptCodes).to.be.an('array').that.is.not.empty);",
-                  "    pm.test('CPT codes have required fields', () => { json.output.SuggestedCptCodes.forEach(c => { pm.expect(c.Code).to.be.a('string'); pm.expect(c.Description).to.be.a('string'); pm.expect(c.Rationale).to.be.a('string'); pm.expect(c.BillableUnits).to.be.a('number'); }); });",
-                  "    pm.test('ICD-10 codes present', () => pm.expect(json.output.SuggestedIcdCodes).to.be.an('array').that.is.not.empty);",
-                  "    pm.test('ICD-10 codes have required fields', () => { json.output.SuggestedIcdCodes.forEach(c => { pm.expect(c.Code).to.be.a('string'); pm.expect(c.Description).to.be.a('string'); pm.expect(c.Rationale).to.be.a('string'); }); });",
-                  "    console.log('Output:', JSON.stringify(json.output, null, 2));",
-                  "} else if (json.runtimeStatus === 'Failed') {",
-                  "    pm.test('Orchestration failed', () => { throw new Error(json.output); });",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/runtime/webhooks/durabletask/instances/{{instanceId}}?code={{durableCode}}"
-          }
-        },
-        {
-          "name": "4 - Get All Sessions for Client",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('Response has items array', () => pm.expect(json.items).to.be.an('array'));",
-                  "pm.test('Response has pageSize',    () => pm.expect(json.pageSize).to.be.a('number'));",
-                  "pm.test('Response has hasMore',     () => pm.expect(json.hasMore).to.be.a('boolean'));",
-                  "if (json.items.length > 0) {",
-                  "    const first = json.items[0];",
-                  "    pm.test('Session has clientId',      () => pm.expect(first.clientId).to.be.a('string'));",
-                  "    pm.test('Session has sessionDate',   () => pm.expect(first.sessionDate).to.be.a('string'));",
-                  "    pm.test('Session has soapNote',      () => pm.expect(first.soapNote).to.be.an('object'));",
-                  "    pm.test('Session has CPT codes',     () => pm.expect(first.suggestedCptCodes).to.be.an('array'));",
-                  "    pm.test('Session has ICD codes',     () => pm.expect(first.suggestedIcdCodes).to.be.an('array'));",
-                  "    pm.test('Session has therapistName', () => pm.expect(first.therapistName).to.be.a('string'));",
-                  "    pm.collectionVariables.set('sessionDate', first.sessionDate);",
-                  "    console.log('Latest session date saved:', first.sessionDate);",
-                  "}",
-                  "if (json.continuationToken) { console.log('Next page token:', json.continuationToken); }",
-                  "console.log('Sessions on this page:', json.items.length, '| hasMore:', json.hasMore);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/api/sessions/{{clientId}}"
-          }
-        },
-        {
-          "name": "5 - Get Specific Session by Client and Date",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200 or 404', () => { pm.expect([200, 404]).to.include(pm.response.code); });",
-                  "if (pm.response.code === 200) {",
-                  "    const json = pm.response.json();",
-                  "    pm.test('Has clientId',  () => pm.expect(json.clientId).to.be.a('string'));",
-                  "    pm.test('Has soapNote',  () => pm.expect(json.soapNote).to.be.an('object'));",
-                  "    pm.test('Has CPT codes', () => pm.expect(json.suggestedCptCodes).to.be.an('array'));",
-                  "    pm.test('Has ICD codes', () => pm.expect(json.suggestedIcdCodes).to.be.an('array'));",
-                  "    console.log('Session:', JSON.stringify(json, null, 2));",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}"
-          }
-        },
-        {
-          "name": "6 - Get Stats by Therapist",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('Has therapistName',                 () => pm.expect(json.therapistName).to.be.a('string'));",
-                  "pm.test('Has totalSessions',                 () => pm.expect(json.totalSessions).to.be.a('number'));",
-                  "pm.test('Has totalClients',                  () => pm.expect(json.totalClients).to.be.a('number'));",
-                  "pm.test('Has averageSessionDurationMinutes', () => pm.expect(json.averageSessionDurationMinutes).to.be.a('number'));",
-                  "pm.test('Has totalBillableUnits',            () => pm.expect(json.totalBillableUnits).to.be.a('number'));",
-                  "pm.test('Has sessionsByDiscipline',          () => pm.expect(json.sessionsByDiscipline).to.be.an('object'));",
-                  "pm.test('Has sessionsBySetting',             () => pm.expect(json.sessionsBySetting).to.be.an('object'));",
-                  "pm.test('Has sessionsByPayer',               () => pm.expect(json.sessionsByPayer).to.be.an('object'));",
-                  "pm.test('Has topCptCodes',                   () => pm.expect(json.topCptCodes).to.be.an('array'));",
-                  "pm.test('Has topIcdCodes',                   () => pm.expect(json.topIcdCodes).to.be.an('array'));",
-                  "console.log('Therapist stats:', JSON.stringify(json, null, 2));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/api/stats/therapist/{{therapistName}}"
-          }
-        },
-        {
-          "name": "7 - Get Stats by Client",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('Has clientId',                      () => pm.expect(json.clientId).to.be.a('string'));",
-                  "pm.test('Has totalSessions',                 () => pm.expect(json.totalSessions).to.be.a('number'));",
-                  "pm.test('Has averageSessionDurationMinutes', () => pm.expect(json.averageSessionDurationMinutes).to.be.a('number'));",
-                  "pm.test('Has totalBillableUnits',            () => pm.expect(json.totalBillableUnits).to.be.a('number'));",
-                  "pm.test('Has sessionsByTherapist',           () => pm.expect(json.sessionsByTherapist).to.be.an('object'));",
-                  "pm.test('Has sessionsByDiscipline',          () => pm.expect(json.sessionsByDiscipline).to.be.an('object'));",
-                  "pm.test('Has sessionsBySetting',             () => pm.expect(json.sessionsBySetting).to.be.an('object'));",
-                  "pm.test('Has sessionsByPayer',               () => pm.expect(json.sessionsByPayer).to.be.an('object'));",
-                  "pm.test('Has topCptCodes',                   () => pm.expect(json.topCptCodes).to.be.an('array'));",
-                  "pm.test('Has topIcdCodes',                   () => pm.expect(json.topIcdCodes).to.be.an('array'));",
-                  "console.log('Client stats:', JSON.stringify(json, null, 2));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/api/stats/client/{{clientId}}"
-          }
-        },
-        {
-          "name": "8 - Update Session",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200 or 404', () => pm.expect([200, 404]).to.include(pm.response.code));",
-                  "if (pm.response.code === 200) {",
-                  "    const json = pm.response.json();",
-                  "    pm.test('Has clientId',  () => pm.expect(json.clientId).to.be.a('string'));",
-                  "    pm.test('Has soapNote',  () => pm.expect(json.soapNote).to.be.an('object'));",
-                  "    pm.test('Has CPT codes', () => pm.expect(json.suggestedCptCodes).to.be.an('array'));",
-                  "    pm.test('Has ICD codes', () => pm.expect(json.suggestedIcdCodes).to.be.an('array'));",
-                  "    console.log('Updated session:', JSON.stringify(json, null, 2));",
-                  "} else {",
-                  "    console.log('Session not found - run steps 2-4 first to create and retrieve a session.');",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"soapNote\": {\n    \"subjective\": \"Patient reports significant improvement in pain levels, now 2/10. Tolerated full session well with no fatigue complaints.\",\n    \"plan\": \"Progress to phase 2 strengthening exercises. Schedule follow-up in 1 week. Patient to continue home exercise program daily.\"\n  },\n  \"suggestedCptCodes\": [\n    {\n      \"code\": \"97110\",\n      \"description\": \"Therapeutic Exercise\",\n      \"rationale\": \"Progressive strengthening to address functional deficits\",\n      \"billableUnits\": 2\n    },\n    {\n      \"code\": \"97530\",\n      \"description\": \"Therapeutic Activities\",\n      \"rationale\": \"Functional task training for ADL independence\",\n      \"billableUnits\": 2\n    }\n  ]\n}"
-            }
-          }
-        },
-        {
-          "name": "9 - Delete Session",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 204 or 404', () => pm.expect([204, 404]).to.include(pm.response.code));",
-                  "if (pm.response.code === 204) { console.log('Session deleted successfully.'); }",
-                  "else { console.log('Session not found - may have already been deleted.'); }"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{baseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Live (Azure)",
-      "item": [
-        {
-          "name": "0 - Get Token (Auto / Client Credentials)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const json = pm.response.json();",
-                  "if (json.access_token) {",
-                  "    pm.collectionVariables.set('accessToken', json.access_token);",
-                  "    pm.test('Access token acquired', () => pm.expect(json.access_token).to.be.a('string'));",
-                  "    console.log('Token acquired. You can now run steps 1 onwards.');",
-                  "} else {",
-                  "    pm.test('Token error: ' + json.error, () => { throw new Error(json.error_description); });",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/x-www-form-urlencoded"
-              }
-            ],
-            "url": "https://login.microsoftonline.com/{{tenantId}}/oauth2/v2.0/token",
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "grant_type",
-                  "value": "client_credentials"
-                },
-                {
-                  "key": "client_id",
-                  "value": "{{apiClientId}}"
-                },
-                {
-                  "key": "client_secret",
-                  "value": "{{clientSecret}}"
-                },
-                {
-                  "key": "scope",
-                  "value": "api://{{apiClientId}}/.default"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "1 - Generate Synthetic OT Transcript",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const json = pm.response.json();",
-                  "const raw = json.choices[0].message.content;",
-                  "let parsed;",
-                  "try {",
-                  "    const clean = raw.replace(/^```(?:json)?\\s*/i, '').replace(/```\\s*$/,'').trim();",
-                  "    parsed = JSON.parse(clean);",
-                  "} catch (e) {",
-                  "    throw new Error('Step 1 response was not valid JSON. Raw content: ' + raw.substring(0, 300));",
-                  "}",
-                  "pm.collectionVariables.set('generatedTranscript', parsed.transcript);",
-                  "pm.collectionVariables.set('therapistName', parsed.therapistName);",
-                  "pm.test('Transcript generated', () => { pm.expect(parsed.transcript).to.be.a('string').and.have.length.greaterThan(100); });",
-                  "pm.test('Therapist name extracted', () => { pm.expect(parsed.therapistName).to.be.a('string').and.have.length.greaterThan(0); });",
-                  "console.log('Therapist name:', parsed.therapistName);",
-                  "console.log('Generated transcript:', parsed.transcript);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "api-key",
-                "value": "{{aoaiApiKey}}"
-              }
-            ],
-            "url": "{{aoaiEndpoint}}/openai/deployments/{{aoaiDeployment}}/chat/completions?api-version={{aoaiApiVersion}}",
-            "body": {
-              "mode": "raw",
-              "raw": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are generating realistic synthetic occupational therapy session transcripts for software testing purposes. Always use clearly fictional names. Include natural dialogue, OT-specific assessments, and functional goals. The transcript should feel like a real 20-minute session with back-and-forth conversation. You must respond with valid JSON only - no markdown, no code fences, no extra text. The JSON must have exactly two fields: therapistName (string, the full name of the therapist in the transcript) and transcript (string, the full transcript text).\"},{\"role\":\"user\",\"content\":\"Generate a realistic 20-minute occupational therapy session transcript. Use random seed {{$randomInt}} to ensure variety. Randomly pick one of these scenarios: (1) stroke patient relearning ADLs such as dressing and grooming, (2) pediatric patient with fine motor delays working on handwriting and scissor skills, (3) adult with TBI working on cognitive rehabilitation including memory and executive function, (4) elderly patient recovering from hip replacement focusing on safe transfers and home modifications, (5) child with sensory processing disorder working on sensory integration, (6) adult with hand injury doing range of motion and strengthening exercises. Use completely different fictional patient and therapist names each time. Include functional assessments with specific scores or measurements, detailed patient responses showing progress or struggle, therapist clinical reasoning, home exercise program discussion, and a plan for the next session. Return only a JSON object with fields therapistName and transcript.\"}],\"temperature\":1.2,\"max_tokens\":2500}"
-            }
-          }
-        },
-        {
-          "name": "2 - Start Documentation",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const transcript = pm.collectionVariables.get('generatedTranscript');",
-                  "const therapistName = pm.collectionVariables.get('therapistName');",
-                  "if (!transcript) { throw new Error('No transcript found. Run step 1 first.'); }",
-                  "if (!therapistName) { throw new Error('No therapist name found. Run step 1 first.'); }",
-                  "const names = ['alex','blake','casey','dana','drew','jamie','morgan','parker','quinn','riley','sage','taylor'];",
-                  "const name = names[Math.floor(Math.random() * names.length)];",
-                  "const suffix = Math.random().toString(36).slice(2, 6);",
-                  "const clientId = 'client-' + name + '-' + suffix;",
-                  "pm.collectionVariables.set('clientId', clientId);",
-                  "const body = JSON.stringify({ clientId, therapistName, sessionDate: new Date().toISOString(), discipline: 0, sessionDurationMinutes: 45, setting: 0, payer: 0, rawTranscript: transcript });",
-                  "pm.collectionVariables.set('requestBody', body);",
-                  "console.log('Client ID:', clientId);",
-                  "console.log('Therapist name:', therapistName);"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const json = pm.response.json();",
-                  "pm.collectionVariables.set('instanceId', json.instanceId);",
-                  "pm.collectionVariables.set('statusQueryGetUri', json.statusQueryGetUri);",
-                  "pm.test('Orchestration started', () => { pm.expect(json.instanceId).to.be.a('string'); });",
-                  "console.log('Instance ID:', json.instanceId);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{liveBaseUrl}}/api/DocumentationStart",
-            "body": {
-              "mode": "raw",
-              "raw": "{{requestBody}}"
-            }
-          }
-        },
-        {
-          "name": "3 - Poll for Completion",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const json = pm.response.json();",
-                  "pm.collectionVariables.set('statusCode', json.runtimeStatus);",
-                  "pm.test('Status received', () => { pm.expect(['Running', 'Completed', 'Failed']).to.include(json.runtimeStatus); });",
-                  "console.log('Status:', json.runtimeStatus);",
-                  "if (json.runtimeStatus === 'Completed') {",
-                  "    pm.test('SOAP note has Subjective', () => pm.expect(json.output.RestoredNote.Subjective).to.be.a('string'));",
-                  "    pm.test('SOAP note has Objective',  () => pm.expect(json.output.RestoredNote.Objective).to.be.a('string'));",
-                  "    pm.test('SOAP note has Assessment', () => pm.expect(json.output.RestoredNote.Assessment).to.be.a('string'));",
-                  "    pm.test('SOAP note has Plan',       () => pm.expect(json.output.RestoredNote.Plan).to.be.a('string'));",
-                  "    pm.test('CPT codes present', () => pm.expect(json.output.SuggestedCptCodes).to.be.an('array').that.is.not.empty);",
-                  "    pm.test('CPT codes have required fields', () => { json.output.SuggestedCptCodes.forEach(c => { pm.expect(c.Code).to.be.a('string'); pm.expect(c.Description).to.be.a('string'); pm.expect(c.Rationale).to.be.a('string'); pm.expect(c.BillableUnits).to.be.a('number'); }); });",
-                  "    pm.test('ICD-10 codes present', () => pm.expect(json.output.SuggestedIcdCodes).to.be.an('array').that.is.not.empty);",
-                  "    pm.test('ICD-10 codes have required fields', () => { json.output.SuggestedIcdCodes.forEach(c => { pm.expect(c.Code).to.be.a('string'); pm.expect(c.Description).to.be.a('string'); pm.expect(c.Rationale).to.be.a('string'); }); });",
-                  "    console.log('Output:', JSON.stringify(json.output, null, 2));",
-                  "} else if (json.runtimeStatus === 'Failed') {",
-                  "    pm.test('Orchestration failed', () => { throw new Error(json.output); });",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "url": "{{statusQueryGetUri}}"
-          }
-        },
-        {
-          "name": "4 - Get All Sessions for Client",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('Response has items array', () => pm.expect(json.items).to.be.an('array'));",
-                  "pm.test('Response has pageSize',    () => pm.expect(json.pageSize).to.be.a('number'));",
-                  "pm.test('Response has hasMore',     () => pm.expect(json.hasMore).to.be.a('boolean'));",
-                  "if (json.items.length > 0) {",
-                  "    const first = json.items[0];",
-                  "    pm.test('Session has clientId',      () => pm.expect(first.clientId).to.be.a('string'));",
-                  "    pm.test('Session has sessionDate',   () => pm.expect(first.sessionDate).to.be.a('string'));",
-                  "    pm.test('Session has soapNote',      () => pm.expect(first.soapNote).to.be.an('object'));",
-                  "    pm.test('Session has CPT codes',     () => pm.expect(first.suggestedCptCodes).to.be.an('array'));",
-                  "    pm.test('Session has ICD codes',     () => pm.expect(first.suggestedIcdCodes).to.be.an('array'));",
-                  "    pm.test('Session has therapistName', () => pm.expect(first.therapistName).to.be.a('string'));",
-                  "    pm.collectionVariables.set('sessionDate', first.sessionDate);",
-                  "    console.log('Latest session date saved:', first.sessionDate);",
-                  "}",
-                  "if (json.continuationToken) { console.log('Next page token:', json.continuationToken); }",
-                  "console.log('Sessions on this page:', json.items.length, '| hasMore:', json.hasMore);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{liveBaseUrl}}/api/sessions/{{clientId}}"
-          }
-        },
-        {
-          "name": "5 - Get Specific Session by Client and Date",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200 or 404', () => { pm.expect([200, 404]).to.include(pm.response.code); });",
-                  "if (pm.response.code === 200) {",
-                  "    const json = pm.response.json();",
-                  "    pm.test('Has clientId',  () => pm.expect(json.clientId).to.be.a('string'));",
-                  "    pm.test('Has soapNote',  () => pm.expect(json.soapNote).to.be.an('object'));",
-                  "    pm.test('Has CPT codes', () => pm.expect(json.suggestedCptCodes).to.be.an('array'));",
-                  "    pm.test('Has ICD codes', () => pm.expect(json.suggestedIcdCodes).to.be.an('array'));",
-                  "    console.log('Session:', JSON.stringify(json, null, 2));",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{liveBaseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}"
-          }
-        },
-        {
-          "name": "6 - Get Stats by Therapist",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('Has therapistName',                 () => pm.expect(json.therapistName).to.be.a('string'));",
-                  "pm.test('Has totalSessions',                 () => pm.expect(json.totalSessions).to.be.a('number'));",
-                  "pm.test('Has totalClients',                  () => pm.expect(json.totalClients).to.be.a('number'));",
-                  "pm.test('Has averageSessionDurationMinutes', () => pm.expect(json.averageSessionDurationMinutes).to.be.a('number'));",
-                  "pm.test('Has totalBillableUnits',            () => pm.expect(json.totalBillableUnits).to.be.a('number'));",
-                  "pm.test('Has sessionsByDiscipline',          () => pm.expect(json.sessionsByDiscipline).to.be.an('object'));",
-                  "pm.test('Has sessionsBySetting',             () => pm.expect(json.sessionsBySetting).to.be.an('object'));",
-                  "pm.test('Has sessionsByPayer',               () => pm.expect(json.sessionsByPayer).to.be.an('object'));",
-                  "pm.test('Has topCptCodes',                   () => pm.expect(json.topCptCodes).to.be.an('array'));",
-                  "pm.test('Has topIcdCodes',                   () => pm.expect(json.topIcdCodes).to.be.an('array'));",
-                  "console.log('Therapist stats:', JSON.stringify(json, null, 2));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{liveBaseUrl}}/api/stats/therapist/{{therapistName}}"
-          }
-        },
-        {
-          "name": "7 - Get Stats by Client",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('Has clientId',                      () => pm.expect(json.clientId).to.be.a('string'));",
-                  "pm.test('Has totalSessions',                 () => pm.expect(json.totalSessions).to.be.a('number'));",
-                  "pm.test('Has averageSessionDurationMinutes', () => pm.expect(json.averageSessionDurationMinutes).to.be.a('number'));",
-                  "pm.test('Has totalBillableUnits',            () => pm.expect(json.totalBillableUnits).to.be.a('number'));",
-                  "pm.test('Has sessionsByTherapist',           () => pm.expect(json.sessionsByTherapist).to.be.an('object'));",
-                  "pm.test('Has sessionsByDiscipline',          () => pm.expect(json.sessionsByDiscipline).to.be.an('object'));",
-                  "pm.test('Has sessionsBySetting',             () => pm.expect(json.sessionsBySetting).to.be.an('object'));",
-                  "pm.test('Has sessionsByPayer',               () => pm.expect(json.sessionsByPayer).to.be.an('object'));",
-                  "pm.test('Has topCptCodes',                   () => pm.expect(json.topCptCodes).to.be.an('array'));",
-                  "pm.test('Has topIcdCodes',                   () => pm.expect(json.topIcdCodes).to.be.an('array'));",
-                  "console.log('Client stats:', JSON.stringify(json, null, 2));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{liveBaseUrl}}/api/stats/client/{{clientId}}"
-          }
-        },
-        {
-          "name": "8 - Update Session",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200 or 404', () => pm.expect([200, 404]).to.include(pm.response.code));",
-                  "if (pm.response.code === 200) {",
-                  "    const json = pm.response.json();",
-                  "    pm.test('Has clientId',  () => pm.expect(json.clientId).to.be.a('string'));",
-                  "    pm.test('Has soapNote',  () => pm.expect(json.soapNote).to.be.an('object'));",
-                  "    pm.test('Has CPT codes', () => pm.expect(json.suggestedCptCodes).to.be.an('array'));",
-                  "    pm.test('Has ICD codes', () => pm.expect(json.suggestedIcdCodes).to.be.an('array'));",
-                  "    console.log('Updated session:', JSON.stringify(json, null, 2));",
-                  "} else {",
-                  "    console.log('Session not found - run steps 2-4 first to create and retrieve a session.');",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{liveBaseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"soapNote\": {\n    \"subjective\": \"Patient reports significant improvement in pain levels, now 2/10. Tolerated full session well with no fatigue complaints.\",\n    \"plan\": \"Progress to phase 2 strengthening exercises. Schedule follow-up in 1 week. Patient to continue home exercise program daily.\"\n  },\n  \"suggestedCptCodes\": [\n    {\n      \"code\": \"97110\",\n      \"description\": \"Therapeutic Exercise\",\n      \"rationale\": \"Progressive strengthening to address functional deficits\",\n      \"billableUnits\": 2\n    },\n    {\n      \"code\": \"97530\",\n      \"description\": \"Therapeutic Activities\",\n      \"rationale\": \"Functional task training for ADL independence\",\n      \"billableUnits\": 2\n    }\n  ]\n}"
-            }
-          }
-        },
-        {
-          "name": "9 - Delete Session",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 204 or 404', () => pm.expect([204, 404]).to.include(pm.response.code));",
-                  "if (pm.response.code === 204) { console.log('Session deleted successfully.'); }",
-                  "else { console.log('Session not found - may have already been deleted.'); }"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": "{{liveBaseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}"
-          }
-        }
-      ]
-    }
-  ]
+﻿{
+    "info":  {
+                 "_postman_id":  "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                 "name":  "Theragraf - Documentation Pipeline",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "variable":  [
+                     {
+                         "key":  "aoaiEndpoint",
+                         "value":  "https://cadehbryant-theragraf-resource.cognitiveservices.azure.com"
+                     },
+                     {
+                         "key":  "aoaiDeployment",
+                         "value":  "gpt-4o-mini"
+                     },
+                     {
+                         "key":  "aoaiApiVersion",
+                         "value":  "2024-12-01-preview"
+                     },
+                     {
+                         "key":  "aoaiApiKey",
+                         "value":  "YOUR_AOAI_KEY"
+                     },
+                     {
+                         "key":  "instanceId",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "statusCode",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "generatedTranscript",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "therapistName",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "sessionDate",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "requestBody",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "baseUrl",
+                         "value":  "http://localhost:7071"
+                     },
+                     {
+                         "key":  "durableCode",
+                         "value":  "YOUR_LOCAL_DURABLE_CODE"
+                     },
+                     {
+                         "key":  "liveBaseUrl",
+                         "value":  "https://theragraf-functions.azurewebsites.net"
+                     },
+                     {
+                         "key":  "liveDurableCode",
+                         "value":  "YOUR_LIVE_DURABLE_CODE"
+                     },
+                     {
+                         "key":  "accessToken",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "deviceCode",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "tenantId",
+                         "value":  "9525f140-7768-4f65-8ebb-54bd5151f7cb"
+                     },
+                     {
+                         "key":  "apiClientId",
+                         "value":  "d84a7ccd-aaa1-4adf-8211-7c03fa3d319a"
+                     },
+                     {
+                         "key":  "clientSecret",
+                         "value":  "YOUR_CLIENT_SECRET"
+                     },
+                     {
+                         "key":  "clientId",
+                         "value":  ""
+                     },
+                     {
+                         "key":  "migrationKey",
+                         "value":  "YOUR_MIGRATION_KEY"
+                     }
+                 ],
+    "item":  [
+                 {
+                     "name":  "Local",
+                     "item":  [
+                                  {
+                                      "name":  "1 - Generate Synthetic OT Transcript",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const json = pm.response.json();",
+                                                                                    "const raw = json.choices[0].message.content;",
+                                                                                    "let parsed;",
+                                                                                    "try {",
+                                                                                    "    const clean = raw.replace(/^```(?:json)?\\s*/i, \u0027\u0027).replace(/```\\s*$/,\u0027\u0027).trim();",
+                                                                                    "    parsed = JSON.parse(clean);",
+                                                                                    "} catch (e) {",
+                                                                                    "    throw new Error(\u0027Step 1 response was not valid JSON. Raw content: \u0027 + raw.substring(0, 300));",
+                                                                                    "}",
+                                                                                    "pm.collectionVariables.set(\u0027generatedTranscript\u0027, parsed.transcript);",
+                                                                                    "pm.collectionVariables.set(\u0027therapistName\u0027, parsed.therapistName);",
+                                                                                    "pm.test(\u0027Transcript generated\u0027, () =\u003e { pm.expect(parsed.transcript).to.be.a(\u0027string\u0027).and.have.length.greaterThan(100); });",
+                                                                                    "pm.test(\u0027Therapist name extracted\u0027, () =\u003e { pm.expect(parsed.therapistName).to.be.a(\u0027string\u0027).and.have.length.greaterThan(0); });",
+                                                                                    "console.log(\u0027Therapist name:\u0027, parsed.therapistName);",
+                                                                                    "console.log(\u0027Generated transcript:\u0027, parsed.transcript);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "api-key",
+                                                                         "value":  "{{aoaiApiKey}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{aoaiEndpoint}}/openai/deployments/{{aoaiDeployment}}/chat/completions?api-version={{aoaiApiVersion}}",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\"messages\":[{\"role\":\"system\",\"content\":\"You are generating realistic synthetic occupational therapy session transcripts for software testing purposes. Always use clearly fictional names. Include natural dialogue, OT-specific assessments, and functional goals. The transcript should feel like a real 20-minute session with back-and-forth conversation. You must respond with valid JSON only - no markdown, no code fences, no extra text. The JSON must have exactly two fields: therapistName (string, the full name of the therapist in the transcript) and transcript (string, the full transcript text).\"},{\"role\":\"user\",\"content\":\"Generate a realistic 20-minute occupational therapy session transcript. Use random seed {{$randomInt}} to ensure variety. Randomly pick one of these scenarios: (1) stroke patient relearning ADLs such as dressing and grooming, (2) pediatric patient with fine motor delays working on handwriting and scissor skills, (3) adult with TBI working on cognitive rehabilitation including memory and executive function, (4) elderly patient recovering from hip replacement focusing on safe transfers and home modifications, (5) child with sensory processing disorder working on sensory integration, (6) adult with hand injury doing range of motion and strengthening exercises. Use completely different fictional patient and therapist names each time. Include functional assessments with specific scores or measurements, detailed patient responses showing progress or struggle, therapist clinical reasoning, home exercise program discussion, and a plan for the next session. Return only a JSON object with fields therapistName and transcript.\"}],\"temperature\":1.2,\"max_tokens\":2500}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "2 - Start Documentation",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "prerequest",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const transcript = pm.collectionVariables.get(\u0027generatedTranscript\u0027);",
+                                                                                    "const therapistName = pm.collectionVariables.get(\u0027therapistName\u0027);",
+                                                                                    "if (!transcript) { throw new Error(\u0027No transcript found. Run step 1 first.\u0027); }",
+                                                                                    "if (!therapistName) { throw new Error(\u0027No therapist name found. Run step 1 first.\u0027); }",
+                                                                                    "const names = [\u0027alex\u0027,\u0027blake\u0027,\u0027casey\u0027,\u0027dana\u0027,\u0027drew\u0027,\u0027jamie\u0027,\u0027morgan\u0027,\u0027parker\u0027,\u0027quinn\u0027,\u0027riley\u0027,\u0027sage\u0027,\u0027taylor\u0027];",
+                                                                                    "const name = names[Math.floor(Math.random() * names.length)];",
+                                                                                    "const suffix = Math.random().toString(36).slice(2, 6);",
+                                                                                    "const clientId = \u0027client-\u0027 + name + \u0027-\u0027 + suffix;",
+                                                                                    "pm.collectionVariables.set(\u0027clientId\u0027, clientId);",
+                                                                                    "const body = JSON.stringify({ clientId, therapistName, sessionDate: new Date().toISOString(), discipline: 0, sessionDurationMinutes: 45, setting: 0, payer: 0, rawTranscript: transcript });",
+                                                                                    "pm.collectionVariables.set(\u0027requestBody\u0027, body);",
+                                                                                    "console.log(\u0027Client ID:\u0027, clientId);",
+                                                                                    "console.log(\u0027Therapist name:\u0027, therapistName);"
+                                                                                ]
+                                                                   }
+                                                    },
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.collectionVariables.set(\u0027instanceId\u0027, json.instanceId);",
+                                                                                    "pm.collectionVariables.set(\u0027statusQueryGetUri\u0027, json.statusQueryGetUri);",
+                                                                                    "pm.test(\u0027Orchestration started\u0027, () =\u003e { pm.expect(json.instanceId).to.be.a(\u0027string\u0027); });",
+                                                                                    "console.log(\u0027Instance ID:\u0027, json.instanceId);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/DocumentationStart",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{{requestBody}}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "3 - Poll for Completion",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.collectionVariables.set(\u0027statusCode\u0027, json.runtimeStatus);",
+                                                                                    "pm.test(\u0027Status received\u0027, () =\u003e { pm.expect([\u0027Running\u0027, \u0027Completed\u0027, \u0027Failed\u0027]).to.include(json.runtimeStatus); });",
+                                                                                    "console.log(\u0027Status:\u0027, json.runtimeStatus);",
+                                                                                    "if (json.runtimeStatus === \u0027Completed\u0027) {",
+                                                                                    "    pm.test(\u0027SOAP note has Subjective\u0027, () =\u003e pm.expect(json.output.RestoredNote.Subjective).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027SOAP note has Objective\u0027,  () =\u003e pm.expect(json.output.RestoredNote.Objective).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027SOAP note has Assessment\u0027, () =\u003e pm.expect(json.output.RestoredNote.Assessment).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027SOAP note has Plan\u0027,       () =\u003e pm.expect(json.output.RestoredNote.Plan).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027CPT codes present\u0027, () =\u003e pm.expect(json.output.SuggestedCptCodes).to.be.an(\u0027array\u0027).that.is.not.empty);",
+                                                                                    "    pm.test(\u0027CPT codes have required fields\u0027, () =\u003e { json.output.SuggestedCptCodes.forEach(c =\u003e { pm.expect(c.Code).to.be.a(\u0027string\u0027); pm.expect(c.Description).to.be.a(\u0027string\u0027); pm.expect(c.Rationale).to.be.a(\u0027string\u0027); pm.expect(c.BillableUnits).to.be.a(\u0027number\u0027); }); });",
+                                                                                    "    pm.test(\u0027ICD-10 codes present\u0027, () =\u003e pm.expect(json.output.SuggestedIcdCodes).to.be.an(\u0027array\u0027).that.is.not.empty);",
+                                                                                    "    pm.test(\u0027ICD-10 codes have required fields\u0027, () =\u003e { json.output.SuggestedIcdCodes.forEach(c =\u003e { pm.expect(c.Code).to.be.a(\u0027string\u0027); pm.expect(c.Description).to.be.a(\u0027string\u0027); pm.expect(c.Rationale).to.be.a(\u0027string\u0027); }); });",
+                                                                                    "    console.log(\u0027Output:\u0027, JSON.stringify(json.output, null, 2));",
+                                                                                    "} else if (json.runtimeStatus === \u0027Failed\u0027) {",
+                                                                                    "    pm.test(\u0027Orchestration failed\u0027, () =\u003e { throw new Error(json.output); });",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{baseUrl}}/runtime/webhooks/durabletask/instances/{{instanceId}}?code={{durableCode}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "4 - Get All Sessions for Client",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027Response has items array\u0027, () =\u003e pm.expect(json.items).to.be.an(\u0027array\u0027));",
+                                                                                    "pm.test(\u0027Response has pageSize\u0027,    () =\u003e pm.expect(json.pageSize).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Response has hasMore\u0027,     () =\u003e pm.expect(json.hasMore).to.be.a(\u0027boolean\u0027));",
+                                                                                    "if (json.items.length \u003e 0) {",
+                                                                                    "    const first = json.items[0];",
+                                                                                    "    pm.test(\u0027Session has clientId\u0027,      () =\u003e pm.expect(first.clientId).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027Session has sessionDate\u0027,   () =\u003e pm.expect(first.sessionDate).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027Session has soapNote\u0027,      () =\u003e pm.expect(first.soapNote).to.be.an(\u0027object\u0027));",
+                                                                                    "    pm.test(\u0027Session has CPT codes\u0027,     () =\u003e pm.expect(first.suggestedCptCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "    pm.test(\u0027Session has ICD codes\u0027,     () =\u003e pm.expect(first.suggestedIcdCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "    pm.test(\u0027Session has therapistName\u0027, () =\u003e pm.expect(first.therapistName).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.collectionVariables.set(\u0027sessionDate\u0027, first.sessionDate);",
+                                                                                    "    console.log(\u0027Latest session date saved:\u0027, first.sessionDate);",
+                                                                                    "}",
+                                                                                    "if (json.continuationToken) { console.log(\u0027Next page token:\u0027, json.continuationToken); }",
+                                                                                    "console.log(\u0027Sessions on this page:\u0027, json.items.length, \u0027| hasMore:\u0027, json.hasMore);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/sessions/{{clientId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "5 - Get Specific Session by Client and Date",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 200 or 404\u0027, () =\u003e { pm.expect([200, 404]).to.include(pm.response.code); });",
+                                                                                    "if (pm.response.code === 200) {",
+                                                                                    "    const json = pm.response.json();",
+                                                                                    "    pm.test(\u0027Has clientId\u0027,  () =\u003e pm.expect(json.clientId).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027Has soapNote\u0027,  () =\u003e pm.expect(json.soapNote).to.be.an(\u0027object\u0027));",
+                                                                                    "    pm.test(\u0027Has CPT codes\u0027, () =\u003e pm.expect(json.suggestedCptCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "    pm.test(\u0027Has ICD codes\u0027, () =\u003e pm.expect(json.suggestedIcdCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "    console.log(\u0027Session:\u0027, JSON.stringify(json, null, 2));",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "6 - Get Stats by Therapist",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027Has therapistName\u0027,                 () =\u003e pm.expect(json.therapistName).to.be.a(\u0027string\u0027));",
+                                                                                    "pm.test(\u0027Has totalSessions\u0027,                 () =\u003e pm.expect(json.totalSessions).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has totalClients\u0027,                  () =\u003e pm.expect(json.totalClients).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has averageSessionDurationMinutes\u0027, () =\u003e pm.expect(json.averageSessionDurationMinutes).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has totalBillableUnits\u0027,            () =\u003e pm.expect(json.totalBillableUnits).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsByDiscipline\u0027,          () =\u003e pm.expect(json.sessionsByDiscipline).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsBySetting\u0027,             () =\u003e pm.expect(json.sessionsBySetting).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsByPayer\u0027,               () =\u003e pm.expect(json.sessionsByPayer).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has topCptCodes\u0027,                   () =\u003e pm.expect(json.topCptCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "pm.test(\u0027Has topIcdCodes\u0027,                   () =\u003e pm.expect(json.topIcdCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "console.log(\u0027Therapist stats:\u0027, JSON.stringify(json, null, 2));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/stats/therapist/{{therapistName}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "7 - Get Stats by Client",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027Has clientId\u0027,                      () =\u003e pm.expect(json.clientId).to.be.a(\u0027string\u0027));",
+                                                                                    "pm.test(\u0027Has totalSessions\u0027,                 () =\u003e pm.expect(json.totalSessions).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has averageSessionDurationMinutes\u0027, () =\u003e pm.expect(json.averageSessionDurationMinutes).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has totalBillableUnits\u0027,            () =\u003e pm.expect(json.totalBillableUnits).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsByTherapist\u0027,           () =\u003e pm.expect(json.sessionsByTherapist).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsByDiscipline\u0027,          () =\u003e pm.expect(json.sessionsByDiscipline).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsBySetting\u0027,             () =\u003e pm.expect(json.sessionsBySetting).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsByPayer\u0027,               () =\u003e pm.expect(json.sessionsByPayer).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has topCptCodes\u0027,                   () =\u003e pm.expect(json.topCptCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "pm.test(\u0027Has topIcdCodes\u0027,                   () =\u003e pm.expect(json.topIcdCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "console.log(\u0027Client stats:\u0027, JSON.stringify(json, null, 2));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/stats/client/{{clientId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "8 - Update Session",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 200 or 404\u0027, () =\u003e pm.expect([200, 404]).to.include(pm.response.code));",
+                                                                                    "if (pm.response.code === 200) {",
+                                                                                    "    const json = pm.response.json();",
+                                                                                    "    pm.test(\u0027Has clientId\u0027,  () =\u003e pm.expect(json.clientId).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027Has soapNote\u0027,  () =\u003e pm.expect(json.soapNote).to.be.an(\u0027object\u0027));",
+                                                                                    "    pm.test(\u0027Has CPT codes\u0027, () =\u003e pm.expect(json.suggestedCptCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "    pm.test(\u0027Has ICD codes\u0027, () =\u003e pm.expect(json.suggestedIcdCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "    console.log(\u0027Updated session:\u0027, JSON.stringify(json, null, 2));",
+                                                                                    "} else {",
+                                                                                    "    console.log(\u0027Session not found - run steps 2-4 first to create and retrieve a session.\u0027);",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "PATCH",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"soapNote\": {\n    \"subjective\": \"Patient reports significant improvement in pain levels, now 2/10. Tolerated full session well with no fatigue complaints.\",\n    \"plan\": \"Progress to phase 2 strengthening exercises. Schedule follow-up in 1 week. Patient to continue home exercise program daily.\"\n  },\n  \"suggestedCptCodes\": [\n    {\n      \"code\": \"97110\",\n      \"description\": \"Therapeutic Exercise\",\n      \"rationale\": \"Progressive strengthening to address functional deficits\",\n      \"billableUnits\": 2\n    },\n    {\n      \"code\": \"97530\",\n      \"description\": \"Therapeutic Activities\",\n      \"rationale\": \"Functional task training for ADL independence\",\n      \"billableUnits\": 2\n    }\n  ]\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "9 - Delete Session",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 204 or 404\u0027, () =\u003e pm.expect([204, 404]).to.include(pm.response.code));",
+                                                                                    "if (pm.response.code === 204) { console.log(\u0027Session deleted successfully.\u0027); }",
+                                                                                    "else { console.log(\u0027Session not found - may have already been deleted.\u0027); }"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Seed Data (wipe + regenerate)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/seed"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Delete Seed Data",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/seed"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Mark All Synthetic",
+                                      "request":  {
+                                                      "method":  "PATCH",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/api/seed/mark-synthetic"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Live (Azure)",
+                     "item":  [
+                                  {
+                                      "name":  "0 - Get Token (Auto / Client Credentials)",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const json = pm.response.json();",
+                                                                                    "if (json.access_token) {",
+                                                                                    "    pm.collectionVariables.set(\u0027accessToken\u0027, json.access_token);",
+                                                                                    "    pm.test(\u0027Access token acquired\u0027, () =\u003e pm.expect(json.access_token).to.be.a(\u0027string\u0027));",
+                                                                                    "    console.log(\u0027Token acquired. You can now run steps 1 onwards.\u0027);",
+                                                                                    "} else {",
+                                                                                    "    pm.test(\u0027Token error: \u0027 + json.error, () =\u003e { throw new Error(json.error_description); });",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/x-www-form-urlencoded"
+                                                                     }
+                                                                 ],
+                                                      "url":  "https://login.microsoftonline.com/{{tenantId}}/oauth2/v2.0/token",
+                                                      "body":  {
+                                                                   "mode":  "urlencoded",
+                                                                   "urlencoded":  [
+                                                                                      {
+                                                                                          "key":  "grant_type",
+                                                                                          "value":  "client_credentials"
+                                                                                      },
+                                                                                      {
+                                                                                          "key":  "client_id",
+                                                                                          "value":  "{{apiClientId}}"
+                                                                                      },
+                                                                                      {
+                                                                                          "key":  "client_secret",
+                                                                                          "value":  "{{clientSecret}}"
+                                                                                      },
+                                                                                      {
+                                                                                          "key":  "scope",
+                                                                                          "value":  "api://{{apiClientId}}/.default"
+                                                                                      }
+                                                                                  ]
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "1 - Generate Synthetic OT Transcript",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const json = pm.response.json();",
+                                                                                    "const raw = json.choices[0].message.content;",
+                                                                                    "let parsed;",
+                                                                                    "try {",
+                                                                                    "    const clean = raw.replace(/^```(?:json)?\\s*/i, \u0027\u0027).replace(/```\\s*$/,\u0027\u0027).trim();",
+                                                                                    "    parsed = JSON.parse(clean);",
+                                                                                    "} catch (e) {",
+                                                                                    "    throw new Error(\u0027Step 1 response was not valid JSON. Raw content: \u0027 + raw.substring(0, 300));",
+                                                                                    "}",
+                                                                                    "pm.collectionVariables.set(\u0027generatedTranscript\u0027, parsed.transcript);",
+                                                                                    "pm.collectionVariables.set(\u0027therapistName\u0027, parsed.therapistName);",
+                                                                                    "pm.test(\u0027Transcript generated\u0027, () =\u003e { pm.expect(parsed.transcript).to.be.a(\u0027string\u0027).and.have.length.greaterThan(100); });",
+                                                                                    "pm.test(\u0027Therapist name extracted\u0027, () =\u003e { pm.expect(parsed.therapistName).to.be.a(\u0027string\u0027).and.have.length.greaterThan(0); });",
+                                                                                    "console.log(\u0027Therapist name:\u0027, parsed.therapistName);",
+                                                                                    "console.log(\u0027Generated transcript:\u0027, parsed.transcript);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "api-key",
+                                                                         "value":  "{{aoaiApiKey}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{aoaiEndpoint}}/openai/deployments/{{aoaiDeployment}}/chat/completions?api-version={{aoaiApiVersion}}",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\"messages\":[{\"role\":\"system\",\"content\":\"You are generating realistic synthetic occupational therapy session transcripts for software testing purposes. Always use clearly fictional names. Include natural dialogue, OT-specific assessments, and functional goals. The transcript should feel like a real 20-minute session with back-and-forth conversation. You must respond with valid JSON only - no markdown, no code fences, no extra text. The JSON must have exactly two fields: therapistName (string, the full name of the therapist in the transcript) and transcript (string, the full transcript text).\"},{\"role\":\"user\",\"content\":\"Generate a realistic 20-minute occupational therapy session transcript. Use random seed {{$randomInt}} to ensure variety. Randomly pick one of these scenarios: (1) stroke patient relearning ADLs such as dressing and grooming, (2) pediatric patient with fine motor delays working on handwriting and scissor skills, (3) adult with TBI working on cognitive rehabilitation including memory and executive function, (4) elderly patient recovering from hip replacement focusing on safe transfers and home modifications, (5) child with sensory processing disorder working on sensory integration, (6) adult with hand injury doing range of motion and strengthening exercises. Use completely different fictional patient and therapist names each time. Include functional assessments with specific scores or measurements, detailed patient responses showing progress or struggle, therapist clinical reasoning, home exercise program discussion, and a plan for the next session. Return only a JSON object with fields therapistName and transcript.\"}],\"temperature\":1.2,\"max_tokens\":2500}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "2 - Start Documentation",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "prerequest",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const transcript = pm.collectionVariables.get(\u0027generatedTranscript\u0027);",
+                                                                                    "const therapistName = pm.collectionVariables.get(\u0027therapistName\u0027);",
+                                                                                    "if (!transcript) { throw new Error(\u0027No transcript found. Run step 1 first.\u0027); }",
+                                                                                    "if (!therapistName) { throw new Error(\u0027No therapist name found. Run step 1 first.\u0027); }",
+                                                                                    "const names = [\u0027alex\u0027,\u0027blake\u0027,\u0027casey\u0027,\u0027dana\u0027,\u0027drew\u0027,\u0027jamie\u0027,\u0027morgan\u0027,\u0027parker\u0027,\u0027quinn\u0027,\u0027riley\u0027,\u0027sage\u0027,\u0027taylor\u0027];",
+                                                                                    "const name = names[Math.floor(Math.random() * names.length)];",
+                                                                                    "const suffix = Math.random().toString(36).slice(2, 6);",
+                                                                                    "const clientId = \u0027client-\u0027 + name + \u0027-\u0027 + suffix;",
+                                                                                    "pm.collectionVariables.set(\u0027clientId\u0027, clientId);",
+                                                                                    "const body = JSON.stringify({ clientId, therapistName, sessionDate: new Date().toISOString(), discipline: 0, sessionDurationMinutes: 45, setting: 0, payer: 0, rawTranscript: transcript });",
+                                                                                    "pm.collectionVariables.set(\u0027requestBody\u0027, body);",
+                                                                                    "console.log(\u0027Client ID:\u0027, clientId);",
+                                                                                    "console.log(\u0027Therapist name:\u0027, therapistName);"
+                                                                                ]
+                                                                   }
+                                                    },
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.collectionVariables.set(\u0027instanceId\u0027, json.instanceId);",
+                                                                                    "pm.collectionVariables.set(\u0027statusQueryGetUri\u0027, json.statusQueryGetUri);",
+                                                                                    "pm.test(\u0027Orchestration started\u0027, () =\u003e { pm.expect(json.instanceId).to.be.a(\u0027string\u0027); });",
+                                                                                    "console.log(\u0027Instance ID:\u0027, json.instanceId);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{liveBaseUrl}}/api/DocumentationStart",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{{requestBody}}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "3 - Poll for Completion",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.collectionVariables.set(\u0027statusCode\u0027, json.runtimeStatus);",
+                                                                                    "pm.test(\u0027Status received\u0027, () =\u003e { pm.expect([\u0027Running\u0027, \u0027Completed\u0027, \u0027Failed\u0027]).to.include(json.runtimeStatus); });",
+                                                                                    "console.log(\u0027Status:\u0027, json.runtimeStatus);",
+                                                                                    "if (json.runtimeStatus === \u0027Completed\u0027) {",
+                                                                                    "    pm.test(\u0027SOAP note has Subjective\u0027, () =\u003e pm.expect(json.output.RestoredNote.Subjective).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027SOAP note has Objective\u0027,  () =\u003e pm.expect(json.output.RestoredNote.Objective).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027SOAP note has Assessment\u0027, () =\u003e pm.expect(json.output.RestoredNote.Assessment).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027SOAP note has Plan\u0027,       () =\u003e pm.expect(json.output.RestoredNote.Plan).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027CPT codes present\u0027, () =\u003e pm.expect(json.output.SuggestedCptCodes).to.be.an(\u0027array\u0027).that.is.not.empty);",
+                                                                                    "    pm.test(\u0027CPT codes have required fields\u0027, () =\u003e { json.output.SuggestedCptCodes.forEach(c =\u003e { pm.expect(c.Code).to.be.a(\u0027string\u0027); pm.expect(c.Description).to.be.a(\u0027string\u0027); pm.expect(c.Rationale).to.be.a(\u0027string\u0027); pm.expect(c.BillableUnits).to.be.a(\u0027number\u0027); }); });",
+                                                                                    "    pm.test(\u0027ICD-10 codes present\u0027, () =\u003e pm.expect(json.output.SuggestedIcdCodes).to.be.an(\u0027array\u0027).that.is.not.empty);",
+                                                                                    "    pm.test(\u0027ICD-10 codes have required fields\u0027, () =\u003e { json.output.SuggestedIcdCodes.forEach(c =\u003e { pm.expect(c.Code).to.be.a(\u0027string\u0027); pm.expect(c.Description).to.be.a(\u0027string\u0027); pm.expect(c.Rationale).to.be.a(\u0027string\u0027); }); });",
+                                                                                    "    console.log(\u0027Output:\u0027, JSON.stringify(json.output, null, 2));",
+                                                                                    "} else if (json.runtimeStatus === \u0027Failed\u0027) {",
+                                                                                    "    pm.test(\u0027Orchestration failed\u0027, () =\u003e { throw new Error(json.output); });",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  "{{statusQueryGetUri}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "4 - Get All Sessions for Client",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027Response has items array\u0027, () =\u003e pm.expect(json.items).to.be.an(\u0027array\u0027));",
+                                                                                    "pm.test(\u0027Response has pageSize\u0027,    () =\u003e pm.expect(json.pageSize).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Response has hasMore\u0027,     () =\u003e pm.expect(json.hasMore).to.be.a(\u0027boolean\u0027));",
+                                                                                    "if (json.items.length \u003e 0) {",
+                                                                                    "    const first = json.items[0];",
+                                                                                    "    pm.test(\u0027Session has clientId\u0027,      () =\u003e pm.expect(first.clientId).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027Session has sessionDate\u0027,   () =\u003e pm.expect(first.sessionDate).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027Session has soapNote\u0027,      () =\u003e pm.expect(first.soapNote).to.be.an(\u0027object\u0027));",
+                                                                                    "    pm.test(\u0027Session has CPT codes\u0027,     () =\u003e pm.expect(first.suggestedCptCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "    pm.test(\u0027Session has ICD codes\u0027,     () =\u003e pm.expect(first.suggestedIcdCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "    pm.test(\u0027Session has therapistName\u0027, () =\u003e pm.expect(first.therapistName).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.collectionVariables.set(\u0027sessionDate\u0027, first.sessionDate);",
+                                                                                    "    console.log(\u0027Latest session date saved:\u0027, first.sessionDate);",
+                                                                                    "}",
+                                                                                    "if (json.continuationToken) { console.log(\u0027Next page token:\u0027, json.continuationToken); }",
+                                                                                    "console.log(\u0027Sessions on this page:\u0027, json.items.length, \u0027| hasMore:\u0027, json.hasMore);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{liveBaseUrl}}/api/sessions/{{clientId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "5 - Get Specific Session by Client and Date",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 200 or 404\u0027, () =\u003e { pm.expect([200, 404]).to.include(pm.response.code); });",
+                                                                                    "if (pm.response.code === 200) {",
+                                                                                    "    const json = pm.response.json();",
+                                                                                    "    pm.test(\u0027Has clientId\u0027,  () =\u003e pm.expect(json.clientId).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027Has soapNote\u0027,  () =\u003e pm.expect(json.soapNote).to.be.an(\u0027object\u0027));",
+                                                                                    "    pm.test(\u0027Has CPT codes\u0027, () =\u003e pm.expect(json.suggestedCptCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "    pm.test(\u0027Has ICD codes\u0027, () =\u003e pm.expect(json.suggestedIcdCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "    console.log(\u0027Session:\u0027, JSON.stringify(json, null, 2));",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{liveBaseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "6 - Get Stats by Therapist",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027Has therapistName\u0027,                 () =\u003e pm.expect(json.therapistName).to.be.a(\u0027string\u0027));",
+                                                                                    "pm.test(\u0027Has totalSessions\u0027,                 () =\u003e pm.expect(json.totalSessions).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has totalClients\u0027,                  () =\u003e pm.expect(json.totalClients).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has averageSessionDurationMinutes\u0027, () =\u003e pm.expect(json.averageSessionDurationMinutes).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has totalBillableUnits\u0027,            () =\u003e pm.expect(json.totalBillableUnits).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsByDiscipline\u0027,          () =\u003e pm.expect(json.sessionsByDiscipline).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsBySetting\u0027,             () =\u003e pm.expect(json.sessionsBySetting).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsByPayer\u0027,               () =\u003e pm.expect(json.sessionsByPayer).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has topCptCodes\u0027,                   () =\u003e pm.expect(json.topCptCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "pm.test(\u0027Has topIcdCodes\u0027,                   () =\u003e pm.expect(json.topIcdCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "console.log(\u0027Therapist stats:\u0027, JSON.stringify(json, null, 2));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{liveBaseUrl}}/api/stats/therapist/{{therapistName}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "7 - Get Stats by Client",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 200\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027Has clientId\u0027,                      () =\u003e pm.expect(json.clientId).to.be.a(\u0027string\u0027));",
+                                                                                    "pm.test(\u0027Has totalSessions\u0027,                 () =\u003e pm.expect(json.totalSessions).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has averageSessionDurationMinutes\u0027, () =\u003e pm.expect(json.averageSessionDurationMinutes).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has totalBillableUnits\u0027,            () =\u003e pm.expect(json.totalBillableUnits).to.be.a(\u0027number\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsByTherapist\u0027,           () =\u003e pm.expect(json.sessionsByTherapist).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsByDiscipline\u0027,          () =\u003e pm.expect(json.sessionsByDiscipline).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsBySetting\u0027,             () =\u003e pm.expect(json.sessionsBySetting).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has sessionsByPayer\u0027,               () =\u003e pm.expect(json.sessionsByPayer).to.be.an(\u0027object\u0027));",
+                                                                                    "pm.test(\u0027Has topCptCodes\u0027,                   () =\u003e pm.expect(json.topCptCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "pm.test(\u0027Has topIcdCodes\u0027,                   () =\u003e pm.expect(json.topIcdCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "console.log(\u0027Client stats:\u0027, JSON.stringify(json, null, 2));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{liveBaseUrl}}/api/stats/client/{{clientId}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "8 - Update Session",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 200 or 404\u0027, () =\u003e pm.expect([200, 404]).to.include(pm.response.code));",
+                                                                                    "if (pm.response.code === 200) {",
+                                                                                    "    const json = pm.response.json();",
+                                                                                    "    pm.test(\u0027Has clientId\u0027,  () =\u003e pm.expect(json.clientId).to.be.a(\u0027string\u0027));",
+                                                                                    "    pm.test(\u0027Has soapNote\u0027,  () =\u003e pm.expect(json.soapNote).to.be.an(\u0027object\u0027));",
+                                                                                    "    pm.test(\u0027Has CPT codes\u0027, () =\u003e pm.expect(json.suggestedCptCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "    pm.test(\u0027Has ICD codes\u0027, () =\u003e pm.expect(json.suggestedIcdCodes).to.be.an(\u0027array\u0027));",
+                                                                                    "    console.log(\u0027Updated session:\u0027, JSON.stringify(json, null, 2));",
+                                                                                    "} else {",
+                                                                                    "    console.log(\u0027Session not found - run steps 2-4 first to create and retrieve a session.\u0027);",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "PATCH",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{liveBaseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"soapNote\": {\n    \"subjective\": \"Patient reports significant improvement in pain levels, now 2/10. Tolerated full session well with no fatigue complaints.\",\n    \"plan\": \"Progress to phase 2 strengthening exercises. Schedule follow-up in 1 week. Patient to continue home exercise program daily.\"\n  },\n  \"suggestedCptCodes\": [\n    {\n      \"code\": \"97110\",\n      \"description\": \"Therapeutic Exercise\",\n      \"rationale\": \"Progressive strengthening to address functional deficits\",\n      \"billableUnits\": 2\n    },\n    {\n      \"code\": \"97530\",\n      \"description\": \"Therapeutic Activities\",\n      \"rationale\": \"Functional task training for ADL independence\",\n      \"billableUnits\": 2\n    }\n  ]\n}"
+                                                               }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "9 - Delete Session",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 204 or 404\u0027, () =\u003e pm.expect([204, 404]).to.include(pm.response.code));",
+                                                                                    "if (pm.response.code === 204) { console.log(\u0027Session deleted successfully.\u0027); }",
+                                                                                    "else { console.log(\u0027Session not found - may have already been deleted.\u0027); }"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{liveBaseUrl}}/api/sessions/{{clientId}}/{{sessionDate}}"
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Seed Data (wipe + regenerate)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{liveBaseUrl}}/api/seed"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Delete Seed Data",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{liveBaseUrl}}/api/seed"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Mark All Synthetic",
+                                      "request":  {
+                                                      "method":  "PATCH",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{accessToken}}",
+                                                                         "type":  "text"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{liveBaseUrl}}/api/seed/mark-synthetic"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Tenant Migration (admin)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "X-Migration-Key",
+                                                                         "value":  "{{migrationKey}}",
+                                                                         "type":  "text"
+                                                                     }
+                                                                 ],
+                                                      "url":  "{{liveBaseUrl}}/api/admin/migrate-partitions",
+                                                      "description":  "One-time partition key migration. Append ?dryRun=true to preview without writing. Requires migrationKey collection variable."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 }
+             ]
 }

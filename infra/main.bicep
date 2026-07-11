@@ -173,9 +173,9 @@ module functionApp 'modules/functionApp.bicep' = {
     cosmosEndpoint: cosmos.outputs.endpoint
     appServicePlanName: appServicePlanName
     keyVaultUri: keyVault.outputs.vaultUri
+    keyVaultUri_migrationKey: !empty(migrationKey) ? keyVault.outputs.vaultUri : ''
     speechRegion: speech.outputs.region
     demoTherapistName: demoTherapistName
-    migrationKey: migrationKey
     tenantIdClaimType: tenantIdClaimType
     syntheticTenantName: syntheticTenantName
   }
@@ -212,6 +212,7 @@ module keyVaultSecrets 'modules/keyVaultSecrets.bicep' = {
   params: {
     keyVaultName: keyVault.outputs.keyVaultName
     speechApiKey: speech.outputs.apiKey
+    migrationKey: migrationKey
   }
 }
 

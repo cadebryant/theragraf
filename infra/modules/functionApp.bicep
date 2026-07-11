@@ -30,9 +30,8 @@ param appServicePlanName string = '${functionAppName}-plan'
 @description('Therapist name used for demo/seed records. Leave blank to disable demo mode.')
 param demoTherapistName string = ''
 
-@description('Secret key required in the X-Migration-Key header to invoke the partition-key migration endpoint. Leave blank to disable the endpoint.')
-@secure()
-param migrationKey string = ''
+@description('Key Vault URI used to build the migration-key secret reference. When empty the endpoint stays disabled.')
+param keyVaultUri_migrationKey string = ''
 
 @description('JWT claim type that carries the tenant identifier. Use "tid" for standard Entra ID; override for Entra External ID custom attributes (e.g. "extension_tenantId").')
 param tenantIdClaimType string = 'tid'
@@ -170,7 +169,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 		// ── Admin / migration ────────────────────────────────────────────────
 		{
 		  name: 'Admin__MigrationKey'
-		  value: migrationKey
+		  value: empty(keyVaultUri_migrationKey) ? '' : '@Microsoft.KeyVault(SecretUri=${keyVaultUri_migrationKey}secrets/migration-key/)'
 		}
 	  ]
 	}
