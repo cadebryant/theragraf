@@ -176,6 +176,23 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
   }
 }
 
+// Explicitly disable App Service Easy Auth. The function app handles its own
+// JWT validation via JwtAuthMiddleware. If Easy Auth is enabled it intercepts
+// every request before function code runs and returns IIS 401 responses.
+resource authSettings 'Microsoft.Web/sites/config@2023-12-01' = {
+  parent: functionApp
+  name: 'authsettingsV2'
+  properties: {
+	globalValidation: {
+	  requireAuthentication: false
+	  unauthenticatedClientAction: 'AllowAnonymous'
+	}
+	platform: {
+	  enabled: false
+	}
+  }
+}
+
 output principalId string = functionApp.identity.principalId
 output defaultHostname string = functionApp.properties.defaultHostName
 output resourceId string = functionApp.id
