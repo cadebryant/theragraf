@@ -65,6 +65,13 @@ jobs:
             --name "${{ env.AZURE_FUNCTIONAPP_NAME }}" \
             --src "${{ github.workspace }}/publish.zip"
 
+      - name: Disable App Service Easy Auth
+        run: |
+          az rest --method PUT \
+            --uri "https://management.azure.com/subscriptions/$(az account show --query id -o tsv)/resourceGroups/${{ env.AZURE_RESOURCE_GROUP }}/providers/Microsoft.Web/sites/${{ env.AZURE_FUNCTIONAPP_NAME }}/config/authsettingsV2?api-version=2022-03-01" \
+            --headers "Content-Type=application/json" \
+            --body '{"properties":{"globalValidation":{"requireAuthentication":false,"unauthenticatedClientAction":"AllowAnonymous"},"platform":{"enabled":false}}}'
+
       # ── React / Vite — build and deploy Static Web App ───────────────────
 
       - name: Set up Node.js
