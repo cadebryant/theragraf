@@ -273,8 +273,7 @@ public class SeedFunction(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "seed")] HttpRequestData req,
         CancellationToken cancellationToken)
     {
-        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
-        if (identity is null && !config.GetValue<bool>("Auth:Disabled"))
+        if (!config.GetValue<bool>("Auth:Disabled") && !ClaimsHelper.IsAuthenticated(req))
         {
             var unauth = req.CreateResponse(HttpStatusCode.Unauthorized);
             await unauth.WriteStringAsync("Authentication is required.", cancellationToken);
@@ -364,7 +363,7 @@ public class SeedFunction(
         _logger.LogInformation(
             "Seed complete: {Clients} clients, {Sessions} sessions, {Goals} goals, 2 therapist profiles, 1 provider",
             ClientPool.Length, totalSessions, totalGoals);
-        auditLogger.Log(AuditEvent.Success(identity ?? "dev", AuditAction.Write, "SeedData",
+        auditLogger.Log(AuditEvent.Success(ClaimsHelper.GetTherapistIdentity(req, config) ?? "app", AuditAction.Write, "SeedData",
             detail: $"Seeded {ClientPool.Length} clients, {totalSessions} sessions, {totalGoals} goals"));
 
         var ok = req.CreateResponse(HttpStatusCode.OK);
@@ -391,8 +390,7 @@ public class SeedFunction(
         [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "seed")] HttpRequestData req,
         CancellationToken cancellationToken)
     {
-        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
-        if (identity is null && !config.GetValue<bool>("Auth:Disabled"))
+        if (!config.GetValue<bool>("Auth:Disabled") && !ClaimsHelper.IsAuthenticated(req))
         {
             var unauth = req.CreateResponse(HttpStatusCode.Unauthorized);
             await unauth.WriteStringAsync("Authentication is required.", cancellationToken);
@@ -411,7 +409,7 @@ public class SeedFunction(
         var wipeCounts = await WipeAllContainersAsync(database, cancellationToken);
 
         _logger.LogInformation("Delete seed complete. Wiped: {Counts}", JsonSerializer.Serialize(wipeCounts));
-        auditLogger.Log(AuditEvent.Success(identity ?? "dev", AuditAction.Delete, "SeedData",
+        auditLogger.Log(AuditEvent.Success(ClaimsHelper.GetTherapistIdentity(req, config) ?? "app", AuditAction.Delete, "SeedData",
             detail: "Wiped all records from all data containers"));
 
         var ok = req.CreateResponse(HttpStatusCode.OK);
@@ -606,8 +604,7 @@ public class SeedFunction(
         [HttpTrigger(AuthorizationLevel.Anonymous, "patch", Route = "seed/mark-synthetic")] HttpRequestData req,
         CancellationToken cancellationToken)
     {
-        var identity = ClaimsHelper.GetTherapistIdentity(req, config);
-        if (identity is null && !config.GetValue<bool>("Auth:Disabled"))
+        if (!config.GetValue<bool>("Auth:Disabled") && !ClaimsHelper.IsAuthenticated(req))
         {
             var unauth = req.CreateResponse(HttpStatusCode.Unauthorized);
             await unauth.WriteStringAsync("Authentication is required.", cancellationToken);
@@ -681,7 +678,7 @@ public class SeedFunction(
         _logger.LogInformation(
             "Marked {Sessions} sessions, {Clients} clients, and {Goals} goals as synthetic",
             sessionsUpdated, clientsUpdated, goalsUpdated);
-        auditLogger.Log(AuditEvent.Success(identity ?? "dev", AuditAction.Write, "SeedMigration",
+        auditLogger.Log(AuditEvent.Success(ClaimsHelper.GetTherapistIdentity(req, config) ?? "app", AuditAction.Write, "SeedMigration",
             detail: $"Marked {sessionsUpdated + clientsUpdated + goalsUpdated} records as synthetic"));
 
         var ok = req.CreateResponse(HttpStatusCode.OK);
