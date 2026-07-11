@@ -27,6 +27,6 @@
     "Demo__TherapistName": "",
     "MultiTenant__TenantIdClaimType": "tid",
     "MultiTenant__SyntheticTenantName": "Self-Hosted",
-    "Admin__MigrationKey": "<leave-blank-to-disable-or-set-a-secret-to-enable-migration-endpoint>"
+    "Admin__MigrationKey": "<generate-a-random-secret-or-leave-blank-to-disable-migration-endpoint>"
   }
 }

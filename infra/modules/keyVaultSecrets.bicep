@@ -19,6 +19,10 @@ param keyVaultName string
 @secure()
 param speechApiKey string
 
+@description('Secret key required in the X-Migration-Key header to invoke the partition-key migration endpoint. Leave blank to keep the endpoint disabled.')
+@secure()
+param migrationKey string = ''
+
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
   name: keyVaultName
 }
@@ -28,6 +32,17 @@ resource speechApiKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   name: 'speech-api-key'
   properties: {
 	value: speechApiKey
+	attributes: {
+	  enabled: true
+	}
+  }
+}
+
+resource migrationKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(migrationKey)) {
+  parent: keyVault
+  name: 'migration-key'
+  properties: {
+	value: migrationKey
 	attributes: {
 	  enabled: true
 	}
