@@ -19,8 +19,8 @@ using Theragraf.Functions.Middleware;
 /// corresponding new container with <c>tenantId</c> prepended as the first partition level.
 ///
 /// Usage:
-///   POST /api/admin/migrate-partitions?dryRun=true   — preview what would be migrated
-///   POST /api/admin/migrate-partitions               — execute the migration
+///   POST /api/manage/migrate-partitions?dryRun=true   — preview what would be migrated
+///   POST /api/manage/migrate-partitions               — execute the migration
 ///
 /// The function is gated by <c>Admin:MigrationKey</c> in configuration. Supply the
 /// key via the <c>X-Migration-Key</c> request header.
@@ -46,7 +46,7 @@ public class TenantMigrationFunction(
 
     [Function("TenantMigration")]
     public async Task<HttpResponseData> RunAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "admin/migrate-partitions")]
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "manage/migrate-partitions")]
         HttpRequestData req)
     {
         // Gate the migration behind a shared secret to prevent accidental execution.
