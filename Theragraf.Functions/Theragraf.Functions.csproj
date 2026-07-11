@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Bogus" Version="35.6.1" Condition="'$(Configuration)' != 'Release'" />
+    <PackageReference Include="Bogus" Version="35.6.1" />
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
     <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.7.0" />
     <PackageReference Include="Azure.AI.TextAnalytics" Version="5.3.0" />
@@ -48,12 +48,7 @@
     </AssemblyAttribute>
   </ItemGroup>
 
-  <!-- Exclude demo seeding code from production (Release) builds -->
-  <ItemGroup Condition="'$(Configuration)' == 'Release'">
-    <Compile Remove="EntryPoint\SeedFunction.cs" />
-  </ItemGroup>
 
-  <!-- Auto-start Azurite when building in Debug configuration (Windows-only) -->
   <Target Name="StartAzurite" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug' And '$(OS)' == 'Windows_NT'">
     <Message Text="Starting Azurite storage emulator..." Importance="high" />
     <Exec Command="powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\tools\Start-Azurite.ps1&quot;" ContinueOnError="true" ConsoleToMSBuild="true" />
