@@ -66,7 +66,7 @@ jobs:
           az functionapp deploy \
             --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
             --name "${{ env.AZURE_FUNCTIONAPP_NAME }}" \
-            --src "${{ github.workspace }}/publish.zip" \
+            --src-path "${{ github.workspace }}/publish.zip" \
             --type zip
 
       - name: Start Azure Functions after deploy
