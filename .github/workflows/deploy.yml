@@ -58,12 +58,19 @@ jobs:
             --output none
           az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 
+      - name: Stop Azure Functions before deploy
+        run: az functionapp stop --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --name "${{ env.AZURE_FUNCTIONAPP_NAME }}"
+
       - name: Deploy to Azure Functions
         run: |
-          az functionapp deployment source config-zip \
+          az functionapp deploy \
             --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
             --name "${{ env.AZURE_FUNCTIONAPP_NAME }}" \
-            --src "${{ github.workspace }}/publish.zip"
+            --src "${{ github.workspace }}/publish.zip" \
+            --type zip
+
+      - name: Start Azure Functions after deploy
+        run: az functionapp start --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --name "${{ env.AZURE_FUNCTIONAPP_NAME }}"
 
       - name: Disable App Service Easy Auth
         run: |
