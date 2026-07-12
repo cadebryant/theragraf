@@ -150,8 +150,11 @@ public class SessionsGet(
         }
 
         // When the caller is authenticated but has not passed an explicit therapist filter,
-        // scope the query to their own sessions only.
-        if (identity is not null && options.Therapist is null)
+        // scope the query to their own sessions only — unless demo mode is active, in which
+        // case all sessions for the client (including shared seed data) should be visible.
+        var demoTherapistName = config["Demo:TherapistName"];
+        var isDemoMode = !string.IsNullOrWhiteSpace(demoTherapistName);
+        if (identity is not null && options.Therapist is null && !isDemoMode)
             options = options with { Therapist = identity };
 
         _logger.LogInformation(
