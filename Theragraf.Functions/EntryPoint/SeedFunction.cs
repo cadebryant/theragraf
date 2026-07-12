@@ -2,6 +2,7 @@ namespace Theragraf.Functions.EntryPoint;
 
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Bogus;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
@@ -288,6 +289,9 @@ public class SeedFunction(
             return disabled;
         }
 
+        try
+        {
+
         var database = cosmosClient.GetDatabase(config["CosmosDb:DatabaseName"] ?? "theragraf");
 
         // ── 1. Wipe all containers ────────────────────────────────────────────
@@ -378,6 +382,21 @@ public class SeedFunction(
             wiped             = wipeCounts,
         }, JsonOptions), cancellationToken);
         return ok;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Seed failed: {Message}", ex.Message);
+            var err = req.CreateResponse(HttpStatusCode.InternalServerError);
+            err.Headers.Add("Content-Type", "application/json; charset=utf-8");
+            await err.WriteStringAsync(JsonSerializer.Serialize(new
+            {
+                error   = ex.GetType().Name,
+                message = ex.Message,
+                inner   = ex.InnerException?.Message,
+                trace   = ex.StackTrace?.Split('\n').Take(8)
+            }), cancellationToken);
+            return err;
+        }
     }
 
     /// <summary>
@@ -438,7 +457,9 @@ public class SeedFunction(
             CreatedAt       = DateTimeOffset.UtcNow,
             UpdatedAt       = DateTimeOffset.UtcNow,
         };
-        await container.UpsertItemAsync(doc, new PartitionKey(doc.TenantId), cancellationToken: ct);
+        await container.UpsertItemAsync(doc,
+            new PartitionKeyBuilder().Add(doc.TenantId).Add(doc.ProviderId).Build(),
+            cancellationToken: ct);
     }
 
     private async Task SeedTherapistProfilesAsync(Container container, string demoTherapistName, CancellationToken ct)
@@ -478,8 +499,12 @@ public class SeedFunction(
             UpdatedAt     = now,
         };
 
-        await container.UpsertItemAsync(otProfile, new PartitionKey(otProfile.TenantId), cancellationToken: ct);
-        await container.UpsertItemAsync(ptProfile, new PartitionKey(ptProfile.TenantId), cancellationToken: ct);
+        await container.UpsertItemAsync(otProfile,
+            new PartitionKeyBuilder().Add(otProfile.TenantId).Add(otProfile.TherapistId).Build(),
+            cancellationToken: ct);
+        await container.UpsertItemAsync(ptProfile,
+            new PartitionKeyBuilder().Add(ptProfile.TenantId).Add(ptProfile.TherapistId).Build(),
+            cancellationToken: ct);
     }
 
     private static IReadOnlyList<SessionRecord> BuildSessions(
@@ -539,53 +564,80 @@ public class SeedFunction(
 
     // ── Wipe helper ───────────────────────────────────────────────────────────
 
+    // Typed projections used by WipeAllContainersAsync — the Cosmos SDK deserialises
+    // directly into these records, so strings are heap-allocated immediately and are
+    // never backed by the FeedResponse buffer that JsonElement would share.
+    private sealed record CosmosIdPk1(string id, string pk1);
+    private sealed record CosmosIdPk2(string id, string pk1, string pk2);
+
     private async Task<Dictionary<string, int>> WipeAllContainersAsync(
         CosmosDatabase database, CancellationToken ct)
     {
         var counts = new Dictionary<string, int>();
 
-        // (containerName, partitionKeyField)
-        var targets = new[]
+        // Single-key containers: (containerName, pkField)
+        var singleKeyTargets = new[]
         {
-            (config["CosmosDb:ContainerName"]                 ?? "sessions",          "clientId"),
-            (config["CosmosDb:GoalsContainerName"]             ?? "goals",             "clientId"),
-            (config["CosmosDb:ClientsContainerName"]           ?? "clients",           "clientId"),
-            (config["CosmosDb:TherapistProfilesContainerName"] ?? "therapist-profiles","tenantId"),
-            (config["CosmosDb:ProvidersContainerName"]         ?? "providers",         "tenantId"),
+            (config["CosmosDb:ContainerName"]      ?? "sessions", "clientId"),
+            (config["CosmosDb:GoalsContainerName"]  ?? "goals",    "clientId"),
+            (config["CosmosDb:ClientsContainerName"]?? "clients",  "clientId"),
         };
 
-        foreach (var (name, pkField) in targets)
+        foreach (var (name, pkField) in singleKeyTargets)
         {
             int deleted = 0;
             try
             {
                 var container = database.GetContainer(name);
-                // Project only id + partition key — minimal RU cost.
-                var query = new QueryDefinition($"SELECT c.id, c[\"{pkField}\"] AS pk FROM c");
-                using var iter = container.GetItemQueryIterator<JsonElement>(query);
-
+                var query = new QueryDefinition($"SELECT c.id, c[\"{pkField}\"] AS pk1 FROM c");
+                using var iter = container.GetItemQueryIterator<CosmosIdPk1>(query);
                 while (iter.HasMoreResults)
                 {
                     var page = await iter.ReadNextAsync(ct);
                     var tasks = page
-                        .Where(d => d.TryGetProperty("id", out _) && d.TryGetProperty("pk", out _))
-                        .Select(d =>
-                        {
-                            var id = d.GetProperty("id").GetString()!;
-                            var pk = d.GetProperty("pk").GetString()!;
-                            return container
-                                .DeleteItemAsync<JsonElement>(id, new PartitionKey(pk), cancellationToken: ct)
-                                .ContinueWith(_ => { }, TaskContinuationOptions.None);
-                        });
+                        .Where(d => d.id != null && d.pk1 != null)
+                        .Select(d => container
+                            .DeleteItemAsync<CosmosIdPk1>(d.id, new PartitionKey(d.pk1), cancellationToken: ct)
+                            .ContinueWith(_ => { }, TaskContinuationOptions.None));
                     await Task.WhenAll(tasks);
                     deleted += page.Count;
                 }
             }
-            catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
-            {
-                // Container doesn't exist yet — nothing to wipe.
-            }
+            catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound) { }
+            counts[name] = deleted;
+        }
 
+        // Hierarchical-key containers: (containerName, pk1Field, pk2Field)
+        var hierarchicalTargets = new[]
+        {
+            (config["CosmosDb:TherapistProfilesContainerName"] ?? "therapist-profiles", "tenantId", "therapistId"),
+            (config["CosmosDb:ProvidersContainerName"]         ?? "providers",           "tenantId", "providerId"),
+        };
+
+        foreach (var (name, pk1Field, pk2Field) in hierarchicalTargets)
+        {
+            int deleted = 0;
+            try
+            {
+                var container = database.GetContainer(name);
+                var query = new QueryDefinition(
+                    $"SELECT c.id, c[\"{pk1Field}\"] AS pk1, c[\"{pk2Field}\"] AS pk2 FROM c");
+                using var iter = container.GetItemQueryIterator<CosmosIdPk2>(query);
+                while (iter.HasMoreResults)
+                {
+                    var page = await iter.ReadNextAsync(ct);
+                    var tasks = page
+                        .Where(d => d.id != null && d.pk1 != null && d.pk2 != null)
+                        .Select(d => container
+                            .DeleteItemAsync<CosmosIdPk2>(d.id,
+                                new PartitionKeyBuilder().Add(d.pk1).Add(d.pk2).Build(),
+                                cancellationToken: ct)
+                            .ContinueWith(_ => { }, TaskContinuationOptions.None));
+                    await Task.WhenAll(tasks);
+                    deleted += page.Count;
+                }
+            }
+            catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound) { }
             counts[name] = deleted;
         }
 
