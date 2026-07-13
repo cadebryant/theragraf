@@ -287,6 +287,24 @@ var host = new HostBuilder()
 
             return new CosmosTenantRepository(cosmosClient, dbName, tenantsContainer, logger);
         });
+
+        services.AddSingleton<ITherapistProfileRepository>(sp =>
+        {
+            var cosmosClient       = sp.GetRequiredService<CosmosClient>();
+            var dbName             = config["CosmosDb:DatabaseName"] ?? "theragraf";
+            var profilesContainer  = config["CosmosDb:TherapistProfilesContainerName"] ?? "therapist-profiles";
+            var logger             = sp.GetRequiredService<ILogger<CosmosTherapistProfileRepository>>();
+            return new CosmosTherapistProfileRepository(cosmosClient, dbName, profilesContainer, logger);
+        });
+
+        services.AddSingleton<IProviderRepository>(sp =>
+        {
+            var cosmosClient       = sp.GetRequiredService<CosmosClient>();
+            var dbName             = config["CosmosDb:DatabaseName"] ?? "theragraf";
+            var providersContainer = config["CosmosDb:ProvidersContainerName"] ?? "providers";
+            var logger             = sp.GetRequiredService<ILogger<CosmosProviderRepository>>();
+            return new CosmosProviderRepository(cosmosClient, dbName, providersContainer, logger);
+        });
     })
     .Build();
 

@@ -61,20 +61,38 @@ public class SeedFunctionTests
         _goalRepository    = Substitute.For<IGoalRepository>();
         _cosmosClient      = Substitute.For<CosmosClient>();
 
-        // Wire CosmosClient → Database → Container chain used by WipeAllContainersAsync,
-        // SeedProviderAsync, and SeedTherapistProfilesAsync.
+        // Wire CosmosClient → Database → Container chain.
         _mockDatabase  = Substitute.For<CosmosDatabase>();
         _mockContainer = Substitute.For<Container>();
 
         _cosmosClient.GetDatabase(Arg.Any<string>()).Returns(_mockDatabase);
-        _mockDatabase.GetContainer(Arg.Any<string>()).Returns(_mockContainer);
 
-        // GetItemQueryIterator returns an empty iterator so WipeAllContainersAsync exits without iterating.
-        var emptyIterator = Substitute.For<FeedIterator<JsonElement>>();
-        emptyIterator.HasMoreResults.Returns(false);
-        _mockContainer
-            .GetItemQueryIterator<JsonElement>(Arg.Any<QueryDefinition>())
-            .Returns(emptyIterator);
+        // WipeAllContainersAsync wraps each container iteration in:
+        //   catch (CosmosException ex) when (ex.StatusCode == NotFound) { }
+        // Throwing NotFound from GetContainer is the cleanest way to stub the wipe path
+        // without needing to reference the private CosmosIdPk1/CosmosIdPk2 record types
+        // that the iterator is now parameterized with.
+        var containerNotFound = new CosmosException(
+            "Container not found (test stub)", HttpStatusCode.NotFound, 0, string.Empty, 0);
+
+        // Single-key containers (sessions, goals, clients) are only accessed during wipe.
+        // Always throw NotFound — caught by each loop's try/catch.
+        _mockDatabase
+            .GetContainer(Arg.Is<string>(n => n == "sessions" || n == "goals" || n == "clients"))
+            .Returns<Container>(_ => throw containerNotFound);
+
+        // Hierarchical containers (therapist-profiles, providers) are accessed TWICE in Seed:
+        //   1st call: WipeAllContainersAsync (throw NotFound — caught)
+        //   2nd call: SeedProviderAsync / SeedTherapistProfilesAsync (return _mockContainer)
+        // For DeleteSeed, only the 1st call occurs, which is still correctly caught.
+        int profilesCallCount  = 0;
+        int providersCallCount = 0;
+        _mockDatabase
+            .GetContainer(Arg.Is<string>(n => n == "therapist-profiles"))
+            .Returns(ci => ++profilesCallCount == 1 ? throw containerNotFound : _mockContainer);
+        _mockDatabase
+            .GetContainer(Arg.Is<string>(n => n == "providers"))
+            .Returns(ci => ++providersCallCount == 1 ? throw containerNotFound : _mockContainer);
 
         // goalRepository.CreateAsync must return a non-null GoalResponse so the seeder
         // can access created.GoalId without a NullReferenceException.
