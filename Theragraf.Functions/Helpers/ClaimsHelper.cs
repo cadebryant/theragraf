@@ -70,6 +70,26 @@ internal static class ClaimsHelper
     }
 
     /// <summary>
+    /// Returns the Entra Object ID (<c>oid</c> claim) of the authenticated user, or
+    /// <see langword="null"/> when authentication is disabled or no principal is present.
+    /// This is the stable, immutable identifier used as <c>TherapistProfileDocument.TherapistId</c>.
+    /// </summary>
+    internal static string? GetTherapistId(HttpRequestData req, IConfiguration config)
+    {
+        if (config.GetValue<bool>("Auth:Disabled"))
+            return config["Auth:DevTherapistId"] ?? "dev-therapist-id";
+
+        if (req.FunctionContext.Items.TryGetValue("ClaimsPrincipal", out var raw)
+            && raw is ClaimsPrincipal principal)
+        {
+            return principal.FindFirst("oid")?.Value
+                ?? principal.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Returns <see langword="true"/> when <paramref name="therapistName"/> matches the
     /// configured demo therapist name (<c>Demo:TherapistName</c>). When this is true,
     /// ownership checks should be skipped so all users can browse shared demo records.

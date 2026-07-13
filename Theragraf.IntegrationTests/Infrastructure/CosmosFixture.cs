@@ -37,13 +37,17 @@ public sealed class CosmosFixture : IAsyncLifetime
     public const string DatabaseName       = "theragraf-integration-tests";
     public const string ContainerName      = "sessions";
     public const string GoalsContainerName  = "goals";
-    public const string ClientsContainerName = "clients";
+    public const string ClientsContainerName          = "clients";
+    public const string TherapistProfilesContainerName  = "therapist-profiles";
+    public const string ProvidersContainerName           = "providers";
 
     public bool IsAvailable { get; private set; }
     public CosmosClient Client { get; private set; } = null!;
     public Container Container { get; private set; } = null!;
     public Container GoalsContainer { get; private set; } = null!;
     public Container ClientsContainer { get; private set; } = null!;
+    public Container TherapistProfilesContainer { get; private set; } = null!;
+    public Container ProvidersContainer { get; private set; } = null!;
 
     public async Task InitializeAsync()
     {
@@ -129,6 +133,26 @@ public sealed class CosmosFixture : IAsyncLifetime
                 cancellationToken: ct);
 
             ClientsContainer = clientsContainerResponse.Container;
+
+            var profilesContainerResponse = await db.Database.CreateContainerIfNotExistsAsync(
+                new ContainerProperties
+                {
+                    Id = TherapistProfilesContainerName,
+                    PartitionKeyPaths = ["/tenantId", "/therapistId"]
+                },
+                cancellationToken: ct);
+
+            TherapistProfilesContainer = profilesContainerResponse.Container;
+
+            var providersContainerResponse = await db.Database.CreateContainerIfNotExistsAsync(
+                new ContainerProperties
+                {
+                    Id = ProvidersContainerName,
+                    PartitionKeyPaths = ["/tenantId", "/providerId"]
+                },
+                cancellationToken: ct);
+
+            ProvidersContainer = providersContainerResponse.Container;
             IsAvailable = true;
         }
         catch (OperationCanceledException)
