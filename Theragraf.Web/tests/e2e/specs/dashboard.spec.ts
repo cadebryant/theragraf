@@ -189,4 +189,12 @@ test.describe('Dashboard', () => {
 
     console.log(`🔄 Dashboard refreshed: ${initialSessions} → ${refreshedSessions} sessions`);
   });
+
+  test('should navigate to My Profile page from nav icon', async ({ page }) => {
+    await page.getByRole('button', { name: /my profile/i }).click();
+
+    await expect(page).toHaveURL(/\/profile/);
+
+    console.log('✅ Navigated to My Profile page from nav icon');
+  });
 });

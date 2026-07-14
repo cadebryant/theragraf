@@ -19,6 +19,7 @@ import {
 import {
   Add24Regular,
   Grid24Regular,
+  Person24Regular,
   SignOut24Regular,
   Settings24Regular,
 } from '@fluentui/react-icons';
@@ -167,6 +168,15 @@ export default function AppLayout() {
               onClick={() => navigate('/')}
               aria-label="Go to Dashboard"
               data-tour="dashboard-link"
+            />
+          </Tooltip>
+          <Tooltip content="My Profile" relationship="label">
+            <Button
+              appearance="subtle"
+              icon={<Person24Regular />}
+              style={{ color: 'white' }}
+              onClick={() => navigate('/profile')}
+              aria-label="Go to My Profile"
             />
           </Tooltip>
           <Tooltip content="Settings" relationship="label">

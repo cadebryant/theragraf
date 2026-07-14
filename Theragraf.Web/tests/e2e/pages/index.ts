@@ -12,3 +12,4 @@ export { DashboardPage } from './DashboardPage';
 export { NewSessionPage } from './NewSessionPage';
 export { SessionReviewPage } from './SessionReviewPage';
 export { ClientProfilePage } from './ClientProfilePage';
+export { TherapistProfilePage } from './TherapistProfilePage';

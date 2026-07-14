@@ -7,6 +7,7 @@ import SessionReview from '@/pages/SessionReview/SessionReview';
 import ClientProfile from '@/pages/ClientProfile/ClientProfile';
 import SessionDetail from '@/pages/SessionDetail/SessionDetail';
 import Settings from '@/pages/Settings/Settings';
+import TherapistProfile from '@/pages/Profile/TherapistProfile';
 
 export default function App() {
   return (
@@ -58,6 +59,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="profile"
+            element={
+              <ProtectedRoute>
+                <TherapistProfile />
               </ProtectedRoute>
             }
           />
