@@ -10,7 +10,7 @@ export async function getClientDemographics(
   try {
     return await apiFetch<ClientDemographicsResponse>(base(clientId));
   } catch (err) {
-    if (err instanceof Error && err.message.startsWith('404')) return null;
+    if (err instanceof Error && (err as Error & { status?: number }).status === 404) return null;
     throw err;
   }
 }
