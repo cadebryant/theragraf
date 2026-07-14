@@ -2,12 +2,14 @@ import { useMsal } from '@azure/msal-react';
 import { useQuery } from '@tanstack/react-query';
 import { makeStyles, tokens, Spinner, Text, Divider } from '@fluentui/react-components';
 import { getTherapistStats } from '@/api/stats';
+import { getGoalStatsForTherapist } from '@/api/goals';
 import { getCaseload } from '@/api/sessions';
 import { getNoteStatus } from '@/utils/noteStatus';
 import { formatErrorMessage } from '@/utils/errorMessages';
 import StatsCards from './StatsCards';
 import StatsCharts from './StatsCharts';
 import CaseloadTable from './CaseloadTable';
+import GoalStatsChart from '@/components/GoalStatsChart';
 
 const useStyles = makeStyles({
   page: {
@@ -45,6 +47,13 @@ export default function Dashboard() {
   const caseloadQuery = useQuery({
     queryKey: ['caseload'],
     queryFn: getCaseload,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const goalStatsQuery = useQuery({
+    queryKey: ['therapistGoalStats', therapistName],
+    queryFn: () => getGoalStatsForTherapist(therapistName),
+    enabled: !!therapistName,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -87,6 +96,15 @@ export default function Dashboard() {
       <Divider />
 
       {statsQuery.data && <StatsCharts stats={statsQuery.data} />}
+
+      <Divider />
+
+      {goalStatsQuery.data && (
+        <GoalStatsChart
+          stats={goalStatsQuery.data}
+          title="Treatment Goal Progress — All Clients"
+        />
+      )}
 
       <Divider />
 

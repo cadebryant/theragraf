@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import GoalStatsChart from '@/components/GoalStatsChart';
 import {
   makeStyles,
   tokens,
@@ -38,6 +39,7 @@ import {
   createGoal,
   deleteGoal,
   getGoals,
+  getGoalStatsForClient,
   suggestGoals,
   updateGoal,
 } from '@/api/goals';
@@ -208,6 +210,12 @@ export default function GoalsPanel({ clientId, latestSoapNote, discipline }: Pro
     enabled: !!clientId,
   });
 
+  const goalStatsQuery = useQuery({
+    queryKey: ['goalStats', clientId],
+    queryFn: () => getGoalStatsForClient(clientId),
+    enabled: !!clientId,
+  });
+
   const suggestQuery = useMutation({
     mutationFn: () =>
       suggestGoals(clientId, {
@@ -221,6 +229,7 @@ export default function GoalsPanel({ clientId, latestSoapNote, discipline }: Pro
     mutationFn: (req: CreateGoalRequest) => createGoal(clientId, req),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['goals', clientId] });
+      qc.invalidateQueries({ queryKey: ['goalStats', clientId] });
       setCreateOpen(false);
       setNewTitle(''); setNewDesc(''); setNewTarget('');
     },
@@ -231,6 +240,7 @@ export default function GoalsPanel({ clientId, latestSoapNote, discipline }: Pro
       updateGoal(clientId, goalId, req),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['goals', clientId] });
+      qc.invalidateQueries({ queryKey: ['goalStats', clientId] });
       setEditGoal(null);
       setProgressGoal(null);
       setProgressNote('');
@@ -241,6 +251,7 @@ export default function GoalsPanel({ clientId, latestSoapNote, discipline }: Pro
     mutationFn: (goalId: string) => deleteGoal(clientId, goalId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['goals', clientId] });
+      qc.invalidateQueries({ queryKey: ['goalStats', clientId] });
       setDeleteTarget(null);
     },
   });
@@ -334,6 +345,10 @@ export default function GoalsPanel({ clientId, latestSoapNote, discipline }: Pro
       </div>
 
       {goalsQuery.isLoading && <Spinner label="Loading goals…" />}
+
+      {goalStatsQuery.data && goalStatsQuery.data.totalGoals > 0 && (
+        <GoalStatsChart stats={goalStatsQuery.data} title="Goal Progress" />
+      )}
 
       {!goalsQuery.isLoading && goals.length === 0 && (
         <Text className={styles.emptyState}>

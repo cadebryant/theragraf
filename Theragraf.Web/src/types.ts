@@ -253,6 +253,34 @@ export interface GoalSuggestRequest {
   discipline: string;
 }
 
+// ── Goal Stats ────────────────────────────────────────────────────────────────
+
+/** Goal progress breakdown for a single client. Returned by GET /api/goals/stats/client/{clientId}. */
+export interface ClientGoalStats {
+  clientId: string;
+  totalGoals: number;
+  activeGoals: number;
+  metGoals: number;
+  notMetGoals: number;
+  discontinuedGoals: number;
+  overdueGoals: number;
+  metRate: number;
+  isSynthetic: boolean;
+}
+
+/** Goal progress breakdown aggregated across all clients for a therapist. Returned by GET /api/goals/stats/therapist/{therapistName}. */
+export interface TherapistGoalStats {
+  therapistName: string;
+  totalGoals: number;
+  activeGoals: number;
+  metGoals: number;
+  notMetGoals: number;
+  discontinuedGoals: number;
+  overdueGoals: number;
+  clientsWithGoals: number;
+  metRate: number;
+}
+
 // ── Client Demographics ───────────────────────────────────────────────────────
 
 export type BiologicalSex = 'NotSpecified' | 'Male' | 'Female' | 'Other';
