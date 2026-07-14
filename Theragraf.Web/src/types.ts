@@ -299,6 +299,79 @@ export interface DiarizedSegment {
   isFinal: boolean;
 }
 
+// ── Multi-tenancy ─────────────────────────────────────────────────────────────
+
+export type TenantOrganizationType =
+  | 'SoloPractitioner'
+  | 'GroupPractice'
+  | 'AcademicProgram'
+  | 'Other';
+
+export type TenantPlan = 'Free' | 'Professional' | 'Academic';
+
+export type TenantStatus = 'Active' | 'Suspended' | 'Deprovisioned';
+
+/** Returned by GET /api/tenant. */
+export interface TenantSummaryResponse {
+  tenantId: string;
+  organizationName: string;
+  organizationType: TenantOrganizationType;
+  plan: TenantPlan;
+  /** AI calls consumed in the current billing period. */
+  aiCallsThisPeriod: number;
+  /** Maximum AI calls per billing period. null means unlimited. */
+  monthlyAiCallQuota: number | null;
+  status: TenantStatus;
+  /** True when synthesised from config (self-hosted/BYOA), not from Cosmos. */
+  isSynthetic: boolean;
+}
+
+/** Returned by GET /api/providers/{providerId}. */
+export interface ProviderResponse {
+  providerId: string;
+  tenantId: string;
+  practiceName: string;
+  organizationNpi: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  phone: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Returned by GET /api/therapists/me. */
+export interface TherapistProfileResponse {
+  therapistId: string;
+  tenantId: string;
+  firstName: string;
+  lastName: string;
+  credentials: string | null;
+  discipline: TherapyDiscipline;
+  individualNpi: string | null;
+  /** FK to ProviderResponse.providerId when part of a group practice. */
+  providerId: string | null;
+  /**
+   * True when the profile was explicitly saved by the therapist.
+   * False means it was auto-created from JWT claims — prompt profile setup.
+   */
+  isConfigured: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Body for PATCH /api/therapists/me. All fields optional. */
+export interface TherapistProfileUpdateRequest {
+  firstName?: string;
+  lastName?: string;
+  credentials?: string;
+  discipline?: TherapyDiscipline;
+  /** 10-digit NPI. Send null to clear. */
+  individualNpi?: string | null;
+}
+
 // ── User Settings ─────────────────────────────────────────────────────────────
 
 export type Theme = 'light' | 'dark' | 'system';
