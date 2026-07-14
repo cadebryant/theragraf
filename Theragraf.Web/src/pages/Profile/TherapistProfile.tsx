@@ -91,12 +91,13 @@ const DISCIPLINES: TherapyDiscipline[] = [
   'Psychotherapy',
 ];
 
-function disciplineLabel(d: TherapyDiscipline): string {
+function disciplineLabel(d: TherapyDiscipline | ''): string {
   switch (d) {
     case 'OccupationalTherapy': return 'Occupational Therapy';
     case 'PhysicalTherapy': return 'Physical Therapy';
     case 'SpeechLanguagePathology': return 'Speech-Language Pathology';
     case 'Psychotherapy': return 'Psychotherapy';
+    default: return '—';
   }
 }
 
@@ -156,14 +157,16 @@ export default function TherapistProfile() {
       </div>
     );
 
-  if (profileError || !profile)
+  if (profileError)
     return (
       <MessageBar intent="error">
         <MessageBarBody>
-          {profileError ? formatErrorMessage(profileError, 'loading profile') : 'Profile not found.'}
+          {formatErrorMessage(profileError, 'loading profile')}
         </MessageBarBody>
       </MessageBar>
     );
+
+  if (!profile) return null;
 
   // AI quota calculation
   const quotaUsed = tenant?.aiCallsThisPeriod ?? 0;
@@ -212,7 +215,7 @@ export default function TherapistProfile() {
             ) : (
               <>
                 <Label>First Name</Label>
-                <Text className={styles.readValue}>{profile.firstName}</Text>
+                <Text className={styles.readValue}>{profile.firstName || '—'}</Text>
               </>
             )}
           </div>
@@ -227,7 +230,7 @@ export default function TherapistProfile() {
             ) : (
               <>
                 <Label>Last Name</Label>
-                <Text className={styles.readValue}>{profile.lastName}</Text>
+                <Text className={styles.readValue}>{profile.lastName || '—'}</Text>
               </>
             )}
           </div>
