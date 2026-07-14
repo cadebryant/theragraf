@@ -13,6 +13,16 @@ export class BasePage {
    */
   async goto(path: string = '/') {
     console.log(`🔗 Navigating to: ${path}`);
+
+    // Suppress the product tour so it never blocks clicks in tests
+    await this.page.addInitScript(() => {
+      try {
+        localStorage.setItem('theragraf:tourCompleted:v1', 'true');
+      } catch {
+        // ignore
+      }
+    });
+
     await this.page.goto(path, { waitUntil: 'domcontentloaded' });
 
     // Wait for network to settle

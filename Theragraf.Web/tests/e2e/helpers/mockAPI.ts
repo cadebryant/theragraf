@@ -12,6 +12,9 @@ import type {
   SessionResponse,
   CptCode,
   IcdCode,
+  TenantSummaryResponse,
+  TherapistProfileResponse,
+  ProviderResponse,
 } from '../../../src/types';
 
 // ── Mock Data Templates ───────────────────────────────────────────────────────
@@ -330,4 +333,128 @@ export async function clearMockAPIs(page: Page) {
   await page.unroute('**/api/DocumentationStart');
   await page.unroute('**/api/status/**');
   await page.unroute('**/api/sessions/**');
+}
+
+// ── Profile / Multi-tenancy Mock Data ────────────────────────────────────────
+
+export const MOCK_TENANT: TenantSummaryResponse = {
+  tenantId: 'tenant-e2e-test',
+  organizationName: 'E2E Test Practice',
+  organizationType: 'SoloPractitioner',
+  plan: 'Professional',
+  aiCallsThisPeriod: 42,
+  monthlyAiCallQuota: 500,
+  status: 'Active',
+  isSynthetic: false,
+};
+
+export const MOCK_THERAPIST_PROFILE_CONFIGURED: TherapistProfileResponse = {
+  therapistId: 'therapist-e2e-test',
+  tenantId: 'tenant-e2e-test',
+  firstName: 'Playwright',
+  lastName: 'E2EUser',
+  credentials: 'OTR/L',
+  discipline: 'OccupationalTherapy',
+  individualNpi: '1234567890',
+  providerId: null,
+  isConfigured: true,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
+export const MOCK_THERAPIST_PROFILE_UNCONFIGURED: TherapistProfileResponse = {
+  ...MOCK_THERAPIST_PROFILE_CONFIGURED,
+  credentials: null,
+  individualNpi: null,
+  isConfigured: false,
+};
+
+export const MOCK_PROVIDER: ProviderResponse = {
+  providerId: 'provider-e2e-test',
+  tenantId: 'tenant-e2e-test',
+  practiceName: 'E2E Group Practice',
+  organizationNpi: '9876543210',
+  addressLine1: '123 Test St',
+  addressLine2: null,
+  city: 'Testville',
+  state: 'TX',
+  zip: '75001',
+  phone: '555-0100',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
+/**
+ * Sets up mock routes for the Therapist Profile page.
+ * Defaults to a fully configured profile. Pass `unconfigured: true` to test
+ * the setup banner state.
+ */
+export async function setupMockProfileAPI(
+  page: Page,
+  options: { unconfigured?: boolean; withProvider?: boolean } = {},
+) {
+  const profile = options.unconfigured
+    ? MOCK_THERAPIST_PROFILE_UNCONFIGURED
+    : options.withProvider
+      ? { ...MOCK_THERAPIST_PROFILE_CONFIGURED, providerId: MOCK_PROVIDER.providerId }
+      : MOCK_THERAPIST_PROFILE_CONFIGURED;
+
+  // GET /api/tenant
+  await page.route('**/api/tenant', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(MOCK_TENANT),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // GET and PATCH /api/therapists/me
+  await page.route('**/api/therapists/me', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(profile),
+      });
+    } else if (route.request().method() === 'PATCH') {
+      const body = JSON.parse(route.request().postData() || '{}');
+      const updated: TherapistProfileResponse = {
+        ...profile,
+        ...body,
+        isConfigured: true,
+        updatedAt: new Date().toISOString(),
+      };
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(updated),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // GET /api/providers/{providerId}
+  if (options.withProvider) {
+    await page.route(`**/api/providers/${MOCK_PROVIDER.providerId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(MOCK_PROVIDER),
+      });
+    });
+  }
+}
+
+/**
+ * Clears mock routes added by setupMockProfileAPI.
+ */
+export async function clearMockProfileAPIs(page: Page) {
+  await page.unroute('**/api/tenant');
+  await page.unroute('**/api/therapists/me');
+  await page.unroute(`**/api/providers/${MOCK_PROVIDER.providerId}`);
 }
