@@ -1,9 +1,11 @@
 import { apiFetch } from './client';
 import type {
+  ClientGoalStats,
   CreateGoalRequest,
   GoalResponse,
   GoalSuggestion,
   GoalSuggestRequest,
+  TherapistGoalStats,
   UpdateGoalRequest,
 } from '@/types';
 
@@ -48,4 +50,20 @@ export async function suggestGoals(
     method: 'POST',
     body: JSON.stringify(request),
   });
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+/** GET /api/goals/stats/client/{clientId} — goal progress breakdown for a single client. */
+export async function getGoalStatsForClient(clientId: string): Promise<ClientGoalStats> {
+  return apiFetch<ClientGoalStats>(
+    `/api/goals/stats/client/${encodeURIComponent(clientId)}`,
+  );
+}
+
+/** GET /api/goals/stats/therapist/{therapistName} — goal progress aggregated across all clients. */
+export async function getGoalStatsForTherapist(therapistName: string): Promise<TherapistGoalStats> {
+  return apiFetch<TherapistGoalStats>(
+    `/api/goals/stats/therapist/${encodeURIComponent(therapistName)}`,
+  );
 }

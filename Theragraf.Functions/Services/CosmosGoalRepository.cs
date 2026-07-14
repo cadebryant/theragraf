@@ -204,6 +204,76 @@ public class CosmosGoalRepository : IGoalRepository
         }
     }
 
+    // ── Stats ─────────────────────────────────────────────────────────────────
+
+    public async Task<ClientGoalStats> GetGoalStatsAsync(
+        string clientId, CancellationToken cancellationToken = default)
+    {
+        var query = new QueryDefinition(
+            "SELECT c.status, c.targetDate, c.isSynthetic " +
+            "FROM c WHERE c.clientId = @clientId " +
+            "AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)")
+            .WithParameter("@clientId", clientId);
+
+        var options  = new QueryRequestOptions { PartitionKey = new PartitionKey(clientId) };
+        var iterator = _container.GetItemQueryIterator<GoalStatusProjection>(query, requestOptions: options);
+
+        var rows = new List<GoalStatusProjection>();
+        using (iterator)
+        {
+            while (iterator.HasMoreResults)
+            {
+                var page = await iterator.ReadNextAsync(cancellationToken);
+                rows.AddRange(page);
+            }
+        }
+
+        return ComputeClientStats(clientId, rows);
+    }
+
+    public async Task<TherapistGoalStats> GetGoalStatsForTherapistAsync(
+        string                therapistName,
+        IReadOnlyList<string> clientIds,
+        CancellationToken     cancellationToken = default)
+    {
+        if (clientIds.Count == 0)
+            return new TherapistGoalStats(therapistName, 0, 0, 0, 0, 0, 0, 0, 0.0);
+
+        // Fan-out: one partition-key query per client, run in parallel (capped to avoid
+        // overwhelming Cosmos with a huge batch).
+        const int MaxConcurrency = 10;
+        var semaphore = new System.Threading.SemaphoreSlim(MaxConcurrency, MaxConcurrency);
+
+        var tasks = clientIds.Select(async clientId =>
+        {
+            await semaphore.WaitAsync(cancellationToken);
+            try { return await GetGoalStatsAsync(clientId, cancellationToken); }
+            finally { semaphore.Release(); }
+        });
+
+        var perClient = await Task.WhenAll(tasks);
+
+        int total        = perClient.Sum(s => s.TotalGoals);
+        int active       = perClient.Sum(s => s.ActiveGoals);
+        int met          = perClient.Sum(s => s.MetGoals);
+        int notMet       = perClient.Sum(s => s.NotMetGoals);
+        int discontinued = perClient.Sum(s => s.DiscontinuedGoals);
+        int overdue      = perClient.Sum(s => s.OverdueGoals);
+        int withGoals    = perClient.Count(s => s.TotalGoals > 0);
+        double metRate   = total > 0 ? Math.Round((double)met / total * 100.0, 1) : 0.0;
+
+        return new TherapistGoalStats(
+            TherapistName:     therapistName,
+            TotalGoals:        total,
+            ActiveGoals:       active,
+            MetGoals:          met,
+            NotMetGoals:       notMet,
+            DiscontinuedGoals: discontinued,
+            OverdueGoals:      overdue,
+            ClientsWithGoals:  withGoals,
+            MetRate:           metRate);
+    }
+
     // ── Mapping ───────────────────────────────────────────────────────────────
 
     private static GoalResponse MapToResponse(GoalDocument doc)
@@ -227,5 +297,44 @@ public class CosmosGoalRepository : IGoalRepository
                 .ToList(),
             IsSynthetic:   doc.IsSynthetic
         );
+    }
+
+    private static ClientGoalStats ComputeClientStats(string clientId, List<GoalStatusProjection> rows)
+    {
+        int total        = rows.Count;
+        int active       = rows.Count(r => r.Status == nameof(GoalStatus.Active));
+        int met          = rows.Count(r => r.Status == nameof(GoalStatus.Met));
+        int notMet       = rows.Count(r => r.Status == nameof(GoalStatus.NotMet));
+        int discontinued = rows.Count(r => r.Status == nameof(GoalStatus.Discontinued));
+        int overdue      = rows.Count(r =>
+            r.Status == nameof(GoalStatus.Active)
+            && r.TargetDate.HasValue
+            && r.TargetDate.Value < DateTimeOffset.UtcNow);
+        double metRate   = total > 0 ? Math.Round((double)met / total * 100.0, 1) : 0.0;
+        bool synthetic   = rows.Any(r => r.IsSynthetic);
+
+        return new ClientGoalStats(
+            ClientId:          clientId,
+            TotalGoals:        total,
+            ActiveGoals:       active,
+            MetGoals:          met,
+            NotMetGoals:       notMet,
+            DiscontinuedGoals: discontinued,
+            OverdueGoals:      overdue,
+            MetRate:           metRate,
+            IsSynthetic:       synthetic);
+    }
+
+    /// <summary>Minimal Cosmos projection used for stats aggregation — avoids loading full documents.</summary>
+    private sealed class GoalStatusProjection
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string Status { get; set; } = nameof(GoalStatus.Active);
+
+        [System.Text.Json.Serialization.JsonPropertyName("targetDate")]
+        public DateTimeOffset? TargetDate { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("isSynthetic")]
+        public bool IsSynthetic { get; set; }
     }
 }

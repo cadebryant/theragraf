@@ -45,4 +45,18 @@ public interface IGoalRepository
     /// </summary>
     Task<bool> RestoreAsync(
         string clientId, string goalId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns aggregated goal-progress statistics for a single client.
+    /// </summary>
+    Task<ClientGoalStats> GetGoalStatsAsync(
+        string clientId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns aggregated goal-progress statistics across all provided client IDs for a therapist.
+    /// </summary>
+    Task<TherapistGoalStats> GetGoalStatsForTherapistAsync(
+        string                    therapistName,
+        IReadOnlyList<string>     clientIds,
+        CancellationToken         cancellationToken = default);
 }
